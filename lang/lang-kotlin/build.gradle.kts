@@ -3,7 +3,6 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 // lang-kotlin — the Kotlin LanguageBackend: editor-time code intelligence (member completion, name/type
 // resolution, a small inference subset) behind the backend-neutral language-api SPI.
 //
-// Editor strategy: use a parser ONLY (KtFile, from :kotlin-syntax — the Kotlin compiler's own multiplatform
 // grammar), and build our own symbol table, inference, and completion on the neutral DOM. Codegen (K2 ->
 // .class) is a separate track: KotlinJvmCompiler/IncrementalKotlinCompiler, driven by the module's own
 //
@@ -38,7 +37,6 @@ kotlin {
             // behind a `Kt*` facade with the compiler's own accessor names. `api`, because `KtFile` and the rest of
             // that vocabulary are all over this module's public signatures (KotlinParsedFile.ktFile, the symbol and
             // completion entry points), exactly as the PSI types were.
-            api(project(":kotlin-syntax"))
             // Reading class files, jars and Kotlin metadata with no JVM behind it. `BuiltinsReader` decodes
             // `.kotlin_builtins` through it, which is what takes the built-in types (`List`, `Int`, `String`)
             // off the compiler's own protobuf classes.
@@ -203,10 +201,8 @@ tasks.named<Test>("jvmTest") {
     systemProperty("compose.foundation.classes.jar", composeFoundationJar.get().asFile.absolutePath)
     // `-Dkt.updateDigest=true` re-records the analysis-parity goldens (see KotlinAnalysisDigestTest).
     // Forwarded explicitly, because a `-D` on the command line reaches the GRADLE JVM and the tests run in
-    // a forked one -- the same trap :kotlin-syntax's baseline flag documents.
     System.getProperty("kt.updateDigest")?.let { systemProperty("kt.updateDigest", it) }
     // The analysis sweeps, both opt-in. `-Dkt.sweep=true` runs the one over THIS repository's own Kotlin
-    // (the root is handed over the way :kotlin-syntax hands its parser sweep the same one);
     // `-Dkt.externalCorpus=<kotlin checkout>` runs the one over the standard library. Opt-in because a sweep
     // is ~3,000 files of analysis, which does not belong in the fast correctness gate.
     val sweeping = System.getProperty("kt.sweep") != null || System.getProperty("kt.externalCorpus") != null
