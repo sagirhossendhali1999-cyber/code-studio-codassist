@@ -109,8 +109,8 @@ val bundletoolUnshaded: Configuration by configurations.creating {
 dependencies { bundletoolUnshaded(libs.android.bundletool) }
 
 val SHADED_PROTOBUF = mapOf(
-    "com/google/protobuf/" to "com/shd/codestudio/shadedproto/",
-    "com.google.protobuf." to "com.shd.codestudio.shadedproto.",
+    "com/google/protobuf/" to "dev/ide/shadedproto/",
+    "com.google.protobuf." to "dev.ide.shadedproto.",
 )
 check(SHADED_PROTOBUF.all { (k, v) -> k.length == v.length }) { "the protobuf relocation must keep string lengths" }
 
