@@ -1,4 +1,4 @@
-name: codeassist_player
+name: codestudio_player
 description: The program the Dart plugin's Flutter player starts with. Built by fetch-flutter.sh.
 publish_to: none
 environment:

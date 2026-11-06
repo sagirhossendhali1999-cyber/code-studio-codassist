@@ -1,0 +1,332 @@
+package com.shd.codestudio.ui.screens
+
+import com.shd.codestudio.ui.components.NewFromTemplateDialog
+import com.shd.codestudio.ui.ext.NewFileTemplateRegistry
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.padding
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalWindowInfo
+import androidx.compose.ui.unit.dp
+import com.shd.codestudio.ui.IdeUiState
+import com.shd.codestudio.ui.backend.FileActions
+import com.shd.codestudio.ui.backend.PackageSegment
+import com.shd.codestudio.ui.backend.RunStatus
+import com.shd.codestudio.ui.backend.TreeNode
+import com.shd.codestudio.ui.components.AddSourceRootDialog
+import com.shd.codestudio.ui.components.AddSourceRootRequest
+import com.shd.codestudio.ui.components.FileOpKind
+import com.shd.codestudio.ui.components.FileOpRequest
+import com.shd.codestudio.ui.components.FileOperationDialog
+import com.shd.codestudio.ui.components.fileOpPath
+import com.shd.codestudio.ui.components.IndexStatusDialog
+import com.shd.codestudio.ui.components.NewEntryDialog
+import com.shd.codestudio.ui.components.NewEntryKind
+import com.shd.codestudio.ui.components.NewEntryRequest
+import com.shd.codestudio.ui.components.NewSourceFileDialog
+import com.shd.codestudio.ui.components.NewSourceLang
+import com.shd.codestudio.ui.components.NewSourceRequest
+import com.shd.codestudio.ui.components.NewXmlFileDialog
+import com.shd.codestudio.ui.components.NewXmlTarget
+import com.shd.codestudio.ui.components.xmlTargetOf
+import com.shd.codestudio.ui.editor.engine.OpenTabDiagnosticsEffect
+import com.shd.codestudio.ui.generated.resources.Res
+import com.shd.codestudio.ui.generated.resources.edscreen_project_root
+import com.shd.codestudio.ui.platform.PlatformBackHandler
+import com.shd.codestudio.ui.platform.HideSystemBars
+import com.shd.codestudio.ui.platform.hiddenSystemBarsWidth
+import com.shd.codestudio.ui.platform.isMobilePlatform
+import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.seconds
+import kotlin.time.TimeMark
+import kotlin.time.TimeSource
+import org.jetbrains.compose.resources.stringResource
+
+/** Width at/below which the UI reflows to the compact (phone) layout. */
+internal val COMPACT_BREAKPOINT = 720.dp
+
+/**
+ * The editor screen, adaptive by window width: expanded (side rail · navigator · editor · console)
+ * on wide windows, compact (single editor pane, the navigator as a left push drawer, and the bottom
+ * nav doubling as the swipe-up build dock/console) when the window is narrowed past [COMPACT_BREAKPOINT].
+ *
+ * This top-level entry owns the screen-wide state that the layouts share: the file-creation / file-op
+ * request flags (whose dialogs are hosted here so they overlay both layouts), and the system-back routing.
+ * The two adaptive layouts live in `EditorLayouts.kt`; the shared editor column in `EditorCenter.kt`.
+ */
+@Composable
+fun EditorScreen(
+    state: IdeUiState,
+    onToggleTheme: () -> Unit,
+    onOpenHub: () -> Unit = {},
+    onOpenIconManager: () -> Unit = {},
+    /** Open the Icon Manager scoped to a `res/` tree node, from its "New" menu. */
+    onNewImageAsset: (resDirPath: String) -> Unit = {},
+    onOpenDependencies: (String?) -> Unit = {},
+    onOpenModuleConfig: (String?) -> Unit = {},
+    /** Leaves for the project list. Called once the user has confirmed in [CloseProjectDialog]. */
+    onCloseProject: () -> Unit = {},
+    /** Whether the close-project confirmation is up. The host owns it, so its system-Back handling can raise it. */
+    closeProjectConfirm: Boolean = false,
+    onCloseProjectConfirmChange: (Boolean) -> Unit = {},
+    onOpenRun: () -> Unit = {},
+    /** Told whether the wide layout is on screen, so a run docks in its bottom pane instead of opening full screen. */
+    onRunDockedChange: (Boolean) -> Unit = {},
+    fileActions: FileActions = FileActions.None,
+    /** Shown above the whole editor while a lesson runs in this project (the Learn task banner). */
+    topBanner: (@Composable () -> Unit)? = null,
+) {
+    // Everything in the editor that leaves the project (the top bar's arrow, the palette) asks first.
+    val requestCloseProject = { onCloseProjectConfirmChange(true) }
+    val indexStatus by state.backend.search.indexStatus.collectAsState()
+    val buildState by state.backend.build.buildState.collectAsState()
+    val scope = rememberCoroutineScope()
+    // The project is open now — kick off any deferred template-dependency resolution (e.g. the Compose AAR
+    // graph of a freshly-created project). Idempotent + a no-op for an opened existing project; progress
+    // streams on depsState so the user can work elsewhere while it resolves.
+    LaunchedEffect(state.backend) { state.backend.deps.startPendingDependencyResolution() }
+    // A finished build (re)writes artifacts under `<module>/build/` — refresh the tree so the dimmed
+    // "build outputs" node (and the All-Files `build/` subtree) pick up the new APK/AAB/jar.
+    LaunchedEffect(buildState.status) {
+        if (buildState.status == RunStatus.Succeeded || buildState.status == RunStatus.Failed) state.refreshTree()
+    }
+    // Diagnostics for the tabs that are open but not focused (the daemon in EditorCenter covers the focused
+    // one), so every tab's status dot reports its own file rather than only the file on screen.
+    OpenTabDiagnosticsEffect(state, indexStatus.building, buildState.status)
+    SyncWithDiskOnReturnEffect(state)
+    var newEntry by remember { mutableStateOf<NewEntryRequest?>(null) }
+    var newXmlTarget by remember { mutableStateOf<NewXmlTarget?>(null) }
+    var newSource by remember { mutableStateOf<NewSourceRequest?>(null) }
+    var fileOp by remember { mutableStateOf<FileOpRequest?>(null) }
+    // New File / New Folder can target any directory; res/ folders additionally offer the templated XML flow.
+    val rootPath = state.backend.project.rootPath
+    val projectRootLabel = stringResource(Res.string.edscreen_project_root)
+    fun dirLabel(dir: String): String =
+        if (dir.startsWith(rootPath)) dir.removePrefix(rootPath).trim('/', '\\')
+            .ifEmpty { projectRootLabel } else dir
+
+    val onNewFile: (String, List<PackageSegment>) -> Unit =
+        { dir, segs -> newEntry = NewEntryRequest(dir, NewEntryKind.File, dirLabel(dir), segs) }
+    val onNewFolder: (String, List<PackageSegment>) -> Unit =
+        { dir, segs -> newEntry = NewEntryRequest(dir, NewEntryKind.Folder, dirLabel(dir), segs) }
+    val onNewResource: (TreeNode) -> Unit = { node -> xmlTargetOf(node)?.let { newXmlTarget = it } }
+    val newImageAsset: (TreeNode) -> Unit = { node -> node.resDirPath?.let(onNewImageAsset) }
+    val onNewSource: (String, NewSourceLang, List<PackageSegment>) -> Unit =
+        { dir, lang, segs -> newSource = NewSourceRequest(dir, lang, dirLabel(dir), segs) }
+    val onFileOp: (TreeNode, FileOpKind) -> Unit =
+        { node, kind -> fileOp = FileOpRequest(node, kind) }
+
+    // Back closes an open editor overlay (dialog, palette, or — on mobile — a navigator/console/search/more
+    // sheet) before the app-level handler pops the screen (#997). Desktop has no system back, so this is inert
+    // there; the mobile-only panes are gated on [isMobilePlatform] since on wide layouts they're docked panes.
+    PlatformBackHandler(
+        enabled = closeProjectConfirm || newEntry != null || newXmlTarget != null || newSource != null || fileOp != null || state.addSourceRootModule != null || state.symbolEditorOpen || state.indexDetailOpen || state.paletteOpen || state.moreOpen || state.selectedRightPanel != null || (isMobilePlatform && (state.leftOpen || state.consoleOpen)) || state.zenMode,
+    ) {
+        when {
+            closeProjectConfirm -> onCloseProjectConfirmChange(false)
+            fileOp != null -> fileOp = null
+            state.symbolEditorOpen -> state.symbolEditorOpen = false
+            state.addSourceRootModule != null -> state.addSourceRootModule = null
+            newSource != null -> newSource = null
+            newEntry != null -> newEntry = null
+            newXmlTarget != null -> newXmlTarget = null
+            state.indexDetailOpen -> state.indexDetailOpen = false
+            state.paletteOpen -> state.paletteOpen = false
+            state.moreOpen -> state.moreOpen = false
+            state.selectedRightPanel != null -> state.selectedRightPanel = null
+            isMobilePlatform && state.consoleOpen -> state.consoleOpen = false
+            isMobilePlatform && state.leftOpen -> state.selectedLeftPanel = null
+            // Last: back leaves zen mode before it can ask to close the project.
+            state.zenMode -> state.setZen(false)
+        }
+    }
+    // Zen mode hides the system bars too, for as long as the editor is on screen. With every tab closed there is
+    // nothing left to focus on, nor a tabs strip to leave it from.
+    HideSystemBars(state.zenMode)
+    LaunchedEffect(state.zenMode, state.openFiles.isEmpty()) {
+        if (state.zenMode && state.openFiles.isEmpty()) state.setZen(false)
+    }
+    // Mirrors the layout choice below for the overlays outside it (the running-run pill).
+    var wideLayout by remember { mutableStateOf(false) }
+    Box(Modifier.fillMaxSize()) {
+        // Measured as if every system bar showed. In zen mode Android brings the navigation bar back while the
+        // keyboard is up, and on a phone near the breakpoint in landscape the lost width flipped the layout as the
+        // keyboard opened; the editor was rebuilt, which closed the keyboard and hid the bar again.
+        val hiddenBars = hiddenSystemBarsWidth()
+        // The lesson banner is drawn inside the editor column, under the top bar and above the file tabs
+        // (where AIDE puts its trainer header), so both layouts pick it up without threading it through.
+        androidx.compose.runtime.CompositionLocalProvider(LocalLessonBanner provides topBanner) {
+        BoxWithConstraints(Modifier.fillMaxSize()) {
+            val wide = maxWidth - hiddenBars >= COMPACT_BREAKPOINT
+            LaunchedEffect(wide, state.runFullScreen) {
+                wideLayout = wide
+                onRunDockedChange(wide && !state.runFullScreen)
+            }
+            if (!wide) CompactLayout(
+                state,
+                onToggleTheme,
+                onOpenHub,
+                onOpenIconManager,
+                indexStatus,
+                buildState,
+                onNewFile,
+                onNewFolder,
+                onNewResource,
+                newImageAsset,
+                onNewSource,
+                onFileOp,
+                onOpenDependencies,
+                onOpenModuleConfig,
+                requestCloseProject,
+                fileActions
+            )
+            else ExpandedLayout(
+                state,
+                onToggleTheme,
+                onOpenHub,
+                onOpenIconManager,
+                indexStatus,
+                buildState,
+                onNewFile,
+                onNewFolder,
+                onNewResource,
+                newImageAsset,
+                onNewSource,
+                onFileOp,
+                onOpenDependencies,
+                onOpenModuleConfig,
+                requestCloseProject,
+                fileActions,
+                onOpenRun,
+            )
+        }
+        }
+        NewEntryDialog(
+            request = newEntry,
+            onDismiss = { newEntry = null },
+            onCreate = { dir, name, kind ->
+                when (kind) {
+                    NewEntryKind.File -> state.createFileSmart(dir, name)
+                    NewEntryKind.Folder -> state.createDirectory(dir, name)
+                }
+            },
+        )
+        NewXmlFileDialog(
+            visible = newXmlTarget != null,
+            target = newXmlTarget,
+            onDismiss = { newXmlTarget = null },
+            onCreate = { dir, fileName, content -> state.createFile(dir, fileName, content) },
+            onCreateDir = { parent, dirName -> state.createDirectory(parent, dirName) },
+        )
+        NewSourceFileDialog(
+            request = newSource,
+            onDismiss = { newSource = null },
+            onCreate = { dir, name, template -> state.createSourceFile(dir, name, template) },
+        )
+        NewFromTemplateDialog(
+            request = NewFileTemplateRegistry.pending,
+            onDismiss = { NewFileTemplateRegistry.pending = null },
+            onCreate = { dir, files -> state.createFiles(dir, files) },
+        )
+        AddSourceRootDialog(
+            request = state.addSourceRootModule?.let {
+                AddSourceRootRequest(
+                    it, state.moduleSourceSets(it)
+                )
+            },
+            onDismiss = { state.addSourceRootModule = null },
+            onAdd = { module, set, dirName, role, newSetScope ->
+                state.addSourceRoot(
+                    module, set, dirName, role, newSetScope
+                )
+            },
+        )
+        FileOperationDialog(
+            request = fileOp,
+            rootPath = state.backend.project.rootPath,
+            listDir = { state.backend.files.listDirectory(it) },
+            onRename = { node, newName ->
+                node.fileOpPath()?.let { p -> scope.launch { state.renamePath(p, newName) } }
+            },
+            onMove = { node, dest -> node.fileOpPath()?.let { state.movePath(it, dest) } },
+            onCopy = { node, dest -> node.fileOpPath()?.let { state.copyPath(it, dest) } },
+            onDelete = { node -> node.fileOpPath()?.let { state.deletePath(it) } },
+            onDismiss = { fileOp = null },
+        )
+        // The Symbols & Macros editor, opened from the keyboard symbol bar's gear key. Overlays both layouts.
+        SymbolMacroEditor(state)
+        // The index-status detail dialog, opened by tapping the top-bar index chip.
+        IndexStatusDialog(
+            visible = state.indexDetailOpen,
+            status = indexStatus,
+            onReindex = { state.backend.search.reindex() },
+            onDismiss = { state.indexDetailOpen = false },
+        )
+        CloseProjectDialog(
+            visible = closeProjectConfirm,
+            projectName = state.backend.project.name,
+            unsavedFiles = state.openFiles.count { it.modified && !it.readOnly },
+            building = buildState.status == RunStatus.Running,
+            onDismiss = { onCloseProjectConfirmChange(false) },
+            onConfirm = {
+                state.saveAllNow()
+                onCloseProjectConfirmChange(false)
+                onCloseProject()
+            },
+        )
+        // The app-wide keyboard commands (tabs, go-to, tool windows, run) and the Ctrl+Tab switcher.
+        AppShortcutsHost(
+            state = state,
+            onOpenSettings = onOpenHub,
+            onNewFile = { dir -> onNewFile(dir, emptyList()) },
+        )
+        // While a console run is active but its terminal isn't on screen (the user backed out mid-run), a
+        // tappable pill returns to it — the run keeps going in the background until then.
+        // Docked (wide layout), the pill brings the bottom pane's Run terminal forward and hides while it shows.
+        val runDocked = wideLayout && !state.runFullScreen
+        if (!(runDocked && state.runOpen)) RunningIndicator(
+            state.backend,
+            onClick = { if (runDocked) state.showRunOutput() else onOpenRun() },
+            modifier = Modifier.align(Alignment.BottomEnd)
+                .padding(end = 16.dp, bottom = if (isMobilePlatform) 88.dp else 24.dp),
+        )
+    }
+}
+
+/**
+ * Catches the open tabs and the tree up with the disk when the window gets focus back after being away: on a
+ * phone, the user returning from a file manager that copied a file over one that is open. Nothing watches the
+ * project directory, so without this the tab kept the old text until the file was deleted and copied again.
+ *
+ * Window focus also goes to a focusable popup (a menu, a dialog), so an absence shorter than
+ * [RETURN_SYNC_MIN_AWAY] is not a return; leaving for another app and coming back takes longer than that.
+ */
+@Composable
+private fun SyncWithDiskOnReturnEffect(state: IdeUiState) {
+    val windowInfo = LocalWindowInfo.current
+    LaunchedEffect(state, windowInfo) {
+        var leftAt: TimeMark? = null
+        snapshotFlow { windowInfo.isWindowFocused }.collect { focused ->
+            if (!focused) {
+                leftAt = TimeSource.Monotonic.markNow()
+            } else {
+                val away = leftAt?.elapsedNow()
+                leftAt = null
+                if (away != null && away >= RETURN_SYNC_MIN_AWAY) state.syncWithDiskOnReturn()
+            }
+        }
+    }
+}
+
+private val RETURN_SYNC_MIN_AWAY = 2.seconds

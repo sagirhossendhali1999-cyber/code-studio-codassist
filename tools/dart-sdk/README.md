@@ -68,7 +68,7 @@ How an app runs, which is `flutter run` without the `flutter` tool:
 - The IDE compiles the app with `frontend_server` (incremental, `--target=flutter`, against the patched platform).
 - The player (`FlutterPlayerActivity`, in the plugin's own APK and process) starts on its stub and sends the IDE
   its Dart VM service URI. It is not exported: its VM service runs whatever code it is sent, so the way in is
-  `FlutterPlayerLauncher`, which starts it only when the caller is CodeAssist (`getLaunchedFromPackage` on
+  `FlutterPlayerLauncher`, which starts it only when the caller is Code Studio (`getLaunchedFromPackage` on
   Android 14 and later, the referrer before that, and adb for a debuggable build). The IDE uploads the kernel and the asset bundle into a DevFS over the VM service and
   calls `_flutter.runInView`: a hot restart into the app.
 - A saved file is recompiled as a delta and loaded with `reloadSources` + `ext.flutter.reassemble`: hot reload,
@@ -82,7 +82,7 @@ light or dark scheme. How it gets into the pane (Android 11 and later):
 
 - `FlutterPreviewService`, a bound service in the plugin's own `:preview` process, runs a `FlutterEngine` and a
   `FlutterView` in a `SurfaceControlViewHost` and hands the pane a `SurfacePackage`, which the pane's
-  `SurfaceView` attaches. It serves CodeAssist alone, checked per message by `Message.sendingUid`.
+  `SurfaceView` attaches. It serves Code Studio alone, checked per message by `Message.sendingUid`.
 - The pane's surface is below the IDE's window, so the IDE receives the touches. The pane forwards them to the
   service, which dispatches them to the view. This keeps the IDE's problem chip and notices drawable over the
   preview.

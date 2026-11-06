@@ -1,0 +1,1193 @@
+package com.shd.codestudio.ui
+
+import com.shd.codestudio.ui.screens.HomeAiTab
+import com.shd.codestudio.ui.ext.HomeTabContext
+import com.shd.codestudio.ui.ext.HomeTabContribution
+import com.shd.codestudio.ui.ext.HomeTabRegistry
+import com.shd.codestudio.ui.components.HalloweenCard
+import com.shd.codestudio.ui.components.HalloweenCardMode
+import com.shd.codestudio.ui.generated.resources.home_account
+import com.shd.codestudio.ui.generated.resources.notif_title
+import com.shd.codestudio.ui.icons.CaSymbols
+import com.shd.codestudio.ui.screens.HomeSidebarItem
+import androidx.compose.animation.Crossfade
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.size
+import androidx.compose.runtime.collectAsState
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.key
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.produceState
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.dp
+import com.shd.codestudio.ui.backend.FileActions
+import com.shd.codestudio.ui.backend.ProjectInfo
+import com.shd.codestudio.ui.backend.VcsService
+import com.shd.codestudio.ui.components.BetaInfo
+import com.shd.codestudio.ui.components.CircularProgressIndicator
+import com.shd.codestudio.ui.generated.resources.Res
+import com.shd.codestudio.ui.generated.resources.settings_title
+import com.shd.codestudio.ui.ext.ScreenContext
+import com.shd.codestudio.ui.ext.ScreenRegistry
+import com.shd.codestudio.ui.navigation.ScreenHost
+import com.shd.codestudio.ui.theme.Motion
+import com.shd.codestudio.ui.screens.ModerationScreen
+import com.shd.codestudio.ui.screens.NotificationBell
+import com.shd.codestudio.ui.screens.NotificationsSheet
+import com.shd.codestudio.ui.screens.PublisherProfileScreen
+import com.shd.codestudio.ui.screens.YouScreen
+import com.shd.codestudio.ui.screens.PublishingGuideScreen
+import com.shd.codestudio.ui.screens.ChallengeBoardScreen
+import com.shd.codestudio.ui.screens.ChallengePlayerScreen
+import com.shd.codestudio.ui.screens.DailyChallengeScreen
+import com.shd.codestudio.ui.screens.StoreSignInSheet
+import com.shd.codestudio.ui.screens.SubmitProjectScreen
+import com.shd.codestudio.ui.screens.CodeStyleScreen
+import com.shd.codestudio.ui.screens.ColorSchemeScreen
+import com.shd.codestudio.ui.screens.CreateProjectScreen
+import com.shd.codestudio.ui.screens.EditorScreen
+import com.shd.codestudio.ui.screens.ExportProjectScreen
+import com.shd.codestudio.ui.screens.HomeScreen
+import com.shd.codestudio.ui.screens.ImportPreviewScreen
+import com.shd.codestudio.ui.screens.KeystoreCreateScreen
+import com.shd.codestudio.ui.screens.KeystoreImportScreen
+import com.shd.codestudio.ui.backend.IconSnippets
+import com.shd.codestudio.ui.backend.UiInsertionTarget
+import com.shd.codestudio.ui.screens.AppIconStudioScreen
+import com.shd.codestudio.ui.screens.IconManagerScreen
+import com.shd.codestudio.ui.screens.KeystoreManagerScreen
+import com.shd.codestudio.ui.screens.LearnScreen
+import com.shd.codestudio.ui.screens.LessonPlayerScreen
+import com.shd.codestudio.ui.screens.LessonTrackScreen
+import com.shd.codestudio.ui.screens.LearnPathScreen
+import com.shd.codestudio.ui.screens.LessonBanner
+import com.shd.codestudio.ui.screens.LearnAskScreen
+import com.shd.codestudio.ui.screens.LearnDiscussionScreen
+import com.shd.codestudio.ui.screens.LearnSolutionsScreen
+import com.shd.codestudio.ui.screens.LearnThreadScreen
+import com.shd.codestudio.ui.screens.ModuleConfigScreen
+import com.shd.codestudio.ui.screens.ModulesTab
+import com.shd.codestudio.ui.screens.LanguageServersScreen
+import com.shd.codestudio.ui.screens.PluginsScreen
+import com.shd.codestudio.ui.screens.ProjectsHomeScreen
+import com.shd.codestudio.ui.screens.ExploreFeed
+import com.shd.codestudio.ui.screens.ProjectsStoreScreen
+import com.shd.codestudio.ui.screens.RunScreen
+import com.shd.codestudio.ui.screens.SdkManagerScreen
+import com.shd.codestudio.ui.screens.HubSection
+import com.shd.codestudio.ui.screens.HubTarget
+import com.shd.codestudio.ui.screens.HubTool
+import com.shd.codestudio.ui.screens.hubSections
+import com.shd.codestudio.ui.screens.HubTwoPaneBreakpoint
+import com.shd.codestudio.ui.screens.SettingsHubPane
+import com.shd.codestudio.ui.screens.SettingsHubScreen
+import com.shd.codestudio.ui.screens.SettingsScreen
+import com.shd.codestudio.ui.screens.SettingsView
+import com.shd.codestudio.ui.screens.StorageScreen
+import com.shd.codestudio.ui.screens.StoreItemScreen
+import com.shd.codestudio.ui.screens.StoreSearchScreen
+import com.shd.codestudio.ui.screens.SymbolMacroEditorScreen
+import org.jetbrains.compose.resources.stringResource
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.launch
+
+/**
+ * Routes the current [Code StudioAppState.screen] to its screen composable, animating between them with
+ * [ScreenHost]. Every destination reads state from [app] and reports back through its intent functions, so
+ * this layer only wires arguments and callbacks.
+ *
+ * @param state the active project's UI state, re-keyed per project by the caller.
+ * @param dark whether the resolved theme is dark (for the editor's quick theme toggle).
+ */
+@Composable
+internal fun AppNavGraph(
+    app: Code StudioAppState,
+    state: IdeUiState,
+    fileActions: FileActions,
+    codeFont: FontFamily,
+    dark: Boolean,
+    modifier: Modifier = Modifier,
+) {
+    val scope = rememberCoroutineScope()
+    // The destination the wide Settings pane last showed. Kept through Settings' own exit animation, when the
+    // app has already moved on and the current screen is no longer one of its destinations.
+    val lastHubPane = remember { arrayOf<HubTarget?>(null) }
+    // The home screen's saved UI state (each tab's scroll position, the Explore shelves, an open store search),
+    // kept while another screen is shown. Opening a listing from Explore replaces the home screen, and without
+    // this, coming back rebuilt every list at the top. Home only: no other screen needs to outlive itself.
+    val homeState = rememberSaveableStateHolder()
+    BoxWithConstraints(modifier) {
+        val twoPane = maxWidth >= HubTwoPaneBreakpoint
+        SideEffect { app.hubTwoPane = twoPane }
+        // On a wide window Settings and its destinations are ONE route: switching between them changes the
+        // pane, not the screen, so the sidebar stays put instead of animating out and back in.
+        val route = if (twoPane && app.isHubPane(app.screen)) Screen.Hub else app.screen
+        ScreenHost(route, back = app.navigatingBack, modifier = Modifier.fillMaxSize()) { s ->
+            if (s == Screen.Hub && twoPane) {
+                HubPaneRoute(app, rememberHubSections(app, state), lastHubPane) { target ->
+                    when (target) {
+                        is HubTarget.Page -> SettingsRoute(app, state, codeFont, fileActions, target.id)
+                        is HubTarget.Tool -> AppRoute(screenOf(target.tool), app, state, fileActions, codeFont, dark, scope)
+                    }
+                }
+            } else if (s == Screen.Projects) {
+                homeState.SaveableStateProvider(HOME_STATE_KEY) { AppRoute(s, app, state, fileActions, codeFont, dark, scope) }
+            } else {
+                AppRoute(s, app, state, fileActions, codeFont, dark, scope)
+            }
+        }
+    }
+}
+
+/**
+ * Settings' destinations for where it was opened from: with a project open (entered from the editor) the
+ * project-scoped pages join the app ones; from the picker only the app pages show. Re-read on every
+ * navigation, so a page a plugin adds or drops is reflected the next time Settings is shown.
+ */
+@Composable
+private fun rememberHubSections(app: Code StudioAppState, state: IdeUiState): List<HubSection> {
+    val global = !app.hubInProject
+    val pages = remember(state.backend, global, app.screen) {
+        state.backend.settings.settingsPages().filter { !global || it.scope == "app" }
+    }
+    // A user-configured language server is a program the IDE starts, which Android does not allow an app to
+    // do for one it did not ship; there a language comes from a plugin instead.
+    val hidden = remember(state.backend) {
+        if (state.backend.settings.languageServersSupported()) emptySet() else setOf(HubTool.LanguageServers)
+    }
+    return hubSections(pages, hidden)
+}
+
+/**
+ * Wide Settings: [SettingsHubPane]'s sidebar beside the destination that is open, which [route] renders with
+ * the same arguments the full-screen route would give it.
+ */
+@Composable
+private fun HubPaneRoute(
+    app: Code StudioAppState,
+    sections: List<HubSection>,
+    last: Array<HubTarget?>,
+    route: @Composable (HubTarget) -> Unit,
+) {
+    hubTargetOf(app, app.screen)?.let { last[0] = it }
+    val available = sections.flatMap { it.entries }.map { it.target }
+    // Opened on Settings itself, or the last page is gone (a project page after the project closed): the
+    // first destination, so the pane is never empty.
+    val shown = last[0]?.takeIf { it in available } ?: available.firstOrNull() ?: return
+    SettingsHubPane(
+        sections = sections,
+        selected = shown,
+        onSelect = { openHubTarget(app, it) },
+        onBack = { app.navigateTo(app.hubReturn) },
+    ) {
+        Crossfade(shown, animationSpec = tween(Motion.FAST), label = "hubPane") { pane -> route(pane) }
+    }
+}
+
+/** The Settings destination [s] shows, or null for Settings itself and every screen outside it. */
+private fun hubTargetOf(app: Code StudioAppState, s: Screen): HubTarget? = when (s) {
+    Screen.Settings -> app.settingsPageId?.let { HubTarget.Page(it) }
+    Screen.CodeStyle -> HubTarget.Tool(HubTool.CodeStyle)
+    Screen.ColorScheme -> HubTarget.Tool(HubTool.Colors)
+    Screen.EditorSymbols -> HubTarget.Tool(HubTool.Symbols)
+    Screen.SdkManager -> HubTarget.Tool(HubTool.SdkManager)
+    Screen.KeystoreManager -> if (app.isHubPane(s)) HubTarget.Tool(HubTool.Keystore) else null
+    Screen.Plugins -> HubTarget.Tool(HubTool.Plugins)
+    Screen.LanguageServers -> HubTarget.Tool(HubTool.LanguageServers)
+    Screen.Storage -> HubTarget.Tool(HubTool.Storage)
+    else -> null
+}
+
+private fun screenOf(tool: HubTool): Screen = when (tool) {
+    HubTool.Colors -> Screen.ColorScheme
+    HubTool.CodeStyle -> Screen.CodeStyle
+    HubTool.Symbols -> Screen.EditorSymbols
+    HubTool.SdkManager -> Screen.SdkManager
+    HubTool.Keystore -> Screen.KeystoreManager
+    HubTool.Plugins -> Screen.Plugins
+    HubTool.LanguageServers -> Screen.LanguageServers
+    HubTool.Storage -> Screen.Storage
+}
+
+private fun openHubTarget(app: Code StudioAppState, target: HubTarget) {
+    when (target) {
+        is HubTarget.Page -> app.openSettingsPage(target.id)
+        // The keystore manager remembers that it was entered from Settings (its Back and its signing row).
+        is HubTarget.Tool -> if (target.tool == HubTool.Keystore) app.openKeystoreManagerFromHub() else app.navigateTo(screenOf(target.tool))
+    }
+}
+
+/**
+ * A settings page. [pageId] null (nothing in the app opens Settings that way any more, but the route still
+ * takes it) shows every page with its own category navigation.
+ */
+@Composable
+private fun SettingsRoute(
+    app: Code StudioAppState,
+    state: IdeUiState,
+    codeFont: FontFamily,
+    fileActions: FileActions,
+    pageId: String?,
+) {
+    SettingsScreen(
+        backend = state.backend,
+        onBack = { app.navigateTo(Screen.Hub) },
+        onSettingsChanged = app::reloadSettings,
+        // The logs viewer is an editor overlay; only meaningful with a project open (not one closed behind Home).
+        onOpenLogs = {
+            if (app.projectOpen) {
+                state.logsOpen = true
+                app.navigateTo(Screen.Editor)
+            }
+        },
+        view = if (app.hubInProject) SettingsView.All else SettingsView.Global,
+        title = stringResource(Res.string.settings_title),
+        codeFont = codeFont,
+        fileActions = fileActions,
+        pageId = pageId,
+    )
+}
+
+/** The [rememberSaveableStateHolder] key the home screen's state is kept under. */
+private const val HOME_STATE_KEY = "home"
+
+/** One route's screen, with its arguments and callbacks wired to [app]. */
+@Composable
+private fun AppRoute(
+    s: Screen,
+    app: Code StudioAppState,
+    state: IdeUiState,
+    fileActions: FileActions,
+    codeFont: FontFamily,
+    dark: Boolean,
+    scope: CoroutineScope,
+) {
+    val backend = app.backend
+    when (s) {
+        Screen.Projects -> HomeRoute(app, state, fileActions)
+
+        Screen.CreateProject -> CreateProjectScreen(
+            backend = backend,
+            onCancel = { app.navigateTo(Screen.Projects) },
+            onCreated = { app.enterEditor() },
+            initialTemplateId = app.createTemplateId,
+        )
+
+        Screen.ImportProject -> {
+            val preview = app.importPreview
+            val path = app.importArchivePath
+            if (preview != null && path != null) {
+                ImportPreviewScreen(
+                    backend = backend,
+                    archivePath = path,
+                    preview = preview,
+                    onCancel = app::cancelImportPreview,
+                    onImported = app::finishImportPreview,
+                )
+            }
+        }
+
+        Screen.ExportProject -> {
+            val target = app.exportTarget
+            if (target != null) {
+                ExportProjectScreen(
+                    backend = backend,
+                    project = target,
+                    fileActions = fileActions,
+                    initialAuthor = app.exportAuthor(),
+                    onAuthorRemembered = app::rememberExportAuthor,
+                    onReveal = if (fileActions.canReveal) ({ path -> fileActions.reveal(path) }) else null,
+                    onSaveCopy = if (fileActions.canExport) ({ path -> fileActions.exportFile(path) }) else null,
+                    onShare = if (fileActions.canShare) ({ path -> fileActions.share(path) }) else null,
+                    onDone = app::finishExport,
+                    // The other way to share the same project. Hidden when this build cannot publish.
+                    onPublish = if (backend.store.submissionsAvailable()) {
+                        // `target` is the project this export flow was opened for, so publishing
+                        // continues with it rather than asking again.
+                        { app.finishExport(); app.openSubmitProject(target) }
+                    } else {
+                        null
+                    },
+                )
+            }
+        }
+
+        Screen.LearnPath -> LearnPathScreen(
+            backend = backend,
+            pathId = app.currentPathId,
+            epoch = app.learnEpoch,
+            onOpenTrack = app::openTrackFromPath,
+            onBack = app::exitLearnPath,
+        )
+
+        Screen.LearnDiscussion -> LearnCommunityRoute(app, fileActions) { needSignIn ->
+            LearnDiscussionScreen(
+                backend = backend,
+                lessonId = app.communityLessonId.orEmpty(),
+                stepId = app.communityStepId,
+                onBack = app::exitCommunity,
+                onOpenThread = app::openThread,
+                onAsk = { stepId -> app.openAsk(app.communityLessonId.orEmpty(), stepId) },
+                onNeedSignIn = needSignIn,
+            )
+        }
+
+        Screen.LearnThread -> LearnCommunityRoute(app, fileActions) { needSignIn ->
+            LearnThreadScreen(
+                backend = backend,
+                threadId = app.communityThreadId.orEmpty(),
+                onBack = app::exitCommunity,
+                onNeedSignIn = needSignIn,
+            )
+        }
+
+        Screen.LearnAsk -> LearnCommunityRoute(app, fileActions) { needSignIn ->
+            LearnAskScreen(
+                backend = backend,
+                lessonId = app.communityLessonId.orEmpty(),
+                stepId = app.communityStepId,
+                prefillCode = app.askPrefill?.code,
+                prefillError = app.askPrefill?.errorText,
+                onBack = app::exitCommunity,
+                onPosted = app::questionPosted,
+                onNeedSignIn = needSignIn,
+            )
+        }
+
+        Screen.LearnSolutions -> LearnCommunityRoute(app, fileActions) { needSignIn ->
+            LearnSolutionsScreen(
+                backend = backend,
+                lessonId = app.communityLessonId.orEmpty(),
+                stepId = app.communityStepId.orEmpty(),
+                onBack = app::exitCommunity,
+                onNeedSignIn = needSignIn,
+            )
+        }
+
+        Screen.LessonTrack -> LessonTrackScreen(
+            backend = backend,
+            trackId = app.currentTrackId,
+            epoch = app.learnEpoch,
+            onOpenLesson = { id -> app.openLesson(id) },
+            onBack = app::exitLessonTrack,
+        )
+
+        Screen.LessonPlayer -> LessonPlayerScreen(
+            backend = backend,
+            lessonId = app.currentLessonId,
+            initialStep = app.lessonInitialStep,
+            inlayHintsEnabled = state.inlayHintsEnabled,
+            host = state.composePreviewHost,
+            onExit = app::exitLessonPlayer,
+            onOpenInEditor = if (app.lessonEditorUnavailable) null else app::openLessonInEditor,
+            onOpenDiscussion = if (backend.learn.communityAvailable()) ({ lessonId, stepId -> app.openDiscussion(lessonId, stepId) }) else null,
+        )
+
+        Screen.ChallengePlayer -> ChallengePlayerScreen(
+            backend = backend,
+            date = app.challengeDate,
+            inlayHintsEnabled = state.inlayHintsEnabled,
+            onExit = app::exitChallenge,
+            onSolved = app::refreshChallenges,
+        )
+
+        Screen.ChallengeBoard -> ChallengeBoardScreen(
+            backend = backend,
+            date = app.challengeDate,
+            onBack = app::exitChallengeBoard,
+        )
+
+        Screen.PublisherProfile -> PublisherProfileScreen(
+            backend = backend,
+            handle = app.publisherHandle.orEmpty(),
+            onBack = app::navigateBack,
+            onOpenItem = app::openStoreItem,
+            // Following needs an account; null would hide the button, which is not the same as it
+            // being unavailable, so it asks instead.
+            onNeedSignIn = { app.navigateTo(Screen.Projects) },
+        )
+
+        Screen.You -> YouScreen(
+            backend = backend,
+            onBack = app::navigateBack,
+            onOpenItem = app::openStoreItemById,
+            onOpenPublicProfile = app::openPublisher,
+            onPublish = if (backend.store.submissionsAvailable()) ({ app.openSubmitProject() }) else null,
+            onUpdateListing = if (backend.store.submissionsAvailable()) {
+                ({ slug: String -> app.openSubmitProject(itemSlug = slug) })
+            } else {
+                null
+            },
+            // Signing out from here lands back on the store, so the only way this renders signed out is
+            // a session that expired while it was open. Offering sign-in is the whole of that case.
+            onSignIn = { app.navigateTo(Screen.Projects) },
+            // Null in a build with no moderation transport; the screen additionally draws it only for
+            // an account the profile says moderates.
+            onModerate = if (backend.store.moderationAvailable()) ({ app.openModeration() }) else null,
+        )
+
+        Screen.Moderation -> ModerationScreen(
+            backend = backend,
+            onBack = app::navigateBack,
+            onOpenItem = app::openStoreItemById,
+            onOpenPublisher = app::openPublisher,
+        )
+
+        Screen.PublishingGuide -> PublishingGuideScreen(
+            onBack = app::navigateBack,
+            onPublish = if (backend.store.submissionsAvailable()) ({ app.openSubmitProject() }) else null,
+        )
+
+        Screen.SubmitProject -> SubmitProjectScreen(
+            backend = backend,
+            initialProject = app.submitProject,
+            initialItemSlug = app.submitItemSlug,
+            // Without this the screenshot picker has no host to ask, which reads on screen as an
+            // "Add a screenshot" button that does nothing.
+            fileActions = fileActions,
+            onBack = app::navigateBack,
+            // To the You screen on success, where the submission is now listed as in review: that is
+            // where its state lives and where its decision will arrive.
+            onSubmitted = app::finishSubmission,
+        )
+
+        Screen.StoreItem -> {
+            val storeScope = rememberCoroutineScope()
+            // The bookmark IS the like now: saving a project is the signal that you rate it, so the
+            // store counts saves publicly rather than asking twice for one opinion. Server-backed, with
+            // the device list as the offline answer (see StoreLikes), which is why a reinstall or a
+            // second device keeps the list.
+            var saved by remember(app.storeItem?.id) {
+                mutableStateOf(app.storeItem?.let { backend.store.isLiked(it.id) } == true)
+            }
+            StoreItemScreen(
+                backend = backend,
+                item = app.storeItem,
+                onBack = app::navigateBack,
+                onCreateFromTemplate = { id -> app.createProject(id) },
+                isSaved = saved,
+                onToggleSaved = app.storeItem?.let { current ->
+                    {
+                        val next = !saved
+                        // Flip first: the local write is what makes the tap feel like it landed, and a
+                        // refusal puts it back rather than leaving the button lying.
+                        saved = next
+                        storeScope.launch {
+                            if (backend.store.setLike(current.id, next) != null) saved = !next
+                        }
+                    }
+                },
+                // Signing in to review needs a browser; null on a host that cannot open one, which the
+                // sheet reports rather than working around.
+                onOpenUrl = if (fileActions.canOpenUrl) ({ url: String -> fileActions.openUrl(url) }) else null,
+                onOpenPublisher = { handle -> app.openPublisher(handle) },
+                // What "Open in editor" opens. Without it the button was inert, which is the half of
+                // this the user could see; the other half was the feed's own Open re-downloading.
+                onOpenInstalled = { path -> app.openInstalledProject(path) },
+            )
+        }
+
+        // The editor needs a loaded project. The state already turns every stale way in back Home
+        // ([Code StudioAppState.projectOpen]); this is the backstop for an engine unloaded under the editor, which
+        // must not compose a screen whose backend throws "No project is open" (a wrong Back target did, in 3.40.0).
+        Screen.Editor -> if (app.epoch <= 0) {
+            LaunchedEffect(Unit) { app.navigateTo(Screen.Projects) }
+        } else EditorScreen(
+            state = state,
+            onToggleTheme = { app.toggleTheme(dark) },
+            onOpenHub = { app.openHub(Screen.Editor) },
+            onOpenIconManager = { app.openIconManager(Screen.Editor) },
+            onNewImageAsset = { resDir -> app.openIconManager(Screen.Editor, resDir) },
+            onOpenDependencies = { module -> app.openModuleConfig(module, ModulesTab.Dependencies) },
+            onOpenModuleConfig = { module -> app.openModuleConfig(module, ModulesTab.Settings) },
+            onCloseProject = { if (app.lessonInEditor) app.exitLessonEditor() else app.navigateTo(Screen.Projects) },
+            closeProjectConfirm = app.confirmCloseProject,
+            // Leaving a lesson's workspace needs no confirmation: its work is saved and it reopens with the lesson.
+            onCloseProjectConfirmChange = { ask ->
+                if (ask && app.lessonInEditor) app.exitLessonEditor() else app.confirmCloseProject = ask
+            },
+            onOpenRun = { app.navigateTo(Screen.Run) },
+            onRunDockedChange = { app.runDocked = it },
+            fileActions = fileActions,
+            topBanner = app.currentLessonId?.takeIf { app.lessonInEditor }?.let { lessonId ->
+                {
+                    LessonBanner(
+                        backend = state.backend,
+                        ui = state,
+                        lessonId = lessonId,
+                        initialStep = app.lessonInitialStep,
+                        host = state.composePreviewHost,
+                        onExit = app::exitLessonEditor,
+                        onStepChanged = app::setLessonStep,
+                        onOpenDiscussion = { stepId -> app.openDiscussion(lessonId, stepId) },
+                        onAskForHelp = { stepId, code, error -> app.openAsk(lessonId, stepId, code, error) },
+                        onOpenSolutions = { stepId -> app.openSolutions(lessonId, stepId) },
+                    )
+                }
+            },
+        )
+
+        Screen.Run -> RunScreen(
+            backend = state.backend,
+            onBack = { app.navigateTo(Screen.Editor) },
+            onOpenDiagnostic = { d ->
+                d.file?.let {
+                    state.openAtLine(it, d.line, d.column)
+                    app.navigateTo(Screen.Editor)
+                }
+            },
+            onOpenSource = { path, offset ->
+                state.openAt(path, offset)
+                app.navigateTo(Screen.Editor)
+            },
+        )
+
+        Screen.ModuleConfig -> ModuleConfigScreen(
+            backend = state.backend,
+            initialModule = app.configModule,
+            initialTab = app.modulesTab,
+            onBack = { app.navigateTo(Screen.Editor) },
+            onOpenKeystoreManager = { app.openKeystoreManager(Screen.ModuleConfig, inProject = true) },
+            codeFont = codeFont,
+            fileActions = fileActions,
+            onFilesRelocated = state::afterFilesRelocated,
+        )
+
+        Screen.SdkManager -> SdkManagerScreen(
+            backend = state.backend,
+            onBack = { app.navigateTo(Screen.Hub) },
+            // A download that failed for want of space links straight to the screen that frees it.
+            onOpenStorage = { app.navigateTo(Screen.Storage) },
+        )
+
+        // A plugin-contributed screen (ScreenRegistry). The route is generic: the contribution renders its
+        // own body against the backend, the host bridges, and a Back that pops to wherever it came from.
+        Screen.PluginScreen -> {
+            // Hold the id this instance is showing rather than reading it live. Navigating away clears
+            // `pluginScreenId` while [ScreenHost]'s AnimatedContent still composes this branch for the
+            // exit animation, so reading it live would blank the screen mid-transition. It follows a
+            // change to another plugin screen (a diff opening that file's history), which stays on this
+            // same destination and so reuses this instance.
+            // The argument is held alongside for the same reason, and moves with the id: Back to an
+            // earlier entry of the same screen (one diff to another) changes only the argument.
+            var shown by remember { mutableStateOf(app.pluginScreenId to app.pluginScreenArgument) }
+            LaunchedEffect(app.pluginScreenId, app.pluginScreenArgument) {
+                app.pluginScreenId?.let { shown = it to app.pluginScreenArgument }
+            }
+            val (shownId, shownArgument) = shown
+            val contribution = shownId?.let { ScreenRegistry.find(it) }
+            if (contribution != null) {
+                val openInEditor = LocalPluginFileOpener.current
+                val screenCtx = remember(backend, fileActions, app, openInEditor, shownArgument) {
+                    object : ScreenContext {
+                        override val backend = backend
+                        override val fileActions = fileActions
+                        override val argument = shownArgument
+                        override fun back() = app.navigateBack()
+                        override fun openScreen(id: String) = app.openPluginScreen(id)
+                        override fun openFile(path: String, offset: Int) = openInEditor(path, offset)
+                    }
+                }
+                // Keyed so each entry starts from fresh state: two entries of one screen with different
+                // arguments are different pages, and one must not inherit the other's loaded content.
+                key(shownId, shownArgument) { contribution.content(screenCtx) }
+            }
+        }
+
+        Screen.LanguageServers -> LanguageServersScreen(backend = state.backend, onBack = { app.navigateTo(Screen.Hub) })
+
+        Screen.Plugins -> PluginsScreen(
+            backend = state.backend,
+            onBack = {
+                val back = app.pluginsReturn
+                app.resetPluginsEntry()
+                app.navigateTo(back)
+            },
+            onOpenUrl = if (fileActions.canOpenUrl) ({ url: String -> fileActions.openUrl(url) }) else null,
+            startTab = app.pluginsStartTab,
+            // The Logs viewer is an editor overlay, so the row offers it only with a project open (a project closed
+            // behind Home is still loaded, which is why this is not `epoch > 0`).
+            onOpenLogs = if (app.projectOpen) {
+                { pluginId ->
+                    state.logsSource = pluginId
+                    state.logsOpen = true
+                    app.navigateTo(Screen.Editor)
+                }
+            } else null,
+            // A restart takes the whole app down, so every modified buffer is written first. Offered only
+            // where the host can restart itself; the screen states the restart either way.
+            onRestart = if (state.backend.settings.canRestartApplication()) {
+                {
+                    state.saveAllNow()
+                    state.backend.settings.restartApplication()
+                }
+            } else null,
+        )
+
+        Screen.Storage -> StorageScreen(
+            backend = state.backend,
+            // A project closed behind Home is still loaded; it is not "open" and may be deleted here.
+            projectOpen = app.projectOpen,
+            onBack = { app.navigateTo(Screen.Hub) },
+        )
+
+        Screen.CodeStyle -> CodeStyleScreen(
+            backend = state.backend,
+            // The live formatter preview is engine-backed: available when the hub (hence Code Style) was
+            // opened from the editor, not from the project picker.
+            hasProject = app.hubInProject,
+            onBack = { app.navigateTo(Screen.Hub) },
+        )
+
+        // The editor color scheme. It needs no backend: schemes live on the app preference store, and
+        // the scheme it edits is the one the running theme is already rendering with, so every change
+        // repaints the app — including this screen's own preview — as it is made.
+        Screen.ColorScheme -> ColorSchemeScreen(
+            store = app.colorSchemes,
+            isDark = isDarkTheme(app.settings, isSystemInDarkTheme()),
+            onApply = app::applyColorScheme,
+            // A scheme is a file people hand to each other, so it goes in and out by file where the
+            // host has a picker and by clipboard everywhere (the screen always offers the clipboard).
+            onImportFile = if (fileActions.canPickFile) {
+                { onJson ->
+                    fileActions.pickFile(listOf("json")) { path ->
+                        if (path != null) runCatching { state.backend.files.readFile(path) }.getOrNull()?.let(onJson)
+                    }
+                }
+            } else {
+                null
+            },
+            onExportFile = if (fileActions.canShare || fileActions.canExport) {
+                { fileName, json ->
+                    state.backend.settings.writeSharedFile(fileName, json)?.let { path ->
+                        if (fileActions.canExport) fileActions.exportFile(path) else fileActions.share(path)
+                    }
+                }
+            } else {
+                null
+            },
+            onBack = { app.navigateTo(Screen.Hub) },
+        )
+
+        Screen.EditorSymbols -> SymbolMacroEditorScreen(
+            state = state,
+            onBack = { app.navigateTo(Screen.Hub) },
+        )
+
+        Screen.KeystoreManager -> KeystoreManagerScreen(
+            backend = state.backend,
+            onBack = { app.navigateTo(app.keystoreReturn) },
+            onCreate = { app.navigateTo(Screen.KeystoreCreate) },
+            onImport = app::openKeystoreImport,
+            // Signing assignment is per-project: only offered when the manager was opened from a project
+            // context (the editor's hub or a module's Signing tab), never from the picker's hub. So it stays
+            // hidden with no project open and cannot navigate into one.
+            onManageSigning = if (app.keystoreInProject) app::openSigningAssignment else null,
+            fileActions = fileActions,
+        )
+
+        Screen.IconManager -> {
+            val tab = state.active
+            // The reference form depends on the buffer, not just the file name (a Compose file wants a
+            // painter, a plain one wants `R.`), so the target is computed from the live text once on
+            // entry rather than per frame: materialising the rope is not free.
+            val insertionTarget = remember(tab?.path) {
+                tab?.let { UiInsertionTarget(it.path, composeContext = IconSnippets.looksLikeCompose(it.text)) }
+            }
+            IconManagerScreen(
+                backend = state.backend,
+                onBack = { app.navigateTo(app.iconManagerReturn) },
+                onOpenAppIconStudio = { seed -> app.openAppIconStudio(seed) },
+                // Offered only when there is an editor tab to write into; the edits drive that tab's own
+                // session, then the user is handed back to it so they see the result in place.
+                onInsert = if (tab == null) null else { ref ->
+                    scope.launch {
+                        val edits = state.backend.icons.iconInsertion(
+                            path = tab.path,
+                            text = tab.text,
+                            caret = tab.session.selection.min,
+                            ref = ref,
+                        )
+                        if (state.applyEdits(edits)) app.navigateTo(Screen.Editor)
+                    }
+                },
+                insertionTarget = insertionTarget,
+                initialResDir = app.iconManagerResDir,
+                fileActions = fileActions,
+                onOpenFile = { path, offset ->
+                    state.openAt(path, offset)
+                    app.navigateTo(Screen.Editor)
+                },
+                onFilesRelocated = state::afterFilesRelocated,
+                initialTab = app.iconManagerTab,
+                onTabChanged = { app.iconManagerTab = it },
+            )
+        }
+
+        Screen.AppIconStudio -> AppIconStudioScreen(
+            backend = state.backend,
+            onBack = { app.navigateTo(Screen.IconManager) },
+            seed = app.appIconSeed,
+            fileActions = fileActions,
+            onOpenFile = { path ->
+                state.openAt(path, 0)
+                app.navigateTo(Screen.Editor)
+            },
+            // The same run the editor's Run button starts, with the console open to follow it.
+            onRunApp = if (state.backend.build.supported()) {
+                {
+                    state.consoleOpen = true
+                    state.requestRun {
+                        val selected = state.selectedRunTask
+                        if (selected != null) state.backend.build.runTask(selected.id) else state.backend.build.runBuild()
+                    }
+                    app.navigateTo(Screen.Editor)
+                }
+            } else null,
+        )
+
+        Screen.KeystoreCreate -> KeystoreCreateScreen(
+            backend = state.backend,
+            onBack = { app.navigateTo(Screen.KeystoreManager) },
+            onDone = { app.navigateTo(Screen.KeystoreManager) },
+        )
+
+        Screen.KeystoreImport -> {
+            val path = app.keystoreImportPath
+            if (path == null) {
+                app.navigateTo(Screen.KeystoreManager)
+            } else {
+                KeystoreImportScreen(
+                    backend = state.backend,
+                    path = path,
+                    onBack = { app.navigateTo(Screen.KeystoreManager) },
+                    onDone = { app.navigateTo(Screen.KeystoreManager) },
+                )
+            }
+        }
+
+        Screen.Hub -> SettingsHubScreen(
+            sections = rememberHubSections(app, state),
+            onBack = { app.navigateTo(app.hubReturn) },
+            onOpen = { openHubTarget(app, it) },
+            listScroll = app.hubListScroll,
+        )
+
+        Screen.Settings -> SettingsRoute(app, state, codeFont, fileActions, app.settingsPageId)
+    }
+}
+
+/**
+ * The AI home tab, when the agent plugin contributes one ([HomeTabRegistry]). Its context reaches the editor and
+ * the Run button: the tab opens or creates a project in the background, and these take the user into it.
+ */
+@Composable
+private fun rememberAiTab(app: Code StudioAppState, state: IdeUiState, fileActions: FileActions): HomeAiTab? {
+    val contribution = HomeTabRegistry.find(HomeTabContribution.AI) ?: return null
+    val context = remember(app, state, fileActions) {
+        object : HomeTabContext {
+            override val backend get() = app.backend
+            override val fileActions get() = fileActions
+            override fun openEditor() = app.enterEditor()
+            override fun openFile(path: String) {
+                state.openAt(path, 0)
+                app.enterEditor()
+            }
+            // The same run the editor's Run button starts, with the console open to follow it.
+            override val runProject: (() -> Unit)? = if (state.backend.build.supported()) {
+                {
+                    state.consoleOpen = true
+                    state.requestRun {
+                        val selected = state.selectedRunTask
+                        if (selected != null) state.backend.build.runTask(selected.id) else state.backend.build.runBuild()
+                    }
+                    app.enterEditor()
+                }
+            } else null
+        }
+    }
+    return HomeAiTab(contribution.title, contribution.icon) { contribution.content(context) }
+}
+
+/**
+ * The landing surface: the project manager on its own, or (behind the Projects Store flag) that manager as
+ * one tab of [HomeScreen] alongside the store and Learn.
+ */
+@Composable
+private fun HomeRoute(app: Code StudioAppState, state: IdeUiState, fileActions: FileActions) {
+    LaunchedEffect(app.epoch, app.projectsRefresh) { app.loadProjects() }
+    val projects = app.projectList ?: emptyList()
+    if (!app.storeEnabled) {
+        ProjectPickerRoute(app, fileActions, projects)
+        return
+    }
+    // The wide home's sidebar reaches the inbox and the account sheet from every tab. Account lives on the
+    // Projects tab, so its entry switches there and asks that tab to open the sheet.
+    var notificationsVisible by remember { mutableStateOf(false) }
+    var accountRequested by remember { mutableStateOf(false) }
+    HomeScreen(
+        tab = app.homeTab,
+        onSelectTab = app::selectHomeTab,
+        projectsContent = {
+            ProjectPickerRoute(
+                app, fileActions, projects,
+                accountRequested = accountRequested,
+                onAccountRequestHandled = { accountRequested = false },
+            )
+        },
+        storeContent = { StoreRoute(app, fileActions) },
+        learnContent = { LearnRoute(app, fileActions) },
+        challengesContent = { ChallengeRoute(app, fileActions) },
+        projectCount = projects.size,
+        ai = rememberAiTab(app, state, fileActions),
+        sidebarFooter = {
+            val unread by app.backend.notifications.unreadCount().collectAsState()
+            HomeSidebarItem(
+                glyph = CaSymbols.inbox,
+                label = stringResource(Res.string.notif_title),
+                count = unread,
+                countIsAlert = true,
+                onClick = { notificationsVisible = true },
+            )
+            HomeSidebarItem(
+                glyph = CaSymbols.accountCircle,
+                label = stringResource(Res.string.home_account),
+                onClick = {
+                    app.selectHomeTab(HomeTab.Projects)
+                    accountRequested = true
+                },
+            )
+        },
+    )
+    if (notificationsVisible) {
+        NotificationsSheet(
+            backend = app.backend,
+            onDismiss = { notificationsVisible = false },
+            onOpenTarget = { n ->
+                notificationsVisible = false
+                app.openNotificationTarget(n)
+            },
+        )
+    }
+}
+
+@Composable
+private fun ProjectPickerRoute(
+    app: Code StudioAppState,
+    fileActions: FileActions,
+    projects: List<ProjectInfo>,
+    accountRequested: Boolean = false,
+    onAccountRequestHandled: () -> Unit = {},
+) {
+    val backend = app.backend
+    var notificationsVisible by remember { mutableStateOf(false) }
+    val halloween = remember(app) { HalloweenDressUp(app) }
+    val halloweenMode = halloween.mode()
+    // Store projects installed here that the store has a newer version of. Asked again when the project
+    // list changes (an install, a delete), and memoised by the backend, so showing Home is not a network trip.
+    val updates by produceState(emptyList<com.shd.codestudio.ui.backend.UiStoreUpdate>(), projects) {
+        value = runCatching { backend.store.availableUpdates() }.getOrDefault(emptyList())
+    }
+    ProjectsHomeScreen(
+        updates = updates,
+        onOpenUpdate = { app.openStoreItem(it.item) },
+        seasonalCard = halloweenMode?.let { mode ->
+            { cardModifier ->
+                HalloweenCard(
+                    mode = mode,
+                    onPrimary = if (mode == HalloweenCardMode.Offer) halloween::dressUp else halloween::putBack,
+                    onSecondary = if (mode == HalloweenCardMode.Applied) halloween::putBack else halloween::dismiss,
+                    modifier = cardModifier,
+                )
+            }
+        },
+        bell = { NotificationBell(backend, onClick = { notificationsVisible = true }) },
+        accountRequested = accountRequested,
+        onAccountRequestHandled = onAccountRequestHandled,
+        projects = projects,
+        projectsLoaded = app.projectList != null,
+        onOpen = app::openProject,
+        // Straight to the full-screen Create-Project gallery, which owns the template picker.
+        onNewProject = { app.createProject() },
+        onDeleteProject = app::deleteProject,
+        onRenameProject = if (backend.projects.projectRenameSupported) app::renameProject else null,
+        // One "Import project" entry for both sources; it asks which when the host can do both.
+        onImportProject = if (fileActions.canPickDirectory || fileActions.canPickFile) app::requestProjectImport else null,
+        // Cloning is the other way into a project, and it is the only one a user with no projects yet can
+        // reach: the Git panel lives in the editor, which needs a project open. Hidden when the version-control
+        // plugin is disabled or this build carries no engine.
+        onCloneRepository = if (app.backend.vcs.supported()) {
+            { app.openPluginScreen(VcsService.SCREEN_CLONE) }
+        } else null,
+        onExportProject = if (fileActions.canShare || fileActions.canExport || fileActions.canReveal) {
+            app::startExport
+        } else null,
+        onBackup = app::backupProjects,
+        onOpenHub = { app.openHub(Screen.Projects) },
+        onSubmitSuggestions = if (fileActions.canOpenUrl) {
+            { fileActions.openUrl(BetaInfo.FEEDBACK_URL) }
+        } else null,
+        onJoinDiscord = if (fileActions.canOpenUrl) {
+            { fileActions.openUrl(BetaInfo.DISCORD_URL) }
+        } else null,
+        // Downloading is a browser's job, so the card is offered only where links open.
+        onGetPlugins = if (fileActions.canOpenUrl) app::openGetPlugins else null,
+        onSponsor = if (fileActions.canOpenUrl) {
+            { fileActions.openUrl(BetaInfo.SPONSOR_URL) }
+        } else null,
+        onStarOnGitHub = if (fileActions.canOpenUrl) {
+            { fileActions.openUrl(BetaInfo.REPO_URL) }
+        } else null,
+        storagePath = backend.projects.storageRootPath(),
+        onOpenInFiles = if (fileActions.canReveal) {
+            { backend.projects.storageRootPath()?.let { fileActions.reveal(it) } }
+        } else null,
+        onRefresh = app::refreshProjects,
+        showLegacyRecovery = app.showLegacyRecovery,
+        onDismissLegacyRecovery = app::dismissLegacyRecovery,
+        loadIcon = { backend.projects.projectIcon(it.rootPath) },
+        loadIconImage = { backend.projects.imageBytes(it) },
+    )
+    if (notificationsVisible) {
+        NotificationsSheet(
+            backend = backend,
+            onDismiss = { notificationsVisible = false },
+            onOpenTarget = { n ->
+                notificationsVisible = false
+                app.openNotificationTarget(n)
+            },
+        )
+    }
+}
+
+/** What [StoreRoute] knows about the server-driven Explore feed: still asking, no remote store, or a feed. */
+private sealed interface StoreFeedState {
+    data object Loading : StoreFeedState
+    data object Unavailable : StoreFeedState
+    class Loaded(val feed: com.shd.codestudio.ui.backend.UiStoreFeed) : StoreFeedState
+}
+
+@Composable
+private fun StoreRoute(app: Code StudioAppState, fileActions: FileActions) {
+    // Publishing asks for an account at the moment it is needed, not at launch.
+    var signInVisible by remember { mutableStateOf(false) }
+    // The search is a mode of this tab rather than a route of its own, so returning from it keeps the
+    // feed's scroll position. Its entry used to re-select the tab it was already on, which is to say the
+    // store had a search box that did nothing.
+    // Saveable, so a search a listing was opened from is still open on the way back (see AppNavGraph's homeState).
+    var searching by rememberSaveable { mutableStateOf(false) }
+    var searchCategory by rememberSaveable { mutableStateOf<String?>(null) }
+    var searchQuery by rememberSaveable { mutableStateOf<String?>(null) }
+    var notifyLaunch by remember(app.backend) { mutableStateOf(app.backend.store.launchNotificationEnabled()) }
+    var notifyMessage by remember { mutableStateOf<String?>(null) }
+    val storeScope = rememberCoroutineScope()
+    // Ask for the server-driven feed once per epoch. THREE outcomes, not two: still asking, no remote
+    // store to reach, and a feed. "No remote store" means the bundled catalog screen takes over, which is
+    // the opposite claim from "the store is empty" and must not render the same page. Folding "still
+    // asking" into it as well is what made the tab open on the bundled catalog and then yank it away on
+    // every single visit: the offline page was being used as a loading spinner, and the shelves a user had
+    // started reading vanished as soon as the request landed.
+    val feed by produceState<StoreFeedState>(StoreFeedState.Loading, app.backend, app.epoch) {
+        val loaded = runCatching { app.backend.store.feed(seedItemId = null) }.getOrNull()
+        value = if (loaded != null) StoreFeedState.Loaded(loaded) else StoreFeedState.Unavailable
+    }
+    val current = when (val state = feed) {
+        StoreFeedState.Loading -> {
+            Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(Modifier.size(28.dp), strokeWidth = 3.dp)
+            }
+            return
+        }
+
+        StoreFeedState.Unavailable -> {
+            // The bundled catalogue, which owns its own search entry.
+            ProjectsStoreScreen(
+                backend = app.backend,
+                onOpenItem = app::openStoreItem,
+                onOpenHub = { app.openHub(Screen.Projects) },
+            )
+            return
+        }
+
+        is StoreFeedState.Loaded -> state.feed
+    }
+    // The bundled scaffolds fill the "Bundled with your IDE" shelf in the empty and sparse states. They
+    // come from the DEVICE, not the feed — that shelf's whole point is working with no network — so they
+    // are read from the bundled catalog rather than from `feed`.
+    val bundledItems by produceState(emptyList<com.shd.codestudio.ui.backend.UiStoreItem>(), app.backend, app.epoch) {
+        value = runCatching {
+            app.backend.store.catalog().sections
+                .firstOrNull { it.id == "templates" }?.items
+                ?.filter { it.templateId != null }
+                ?.take(4)
+                .orEmpty()
+        }.getOrDefault(emptyList())
+    }
+    // The search draws OVER the feed rather than replacing it: the feed stays composed, so coming back
+    // from a search lands where the reader left off instead of at the top of the store.
+    Box(Modifier.fillMaxSize()) {
+        ExploreFeed(
+            feed = current,
+            onOpenItem = app::openStoreItem,
+            installing = app.backend.store.installProgress().collectAsState().value,
+            onInstallItem = { item -> app.installStoreItem(item) },
+            onOpenSearch = { category ->
+                searchCategory = category
+                searchQuery = null
+                searching = true
+            },
+            onSearchTerm = { term ->
+                searchCategory = null
+                searchQuery = term
+                searching = true
+            },
+            bundled = bundledItems,
+            onUseBundled = { item -> item.templateId?.let(app::createProject) },
+            onPublish = { signInVisible = true },
+            // The switch was inert: nothing was passed, so it defaulted to false and a no-op handler. It now
+            // reflects and writes a real broadcast subscription on the device row.
+            notifyOnLaunch = notifyLaunch,
+            notifyMessage = notifyMessage,
+            onNotifyChange = { wanted ->
+                storeScope.launch {
+                    val error = app.backend.store.setLaunchNotification(wanted)
+                    // Only follow the server: a switch that flips on its own would claim a subscription the
+                    // backend never accepted.
+                    if (error == null) notifyLaunch = wanted
+                    notifyMessage = error
+                }
+            },
+            // A publisher with no handle has no page to open — the handle IS the address — so the tap is a
+            // no-op rather than opening a profile that cannot resolve.
+            onOpenPublisher = { publisher -> publisher.handle?.let { app.openPublisher(it) } },
+            // Signed in this opens the account's own page; signed out it is the sign-in sheet, because there is
+            // no page to show until there is an account.
+            onAccount = if (app.backend.store.authProviders().isNotEmpty()) {
+                ({ if (app.backend.store.authState().value.signedIn) app.openYou() else signInVisible = true })
+            } else {
+                null
+            },
+            signedIn = app.backend.store.authState().collectAsState().value.signedIn,
+            onHowItWorks = { app.openPublishingGuide() },
+            // Where the cards fetch a published screenshot from. Without it every shelf draws the abstract
+            // code motif, including for projects that shipped six screenshots.
+            backend = app.backend,
+        )
+        if (searching) {
+            StoreSearchScreen(
+                backend = app.backend,
+                onOpenItem = app::openStoreItem,
+                onClose = { searching = false },
+                initialCategory = searchCategory,
+                initialQuery = searchQuery,
+            )
+        }
+    }
+    if (signInVisible) {
+        StoreSignInSheet(
+            backend = app.backend,
+            onDismiss = { signInVisible = false },
+            onSubmitProject = if (app.backend.store.submissionsAvailable()) ({ app.openSubmitProject() }) else null,
+            // Null when the host cannot open a browser, which the sheet reports rather than working around.
+            onOpenUrl = if (fileActions.canOpenUrl) ({ url: String -> fileActions.openUrl(url) }) else null,
+        )
+    }
+}
+
+/**
+ * The Challenges tab.
+ *
+ * Signing in is offered through the same sheet the store uses, because it is the same account: a user
+ * who signed in to publish a project is already signed in to compete.
+ */
+@Composable
+private fun ChallengeRoute(app: Code StudioAppState, fileActions: FileActions) {
+    var signInVisible by remember { mutableStateOf(false) }
+    val signedIn = app.backend.store.authState().collectAsState().value.signedIn
+    DailyChallengeScreen(
+        backend = app.backend,
+        epoch = app.challengeEpoch,
+        signedIn = signedIn,
+        onSolve = { app.openChallenge() },
+        onSignIn = { signInVisible = true },
+        onOpenBoard = { app.openChallengeBoard() },
+        onOpenArchive = { date -> app.openChallenge(date) },
+    )
+    if (signInVisible) {
+        StoreSignInSheet(
+            backend = app.backend,
+            onDismiss = {
+                signInVisible = false
+                // A sign-in changes what the tab can show, and the sheet cannot know whether one happened.
+                app.refreshChallenges()
+            },
+            onSubmitProject = null,
+            onOpenUrl = if (fileActions.canOpenUrl) ({ url: String -> fileActions.openUrl(url) }) else null,
+        )
+    }
+}
+
+/** A Learn community screen with the store's sign-in sheet behind its "sign in to post" prompts. */
+@Composable
+private fun LearnCommunityRoute(
+    app: Code StudioAppState,
+    fileActions: FileActions,
+    content: @Composable (needSignIn: () -> Unit) -> Unit,
+) {
+    var signInVisible by remember { mutableStateOf(false) }
+    content { signInVisible = true }
+    if (signInVisible) {
+        StoreSignInSheet(
+            backend = app.backend,
+            onDismiss = { signInVisible = false },
+            onSubmitProject = null,
+            onOpenUrl = if (fileActions.canOpenUrl) ({ url: String -> fileActions.openUrl(url) }) else null,
+        )
+    }
+}
+
+@Composable
+private fun LearnRoute(app: Code StudioAppState, fileActions: FileActions) {
+    var signInVisible by remember { mutableStateOf(false) }
+    if (signInVisible) {
+        StoreSignInSheet(
+            backend = app.backend,
+            onDismiss = {
+                signInVisible = false
+                // The screen re-syncs when the auth state flips; this covers a sheet closed without signing in.
+                app.refreshLearn()
+            },
+            onSubmitProject = null,
+            onOpenUrl = if (fileActions.canOpenUrl) ({ url: String -> fileActions.openUrl(url) }) else null,
+        )
+    }
+    LearnScreen(
+        backend = app.backend,
+        epoch = app.learnEpoch,
+        onOpenTrack = app::openTrack,
+        onResume = app::resumeLesson,
+        onOpenPath = app::openPath,
+        // Shown only when Learn has an account backend (UiLearnAccount.available), so always offered here.
+        onSignIn = { signInVisible = true },
+        onOpenDocs = if (fileActions.canOpenUrl) {
+            { fileActions.openUrl(BetaInfo.REPO_URL) }
+        } else null,
+        onJoinDiscord = if (fileActions.canOpenUrl) {
+            { fileActions.openUrl(BetaInfo.DISCORD_URL) }
+        } else null,
+    )
+}

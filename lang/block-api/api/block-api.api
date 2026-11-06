@@ -1,34 +1,34 @@
-# The compiled surface of io.github.tyron12233:block-api, pinned at SPI 3.0.0.
+# The compiled surface of io.github.sagirhossendhali1999-cyber:block-api, pinned at SPI 3.0.0.
 # A plugin links against these by name and descriptor; see :spi-compat.
 # Regenerate with: ./gradlew :spi-compat:test -Dspi.updateBaselines=true
-dev/ide/block/BlockEdit
+com/shd/codestudio/block/BlockEdit
 	kind interface
-dev/ide/block/BlockField
+com/shd/codestudio/block/BlockField
 	kind class
 	super java/lang/Object
-	ctor (Ljava/lang/String;Ljava/lang/String;ZLdev/ide/lang/dom/TextRange;)V
-	ctor (Ljava/lang/String;Ljava/lang/String;ZLdev/ide/lang/dom/TextRange;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	field static Companion Ldev/ide/block/BlockField$Companion;
+	ctor (Ljava/lang/String;Ljava/lang/String;ZLcom/shd/codestudio/lang/dom/TextRange;)V
+	ctor (Ljava/lang/String;Ljava/lang/String;ZLcom/shd/codestudio/lang/dom/TextRange;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	field static Companion Lcom/shd/codestudio/block/BlockField$Companion;
 	method component1()Ljava/lang/String;
 	method component2()Ljava/lang/String;
 	method component3()Z
-	method component4()Ldev/ide/lang/dom/TextRange;
-	method copy(Ljava/lang/String;Ljava/lang/String;ZLdev/ide/lang/dom/TextRange;)Ldev/ide/block/BlockField;
+	method component4()Lcom/shd/codestudio/lang/dom/TextRange;
+	method copy(Ljava/lang/String;Ljava/lang/String;ZLcom/shd/codestudio/lang/dom/TextRange;)Lcom/shd/codestudio/block/BlockField;
 	method equals(Ljava/lang/Object;)Z
 	method getEditable()Z
-	method getRange()Ldev/ide/lang/dom/TextRange;
+	method getRange()Lcom/shd/codestudio/lang/dom/TextRange;
 	method getRole()Ljava/lang/String;
 	method getText()Ljava/lang/String;
 	method hashCode()I
-	method static copy$default(Ldev/ide/block/BlockField;Ljava/lang/String;Ljava/lang/String;ZLdev/ide/lang/dom/TextRange;ILjava/lang/Object;)Ldev/ide/block/BlockField;
+	method static copy$default(Lcom/shd/codestudio/block/BlockField;Ljava/lang/String;Ljava/lang/String;ZLcom/shd/codestudio/lang/dom/TextRange;ILjava/lang/Object;)Lcom/shd/codestudio/block/BlockField;
 	method toString()Ljava/lang/String;
-dev/ide/block/BlockField$Companion
+com/shd/codestudio/block/BlockField$Companion
 	kind class
 	super java/lang/Object
 	ctor (Lkotlin/jvm/internal/DefaultConstructorMarker;)V
-	method chrome(Ljava/lang/String;Ldev/ide/lang/dom/TextRange;)Ldev/ide/block/BlockField;
-	method static chrome$default(Ldev/ide/block/BlockField$Companion;Ljava/lang/String;Ldev/ide/lang/dom/TextRange;ILjava/lang/Object;)Ldev/ide/block/BlockField;
-dev/ide/block/BlockId
+	method chrome(Ljava/lang/String;Lcom/shd/codestudio/lang/dom/TextRange;)Lcom/shd/codestudio/block/BlockField;
+	method static chrome$default(Lcom/shd/codestudio/block/BlockField$Companion;Ljava/lang/String;Lcom/shd/codestudio/lang/dom/TextRange;ILjava/lang/Object;)Lcom/shd/codestudio/block/BlockField;
+com/shd/codestudio/block/BlockId
 	kind class
 	super java/lang/Object
 	method equals(Ljava/lang/Object;)Z
@@ -40,233 +40,233 @@ dev/ide/block/BlockId
 	method static hashCode-impl(Ljava/lang/String;)I
 	method static toString-impl(Ljava/lang/String;)Ljava/lang/String;
 	method toString()Ljava/lang/String;
-dev/ide/block/BlockMapping
+com/shd/codestudio/block/BlockMapping
 	kind interface
 	method abstract getHandles()Ljava/util/Set;
 	method abstract getLanguages()Ljava/util/Set;
-	method abstract template()Ldev/ide/block/BlockTemplate;
-	method project(Ldev/ide/lang/dom/DomNode;Ldev/ide/block/ProjectionContext;)Ldev/ide/block/BlockNode;
-	method serialize(Ldev/ide/block/BlockNode;)Ljava/lang/String;
-dev/ide/block/BlockMapping$DefaultImpls
+	method abstract template()Lcom/shd/codestudio/block/BlockTemplate;
+	method project(Lcom/shd/codestudio/lang/dom/DomNode;Lcom/shd/codestudio/block/ProjectionContext;)Lcom/shd/codestudio/block/BlockNode;
+	method serialize(Lcom/shd/codestudio/block/BlockNode;)Ljava/lang/String;
+com/shd/codestudio/block/BlockMapping$DefaultImpls
 	kind class
 	super java/lang/Object
-	method static project(Ldev/ide/block/BlockMapping;Ldev/ide/lang/dom/DomNode;Ldev/ide/block/ProjectionContext;)Ldev/ide/block/BlockNode;
-	method static serialize(Ldev/ide/block/BlockMapping;Ldev/ide/block/BlockNode;)Ljava/lang/String;
-dev/ide/block/BlockMappingKt
+	method static project(Lcom/shd/codestudio/block/BlockMapping;Lcom/shd/codestudio/lang/dom/DomNode;Lcom/shd/codestudio/block/ProjectionContext;)Lcom/shd/codestudio/block/BlockNode;
+	method static serialize(Lcom/shd/codestudio/block/BlockMapping;Lcom/shd/codestudio/block/BlockNode;)Ljava/lang/String;
+com/shd/codestudio/block/BlockMappingKt
 	kind class
 	super java/lang/Object
-	method static defaultSerialize(Ldev/ide/block/BlockNode;)Ljava/lang/String;
-	method static getBLOCK_MAPPING_EP()Ldev/ide/platform/ExtensionPoint;
-dev/ide/block/BlockNode
+	method static defaultSerialize(Lcom/shd/codestudio/block/BlockNode;)Ljava/lang/String;
+	method static getBLOCK_MAPPING_EP()Lcom/shd/codestudio/platform/ExtensionPoint;
+com/shd/codestudio/block/BlockNode
 	kind interface
-	method abstract getAnchor()Ldev/ide/lang/dom/DomNode;
+	method abstract getAnchor()Lcom/shd/codestudio/lang/dom/DomNode;
 	method abstract getId-EhzzDi8()Ljava/lang/String;
 	method abstract getKind-Iaadglk()Ljava/lang/String;
 	method abstract getParts()Ljava/util/List;
-	method abstract getRange()Ldev/ide/lang/dom/TextRange;
+	method abstract getRange()Lcom/shd/codestudio/lang/dom/TextRange;
 	method getFields()Ljava/util/List;
 	method getLabel()Ljava/lang/String;
 	method getSlots()Ljava/util/List;
-	method getValueKind()Ldev/ide/block/ValueKind;
-dev/ide/block/BlockNode$DefaultImpls
+	method getValueKind()Lcom/shd/codestudio/block/ValueKind;
+com/shd/codestudio/block/BlockNode$DefaultImpls
 	kind class
 	super java/lang/Object
-	method static getFields(Ldev/ide/block/BlockNode;)Ljava/util/List;
-	method static getLabel(Ldev/ide/block/BlockNode;)Ljava/lang/String;
-	method static getSlots(Ldev/ide/block/BlockNode;)Ljava/util/List;
-	method static getValueKind(Ldev/ide/block/BlockNode;)Ldev/ide/block/ValueKind;
-dev/ide/block/BlockPart
+	method static getFields(Lcom/shd/codestudio/block/BlockNode;)Ljava/util/List;
+	method static getLabel(Lcom/shd/codestudio/block/BlockNode;)Ljava/lang/String;
+	method static getSlots(Lcom/shd/codestudio/block/BlockNode;)Ljava/util/List;
+	method static getValueKind(Lcom/shd/codestudio/block/BlockNode;)Lcom/shd/codestudio/block/ValueKind;
+com/shd/codestudio/block/BlockPart
 	kind interface
-dev/ide/block/BlockPart$Field
+com/shd/codestudio/block/BlockPart$Field
 	kind class
 	super java/lang/Object
-	implements dev/ide/block/BlockPart
-	ctor (Ldev/ide/block/BlockField;)V
-	method component1()Ldev/ide/block/BlockField;
-	method copy(Ldev/ide/block/BlockField;)Ldev/ide/block/BlockPart$Field;
+	implements com/shd/codestudio/block/BlockPart
+	ctor (Lcom/shd/codestudio/block/BlockField;)V
+	method component1()Lcom/shd/codestudio/block/BlockField;
+	method copy(Lcom/shd/codestudio/block/BlockField;)Lcom/shd/codestudio/block/BlockPart$Field;
 	method equals(Ljava/lang/Object;)Z
-	method getField()Ldev/ide/block/BlockField;
+	method getField()Lcom/shd/codestudio/block/BlockField;
 	method hashCode()I
-	method static copy$default(Ldev/ide/block/BlockPart$Field;Ldev/ide/block/BlockField;ILjava/lang/Object;)Ldev/ide/block/BlockPart$Field;
+	method static copy$default(Lcom/shd/codestudio/block/BlockPart$Field;Lcom/shd/codestudio/block/BlockField;ILjava/lang/Object;)Lcom/shd/codestudio/block/BlockPart$Field;
 	method toString()Ljava/lang/String;
-dev/ide/block/BlockPart$Slot
+com/shd/codestudio/block/BlockPart$Slot
 	kind class
 	super java/lang/Object
-	implements dev/ide/block/BlockPart
-	ctor (Ldev/ide/block/BlockSlot;)V
-	method component1()Ldev/ide/block/BlockSlot;
-	method copy(Ldev/ide/block/BlockSlot;)Ldev/ide/block/BlockPart$Slot;
+	implements com/shd/codestudio/block/BlockPart
+	ctor (Lcom/shd/codestudio/block/BlockSlot;)V
+	method component1()Lcom/shd/codestudio/block/BlockSlot;
+	method copy(Lcom/shd/codestudio/block/BlockSlot;)Lcom/shd/codestudio/block/BlockPart$Slot;
 	method equals(Ljava/lang/Object;)Z
-	method getSlot()Ldev/ide/block/BlockSlot;
+	method getSlot()Lcom/shd/codestudio/block/BlockSlot;
 	method hashCode()I
-	method static copy$default(Ldev/ide/block/BlockPart$Slot;Ldev/ide/block/BlockSlot;ILjava/lang/Object;)Ldev/ide/block/BlockPart$Slot;
+	method static copy$default(Lcom/shd/codestudio/block/BlockPart$Slot;Lcom/shd/codestudio/block/BlockSlot;ILjava/lang/Object;)Lcom/shd/codestudio/block/BlockPart$Slot;
 	method toString()Ljava/lang/String;
-dev/ide/block/BlockProjectionService
+com/shd/codestudio/block/BlockProjectionService
 	kind interface
-	method abstract computeEdit(Ldev/ide/block/BlockTree;Ljava/lang/CharSequence;Ldev/ide/block/BlockEdit;)Ljava/util/List;
-	method abstract project(Ldev/ide/lang/dom/ParsedFile;)Ldev/ide/block/BlockTree;
-	method blockAt(Ldev/ide/block/BlockTree;I)Ldev/ide/block/BlockNode;
-dev/ide/block/BlockProjectionService$DefaultImpls
+	method abstract computeEdit(Lcom/shd/codestudio/block/BlockTree;Ljava/lang/CharSequence;Lcom/shd/codestudio/block/BlockEdit;)Ljava/util/List;
+	method abstract project(Lcom/shd/codestudio/lang/dom/ParsedFile;)Lcom/shd/codestudio/block/BlockTree;
+	method blockAt(Lcom/shd/codestudio/block/BlockTree;I)Lcom/shd/codestudio/block/BlockNode;
+com/shd/codestudio/block/BlockProjectionService$DefaultImpls
 	kind class
 	super java/lang/Object
-	method static blockAt(Ldev/ide/block/BlockProjectionService;Ldev/ide/block/BlockTree;I)Ldev/ide/block/BlockNode;
-dev/ide/block/BlockRef
+	method static blockAt(Lcom/shd/codestudio/block/BlockProjectionService;Lcom/shd/codestudio/block/BlockTree;I)Lcom/shd/codestudio/block/BlockNode;
+com/shd/codestudio/block/BlockRef
 	kind class
 	super java/lang/Object
 	ctor (Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	method component1-EhzzDi8()Ljava/lang/String;
-	method copy-TkmiAxo(Ljava/lang/String;)Ldev/ide/block/BlockRef;
+	method copy-TkmiAxo(Ljava/lang/String;)Lcom/shd/codestudio/block/BlockRef;
 	method equals(Ljava/lang/Object;)Z
 	method getId-EhzzDi8()Ljava/lang/String;
 	method hashCode()I
-	method static copy-TkmiAxo$default(Ldev/ide/block/BlockRef;Ljava/lang/String;ILjava/lang/Object;)Ldev/ide/block/BlockRef;
+	method static copy-TkmiAxo$default(Lcom/shd/codestudio/block/BlockRef;Ljava/lang/String;ILjava/lang/Object;)Lcom/shd/codestudio/block/BlockRef;
 	method toString()Ljava/lang/String;
-dev/ide/block/BlockSlot
+com/shd/codestudio/block/BlockSlot
 	kind interface
-	method abstract getCategory()Ldev/ide/block/SlotCategory;
+	method abstract getCategory()Lcom/shd/codestudio/block/SlotCategory;
 	method abstract getChildren()Ljava/util/List;
 	method abstract getMultiple()Z
-	method abstract getRange()Ldev/ide/lang/dom/TextRange;
-	method getValueKind()Ldev/ide/block/ValueKind;
-dev/ide/block/BlockSlot$DefaultImpls
+	method abstract getRange()Lcom/shd/codestudio/lang/dom/TextRange;
+	method getValueKind()Lcom/shd/codestudio/block/ValueKind;
+com/shd/codestudio/block/BlockSlot$DefaultImpls
 	kind class
 	super java/lang/Object
-	method static getValueKind(Ldev/ide/block/BlockSlot;)Ldev/ide/block/ValueKind;
-dev/ide/block/BlockTemplate
+	method static getValueKind(Lcom/shd/codestudio/block/BlockSlot;)Lcom/shd/codestudio/block/ValueKind;
+com/shd/codestudio/block/BlockTemplate
 	kind class
 	super java/lang/Object
-	ctor (Ljava/lang/String;Ldev/ide/block/SlotCategory;Ljava/lang/String;Ljava/util/List;)V
-	ctor (Ljava/lang/String;Ldev/ide/block/SlotCategory;Ljava/lang/String;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	field static Companion Ldev/ide/block/BlockTemplate$Companion;
+	ctor (Ljava/lang/String;Lcom/shd/codestudio/block/SlotCategory;Ljava/lang/String;Ljava/util/List;)V
+	ctor (Ljava/lang/String;Lcom/shd/codestudio/block/SlotCategory;Ljava/lang/String;Ljava/util/List;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	field static Companion Lcom/shd/codestudio/block/BlockTemplate$Companion;
 	field static PLACEHOLDER C
 	method component1()Ljava/lang/String;
-	method component2()Ldev/ide/block/SlotCategory;
+	method component2()Lcom/shd/codestudio/block/SlotCategory;
 	method component3()Ljava/lang/String;
 	method component4()Ljava/util/List;
-	method copy(Ljava/lang/String;Ldev/ide/block/SlotCategory;Ljava/lang/String;Ljava/util/List;)Ldev/ide/block/BlockTemplate;
+	method copy(Ljava/lang/String;Lcom/shd/codestudio/block/SlotCategory;Ljava/lang/String;Ljava/util/List;)Lcom/shd/codestudio/block/BlockTemplate;
 	method equals(Ljava/lang/Object;)Z
-	method getCategory()Ldev/ide/block/SlotCategory;
+	method getCategory()Lcom/shd/codestudio/block/SlotCategory;
 	method getDefaultText()Ljava/lang/String;
 	method getLabel()Ljava/lang/String;
 	method getSlots()Ljava/util/List;
 	method hashCode()I
-	method static copy$default(Ldev/ide/block/BlockTemplate;Ljava/lang/String;Ldev/ide/block/SlotCategory;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Ldev/ide/block/BlockTemplate;
+	method static copy$default(Lcom/shd/codestudio/block/BlockTemplate;Ljava/lang/String;Lcom/shd/codestudio/block/SlotCategory;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lcom/shd/codestudio/block/BlockTemplate;
 	method toString()Ljava/lang/String;
-dev/ide/block/BlockTemplate$Companion
+com/shd/codestudio/block/BlockTemplate$Companion
 	kind class
 	super java/lang/Object
 	ctor (Lkotlin/jvm/internal/DefaultConstructorMarker;)V
-dev/ide/block/BlockTree
+com/shd/codestudio/block/BlockTree
 	kind interface
-	method abstract block-TkmiAxo(Ljava/lang/String;)Ldev/ide/block/BlockNode;
-	method abstract blockAt(I)Ldev/ide/block/BlockNode;
-	method abstract getRoot()Ldev/ide/block/BlockNode;
+	method abstract block-TkmiAxo(Ljava/lang/String;)Lcom/shd/codestudio/block/BlockNode;
+	method abstract blockAt(I)Lcom/shd/codestudio/block/BlockNode;
+	method abstract getRoot()Lcom/shd/codestudio/block/BlockNode;
 	method abstract getVersion()J
-dev/ide/block/Delete
+com/shd/codestudio/block/Delete
 	kind class
 	super java/lang/Object
-	implements dev/ide/block/BlockEdit
-	ctor (Ldev/ide/block/BlockRef;)V
-	method component1()Ldev/ide/block/BlockRef;
-	method copy(Ldev/ide/block/BlockRef;)Ldev/ide/block/Delete;
+	implements com/shd/codestudio/block/BlockEdit
+	ctor (Lcom/shd/codestudio/block/BlockRef;)V
+	method component1()Lcom/shd/codestudio/block/BlockRef;
+	method copy(Lcom/shd/codestudio/block/BlockRef;)Lcom/shd/codestudio/block/Delete;
 	method equals(Ljava/lang/Object;)Z
-	method getBlock()Ldev/ide/block/BlockRef;
+	method getBlock()Lcom/shd/codestudio/block/BlockRef;
 	method hashCode()I
-	method static copy$default(Ldev/ide/block/Delete;Ldev/ide/block/BlockRef;ILjava/lang/Object;)Ldev/ide/block/Delete;
+	method static copy$default(Lcom/shd/codestudio/block/Delete;Lcom/shd/codestudio/block/BlockRef;ILjava/lang/Object;)Lcom/shd/codestudio/block/Delete;
 	method toString()Ljava/lang/String;
-dev/ide/block/InsertTemplate
+com/shd/codestudio/block/InsertTemplate
 	kind class
 	super java/lang/Object
-	implements dev/ide/block/BlockEdit
-	ctor (Ldev/ide/block/SlotRef;Ldev/ide/block/BlockTemplate;)V
-	method component1()Ldev/ide/block/SlotRef;
-	method component2()Ldev/ide/block/BlockTemplate;
-	method copy(Ldev/ide/block/SlotRef;Ldev/ide/block/BlockTemplate;)Ldev/ide/block/InsertTemplate;
+	implements com/shd/codestudio/block/BlockEdit
+	ctor (Lcom/shd/codestudio/block/SlotRef;Lcom/shd/codestudio/block/BlockTemplate;)V
+	method component1()Lcom/shd/codestudio/block/SlotRef;
+	method component2()Lcom/shd/codestudio/block/BlockTemplate;
+	method copy(Lcom/shd/codestudio/block/SlotRef;Lcom/shd/codestudio/block/BlockTemplate;)Lcom/shd/codestudio/block/InsertTemplate;
 	method equals(Ljava/lang/Object;)Z
-	method getAt()Ldev/ide/block/SlotRef;
-	method getTemplate()Ldev/ide/block/BlockTemplate;
+	method getAt()Lcom/shd/codestudio/block/SlotRef;
+	method getTemplate()Lcom/shd/codestudio/block/BlockTemplate;
 	method hashCode()I
-	method static copy$default(Ldev/ide/block/InsertTemplate;Ldev/ide/block/SlotRef;Ldev/ide/block/BlockTemplate;ILjava/lang/Object;)Ldev/ide/block/InsertTemplate;
+	method static copy$default(Lcom/shd/codestudio/block/InsertTemplate;Lcom/shd/codestudio/block/SlotRef;Lcom/shd/codestudio/block/BlockTemplate;ILjava/lang/Object;)Lcom/shd/codestudio/block/InsertTemplate;
 	method toString()Ljava/lang/String;
-dev/ide/block/Move
+com/shd/codestudio/block/Move
 	kind class
 	super java/lang/Object
-	implements dev/ide/block/BlockEdit
-	ctor (Ldev/ide/block/BlockRef;Ldev/ide/block/SlotRef;)V
-	method component1()Ldev/ide/block/BlockRef;
-	method component2()Ldev/ide/block/SlotRef;
-	method copy(Ldev/ide/block/BlockRef;Ldev/ide/block/SlotRef;)Ldev/ide/block/Move;
+	implements com/shd/codestudio/block/BlockEdit
+	ctor (Lcom/shd/codestudio/block/BlockRef;Lcom/shd/codestudio/block/SlotRef;)V
+	method component1()Lcom/shd/codestudio/block/BlockRef;
+	method component2()Lcom/shd/codestudio/block/SlotRef;
+	method copy(Lcom/shd/codestudio/block/BlockRef;Lcom/shd/codestudio/block/SlotRef;)Lcom/shd/codestudio/block/Move;
 	method equals(Ljava/lang/Object;)Z
-	method getBlock()Ldev/ide/block/BlockRef;
-	method getTo()Ldev/ide/block/SlotRef;
+	method getBlock()Lcom/shd/codestudio/block/BlockRef;
+	method getTo()Lcom/shd/codestudio/block/SlotRef;
 	method hashCode()I
-	method static copy$default(Ldev/ide/block/Move;Ldev/ide/block/BlockRef;Ldev/ide/block/SlotRef;ILjava/lang/Object;)Ldev/ide/block/Move;
+	method static copy$default(Lcom/shd/codestudio/block/Move;Lcom/shd/codestudio/block/BlockRef;Lcom/shd/codestudio/block/SlotRef;ILjava/lang/Object;)Lcom/shd/codestudio/block/Move;
 	method toString()Ljava/lang/String;
-dev/ide/block/ProjectionContext
+com/shd/codestudio/block/ProjectionContext
 	kind interface
-	method abstract block-bnSY5Jo(Ldev/ide/lang/dom/DomNode;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ldev/ide/block/ValueKind;)Ldev/ide/block/BlockNode;
-	method abstract carve(Ldev/ide/lang/dom/DomNode;)Ldev/ide/block/BlockNode;
-	method abstract child(Ldev/ide/lang/dom/DomNode;)Ldev/ide/block/BlockNode;
-	method abstract field(Ljava/lang/String;Ljava/lang/String;ZLdev/ide/lang/dom/TextRange;)Ldev/ide/block/BlockField;
+	method abstract block-bnSY5Jo(Lcom/shd/codestudio/lang/dom/DomNode;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Lcom/shd/codestudio/block/ValueKind;)Lcom/shd/codestudio/block/BlockNode;
+	method abstract carve(Lcom/shd/codestudio/lang/dom/DomNode;)Lcom/shd/codestudio/block/BlockNode;
+	method abstract child(Lcom/shd/codestudio/lang/dom/DomNode;)Lcom/shd/codestudio/block/BlockNode;
+	method abstract field(Ljava/lang/String;Ljava/lang/String;ZLcom/shd/codestudio/lang/dom/TextRange;)Lcom/shd/codestudio/block/BlockField;
 	method abstract getSource()Ljava/lang/CharSequence;
-	method abstract slot(Ldev/ide/block/SlotCategory;Ljava/util/List;ZLdev/ide/lang/dom/TextRange;Ldev/ide/block/ValueKind;)Ldev/ide/block/BlockSlot;
-	method abstract textOf(Ldev/ide/lang/dom/TextRange;)Ljava/lang/CharSequence;
-	method static block-bnSY5Jo$default(Ldev/ide/block/ProjectionContext;Ldev/ide/lang/dom/DomNode;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ldev/ide/block/ValueKind;ILjava/lang/Object;)Ldev/ide/block/BlockNode;
-	method static field$default(Ldev/ide/block/ProjectionContext;Ljava/lang/String;Ljava/lang/String;ZLdev/ide/lang/dom/TextRange;ILjava/lang/Object;)Ldev/ide/block/BlockField;
-	method static slot$default(Ldev/ide/block/ProjectionContext;Ldev/ide/block/SlotCategory;Ljava/util/List;ZLdev/ide/lang/dom/TextRange;Ldev/ide/block/ValueKind;ILjava/lang/Object;)Ldev/ide/block/BlockSlot;
-dev/ide/block/ProjectionContext$DefaultImpls
+	method abstract slot(Lcom/shd/codestudio/block/SlotCategory;Ljava/util/List;ZLcom/shd/codestudio/lang/dom/TextRange;Lcom/shd/codestudio/block/ValueKind;)Lcom/shd/codestudio/block/BlockSlot;
+	method abstract textOf(Lcom/shd/codestudio/lang/dom/TextRange;)Ljava/lang/CharSequence;
+	method static block-bnSY5Jo$default(Lcom/shd/codestudio/block/ProjectionContext;Lcom/shd/codestudio/lang/dom/DomNode;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Lcom/shd/codestudio/block/ValueKind;ILjava/lang/Object;)Lcom/shd/codestudio/block/BlockNode;
+	method static field$default(Lcom/shd/codestudio/block/ProjectionContext;Ljava/lang/String;Ljava/lang/String;ZLcom/shd/codestudio/lang/dom/TextRange;ILjava/lang/Object;)Lcom/shd/codestudio/block/BlockField;
+	method static slot$default(Lcom/shd/codestudio/block/ProjectionContext;Lcom/shd/codestudio/block/SlotCategory;Ljava/util/List;ZLcom/shd/codestudio/lang/dom/TextRange;Lcom/shd/codestudio/block/ValueKind;ILjava/lang/Object;)Lcom/shd/codestudio/block/BlockSlot;
+com/shd/codestudio/block/ProjectionContext$DefaultImpls
 	kind class
 	super java/lang/Object
-	method static block-bnSY5Jo$default(Ldev/ide/block/ProjectionContext;Ldev/ide/lang/dom/DomNode;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Ldev/ide/block/ValueKind;ILjava/lang/Object;)Ldev/ide/block/BlockNode;
-	method static field$default(Ldev/ide/block/ProjectionContext;Ljava/lang/String;Ljava/lang/String;ZLdev/ide/lang/dom/TextRange;ILjava/lang/Object;)Ldev/ide/block/BlockField;
-	method static slot$default(Ldev/ide/block/ProjectionContext;Ldev/ide/block/SlotCategory;Ljava/util/List;ZLdev/ide/lang/dom/TextRange;Ldev/ide/block/ValueKind;ILjava/lang/Object;)Ldev/ide/block/BlockSlot;
-dev/ide/block/ReplaceWithText
+	method static block-bnSY5Jo$default(Lcom/shd/codestudio/block/ProjectionContext;Lcom/shd/codestudio/lang/dom/DomNode;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;Lcom/shd/codestudio/block/ValueKind;ILjava/lang/Object;)Lcom/shd/codestudio/block/BlockNode;
+	method static field$default(Lcom/shd/codestudio/block/ProjectionContext;Ljava/lang/String;Ljava/lang/String;ZLcom/shd/codestudio/lang/dom/TextRange;ILjava/lang/Object;)Lcom/shd/codestudio/block/BlockField;
+	method static slot$default(Lcom/shd/codestudio/block/ProjectionContext;Lcom/shd/codestudio/block/SlotCategory;Ljava/util/List;ZLcom/shd/codestudio/lang/dom/TextRange;Lcom/shd/codestudio/block/ValueKind;ILjava/lang/Object;)Lcom/shd/codestudio/block/BlockSlot;
+com/shd/codestudio/block/ReplaceWithText
 	kind class
 	super java/lang/Object
-	implements dev/ide/block/BlockEdit
-	ctor (Ldev/ide/block/SlotRef;Ljava/lang/String;)V
-	method component1()Ldev/ide/block/SlotRef;
+	implements com/shd/codestudio/block/BlockEdit
+	ctor (Lcom/shd/codestudio/block/SlotRef;Ljava/lang/String;)V
+	method component1()Lcom/shd/codestudio/block/SlotRef;
 	method component2()Ljava/lang/String;
-	method copy(Ldev/ide/block/SlotRef;Ljava/lang/String;)Ldev/ide/block/ReplaceWithText;
+	method copy(Lcom/shd/codestudio/block/SlotRef;Ljava/lang/String;)Lcom/shd/codestudio/block/ReplaceWithText;
 	method equals(Ljava/lang/Object;)Z
-	method getSlot()Ldev/ide/block/SlotRef;
+	method getSlot()Lcom/shd/codestudio/block/SlotRef;
 	method getText()Ljava/lang/String;
 	method hashCode()I
-	method static copy$default(Ldev/ide/block/ReplaceWithText;Ldev/ide/block/SlotRef;Ljava/lang/String;ILjava/lang/Object;)Ldev/ide/block/ReplaceWithText;
+	method static copy$default(Lcom/shd/codestudio/block/ReplaceWithText;Lcom/shd/codestudio/block/SlotRef;Ljava/lang/String;ILjava/lang/Object;)Lcom/shd/codestudio/block/ReplaceWithText;
 	method toString()Ljava/lang/String;
-dev/ide/block/SetField
+com/shd/codestudio/block/SetField
 	kind class
 	super java/lang/Object
-	implements dev/ide/block/BlockEdit
-	ctor (Ldev/ide/block/BlockRef;Ljava/lang/String;Ljava/lang/String;)V
-	method component1()Ldev/ide/block/BlockRef;
+	implements com/shd/codestudio/block/BlockEdit
+	ctor (Lcom/shd/codestudio/block/BlockRef;Ljava/lang/String;Ljava/lang/String;)V
+	method component1()Lcom/shd/codestudio/block/BlockRef;
 	method component2()Ljava/lang/String;
 	method component3()Ljava/lang/String;
-	method copy(Ldev/ide/block/BlockRef;Ljava/lang/String;Ljava/lang/String;)Ldev/ide/block/SetField;
+	method copy(Lcom/shd/codestudio/block/BlockRef;Ljava/lang/String;Ljava/lang/String;)Lcom/shd/codestudio/block/SetField;
 	method equals(Ljava/lang/Object;)Z
-	method getBlock()Ldev/ide/block/BlockRef;
+	method getBlock()Lcom/shd/codestudio/block/BlockRef;
 	method getRole()Ljava/lang/String;
 	method getText()Ljava/lang/String;
 	method hashCode()I
-	method static copy$default(Ldev/ide/block/SetField;Ldev/ide/block/BlockRef;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ldev/ide/block/SetField;
+	method static copy$default(Lcom/shd/codestudio/block/SetField;Lcom/shd/codestudio/block/BlockRef;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/shd/codestudio/block/SetField;
 	method toString()Ljava/lang/String;
-dev/ide/block/SlotCategory
+com/shd/codestudio/block/SlotCategory
 	kind enum
 	super java/lang/Enum
-	field static ARGUMENT Ldev/ide/block/SlotCategory;
-	field static DECLARATION Ldev/ide/block/SlotCategory;
-	field static EXPRESSION Ldev/ide/block/SlotCategory;
-	field static MODIFIER Ldev/ide/block/SlotCategory;
-	field static NAME Ldev/ide/block/SlotCategory;
-	field static OPAQUE Ldev/ide/block/SlotCategory;
-	field static PARAMETER Ldev/ide/block/SlotCategory;
-	field static STATEMENT Ldev/ide/block/SlotCategory;
-	field static TYPE Ldev/ide/block/SlotCategory;
-	method accepts(Ldev/ide/block/SlotCategory;)Z
+	field static ARGUMENT Lcom/shd/codestudio/block/SlotCategory;
+	field static DECLARATION Lcom/shd/codestudio/block/SlotCategory;
+	field static EXPRESSION Lcom/shd/codestudio/block/SlotCategory;
+	field static MODIFIER Lcom/shd/codestudio/block/SlotCategory;
+	field static NAME Lcom/shd/codestudio/block/SlotCategory;
+	field static OPAQUE Lcom/shd/codestudio/block/SlotCategory;
+	field static PARAMETER Lcom/shd/codestudio/block/SlotCategory;
+	field static STATEMENT Lcom/shd/codestudio/block/SlotCategory;
+	field static TYPE Lcom/shd/codestudio/block/SlotCategory;
+	method accepts(Lcom/shd/codestudio/block/SlotCategory;)Z
 	method static getEntries()Lkotlin/enums/EnumEntries;
-	method static valueOf(Ljava/lang/String;)Ldev/ide/block/SlotCategory;
-	method static values()[Ldev/ide/block/SlotCategory;
-dev/ide/block/SlotRef
+	method static valueOf(Ljava/lang/String;)Lcom/shd/codestudio/block/SlotCategory;
+	method static values()[Lcom/shd/codestudio/block/SlotCategory;
+com/shd/codestudio/block/SlotRef
 	kind class
 	super java/lang/Object
 	ctor (Ljava/lang/String;IIILkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -274,40 +274,40 @@ dev/ide/block/SlotRef
 	method component1-EhzzDi8()Ljava/lang/String;
 	method component2()I
 	method component3()I
-	method copy-0pyA3Do(Ljava/lang/String;II)Ldev/ide/block/SlotRef;
+	method copy-0pyA3Do(Ljava/lang/String;II)Lcom/shd/codestudio/block/SlotRef;
 	method equals(Ljava/lang/Object;)Z
 	method getIndex()I
 	method getOwner-EhzzDi8()Ljava/lang/String;
 	method getSlotIndex()I
 	method hashCode()I
-	method static copy-0pyA3Do$default(Ldev/ide/block/SlotRef;Ljava/lang/String;IIILjava/lang/Object;)Ldev/ide/block/SlotRef;
+	method static copy-0pyA3Do$default(Lcom/shd/codestudio/block/SlotRef;Ljava/lang/String;IIILjava/lang/Object;)Lcom/shd/codestudio/block/SlotRef;
 	method toString()Ljava/lang/String;
-dev/ide/block/ValueKind
+com/shd/codestudio/block/ValueKind
 	kind enum
 	super java/lang/Enum
-	field static BOOLEAN Ldev/ide/block/ValueKind;
-	field static NUMBER Ldev/ide/block/ValueKind;
-	field static OBJECT Ldev/ide/block/ValueKind;
-	field static STRING Ldev/ide/block/ValueKind;
-	field static TYPE Ldev/ide/block/ValueKind;
-	field static UNKNOWN Ldev/ide/block/ValueKind;
+	field static BOOLEAN Lcom/shd/codestudio/block/ValueKind;
+	field static NUMBER Lcom/shd/codestudio/block/ValueKind;
+	field static OBJECT Lcom/shd/codestudio/block/ValueKind;
+	field static STRING Lcom/shd/codestudio/block/ValueKind;
+	field static TYPE Lcom/shd/codestudio/block/ValueKind;
+	field static UNKNOWN Lcom/shd/codestudio/block/ValueKind;
 	method static getEntries()Lkotlin/enums/EnumEntries;
-	method static valueOf(Ljava/lang/String;)Ldev/ide/block/ValueKind;
-	method static values()[Ldev/ide/block/ValueKind;
-dev/ide/block/ValueKindOracle
+	method static valueOf(Ljava/lang/String;)Lcom/shd/codestudio/block/ValueKind;
+	method static values()[Lcom/shd/codestudio/block/ValueKind;
+com/shd/codestudio/block/ValueKindOracle
 	kind interface
-	method abstract producedKind(Ldev/ide/lang/dom/DomNode;)Ldev/ide/block/ValueKind;
-dev/ide/block/Wrap
+	method abstract producedKind(Lcom/shd/codestudio/lang/dom/DomNode;)Lcom/shd/codestudio/block/ValueKind;
+com/shd/codestudio/block/Wrap
 	kind class
 	super java/lang/Object
-	implements dev/ide/block/BlockEdit
-	ctor (Ldev/ide/block/BlockRef;Ldev/ide/block/BlockTemplate;)V
-	method component1()Ldev/ide/block/BlockRef;
-	method component2()Ldev/ide/block/BlockTemplate;
-	method copy(Ldev/ide/block/BlockRef;Ldev/ide/block/BlockTemplate;)Ldev/ide/block/Wrap;
+	implements com/shd/codestudio/block/BlockEdit
+	ctor (Lcom/shd/codestudio/block/BlockRef;Lcom/shd/codestudio/block/BlockTemplate;)V
+	method component1()Lcom/shd/codestudio/block/BlockRef;
+	method component2()Lcom/shd/codestudio/block/BlockTemplate;
+	method copy(Lcom/shd/codestudio/block/BlockRef;Lcom/shd/codestudio/block/BlockTemplate;)Lcom/shd/codestudio/block/Wrap;
 	method equals(Ljava/lang/Object;)Z
-	method getBlock()Ldev/ide/block/BlockRef;
-	method getWith()Ldev/ide/block/BlockTemplate;
+	method getBlock()Lcom/shd/codestudio/block/BlockRef;
+	method getWith()Lcom/shd/codestudio/block/BlockTemplate;
 	method hashCode()I
-	method static copy$default(Ldev/ide/block/Wrap;Ldev/ide/block/BlockRef;Ldev/ide/block/BlockTemplate;ILjava/lang/Object;)Ldev/ide/block/Wrap;
+	method static copy$default(Lcom/shd/codestudio/block/Wrap;Lcom/shd/codestudio/block/BlockRef;Lcom/shd/codestudio/block/BlockTemplate;ILjava/lang/Object;)Lcom/shd/codestudio/block/Wrap;
 	method toString()Ljava/lang/String;

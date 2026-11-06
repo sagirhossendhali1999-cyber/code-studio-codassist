@@ -1,1 +1,0 @@
-Android IDE: пишите на Kotlin и Java, смотрите Compose, собирайте APK без ПК.

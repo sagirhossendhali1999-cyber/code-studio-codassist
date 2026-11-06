@@ -1,14 +1,14 @@
 # Privacy Policy
 
-**App:** CodeAssist
+**App:** Code Studio
 **Effective date:** 2 November 2026
 
-This policy explains what information the CodeAssist Android app handles, why, and the choices you have. CodeAssist is a code editor and build environment that runs on your device. You can use the editor and build tools without an account. Some online features (the Projects Store, daily challenges, and CodeAssist Free AI) need you to sign in.
+This policy explains what information the Code Studio Android app handles, why, and the choices you have. Code Studio is a code editor and build environment that runs on your device. You can use the editor and build tools without an account. Some online features (the Projects Store, daily challenges, and Code Studio Free AI) need you to sign in.
 
 ## Summary
 
 - Your projects stay on your device. The app sends your code or files somewhere only when you use a feature that needs to: asking the AI assistant, submitting a daily-challenge solution, or publishing a project to the Projects Store.
-- Signing in is optional and uses your GitHub or Google account. It is needed only for the Projects Store, daily challenges, and CodeAssist Free AI.
+- Signing in is optional and uses your GitHub or Google account. It is needed only for the Projects Store, daily challenges, and Code Studio Free AI.
 - The app shows ads from Google AdMob and its partner ad networks. Ads use your device's advertising ID, subject to the consent choices offered where the law requires them.
 - Performance, crash, and feature-usage telemetry is off by default and is sent only if you turn it on.
 - We do not sell your data.
@@ -28,19 +28,19 @@ Projects, files, settings, and signing keys are stored on your device. They leav
 
 If you sign in with GitHub or Google, our backend (Supabase) receives the account identifier, email address, display name, and profile picture that the provider shares. We use them to keep you signed in and to show your publisher profile (handle, display name, avatar, and any bio or link you add) next to projects you publish. Your sign-in session is stored on your device.
 
-Signed-in activity is stored with your account: projects and reviews you publish, ratings, likes, follows, daily-challenge submissions and scores (shown on a public leaderboard), and your CodeAssist Free AI points and usage.
+Signed-in activity is stored with your account: projects and reviews you publish, ratings, likes, follows, daily-challenge submissions and scores (shown on a public leaderboard), and your Code Studio Free AI points and usage.
 
 ### AI assistant
 
 The AI assistant sends the conversation to an AI provider so that it can answer. That includes your messages, any files, code selections, or images you attach, and the results of the actions the assistant takes in your project (for example the contents of a file it opens, or a build's output).
 
-- **CodeAssist Free AI:** requests go through our server to Anthropic, which runs the Claude models. Our server checks your sign-in, applies usage limits, and records each request's model, token counts, and cost against your points. It does not store the content of your conversations. Anthropic processes the content under its commercial terms, which do not allow it to be used to train Anthropic's models. See https://www.anthropic.com/legal/privacy.
+- **Code Studio Free AI:** requests go through our server to Anthropic, which runs the Claude models. Our server checks your sign-in, applies usage limits, and records each request's model, token counts, and cost against your points. It does not store the content of your conversations. Anthropic processes the content under its commercial terms, which do not allow it to be used to train Anthropic's models. See https://www.anthropic.com/legal/privacy.
 - **Your own API key:** if you add a key for Anthropic, OpenAI, Google Gemini, OpenRouter, or a custom endpoint, the app sends requests straight to that provider. They do not pass through our servers, and the provider's own terms and privacy policy apply. Keys are stored on your device.
 - **Saved conversations** are stored on your device.
 
 ### Rewarded ads for AI points
 
-You can choose to watch a rewarded ad to earn CodeAssist Free AI points. When you do, the app gives Google your CodeAssist account identifier with the ad, and Google sends a signed confirmation to our server when you have earned the reward. Our server records the ad's transaction identifier and credits your points. These ads are shown only when you tap to watch one.
+You can choose to watch a rewarded ad to earn Code Studio Free AI points. When you do, the app gives Google your Code Studio account identifier with the ad, and Google sends a signed confirmation to our server when you have earned the reward. Our server records the ad's transaction identifier and credits your points. These ads are shown only when you tap to watch one.
 
 ### Ads
 
@@ -71,7 +71,7 @@ Telemetry never includes your source code, file contents, file names, project na
 ## Permissions the app requests
 
 - **Internet:** for the features above, downloading dependencies and SDK components, ads, and optional telemetry.
-- **Install unknown apps:** so you can install an app you built with CodeAssist, through Android's standard install confirmation.
+- **Install unknown apps:** so you can install an app you built with Code Studio, through Android's standard install confirmation.
 - **Notifications:** for build progress and Projects Store notifications.
 - **Foreground service:** so a long build can keep running while you switch apps.
 - **Advertising ID:** added by the Google Mobile Ads SDK, for ads as described above.
@@ -83,8 +83,8 @@ When you ask the app to, it downloads project dependencies from package reposito
 ## How the information is used
 
 - To provide the features you use: sign-in, the Projects Store, daily challenges, the AI assistant, and notifications.
-- To run CodeAssist Free AI fairly: to keep each account within its points and daily limits and the service within its monthly budget, and to prevent abuse.
-- To show ads, which pay for the app and for CodeAssist Free AI.
+- To run Code Studio Free AI fairly: to keep each account within its points and daily limits and the service within its monthly budget, and to prevent abuse.
+- To show ads, which pay for the app and for Code Studio Free AI.
 - With your permission, to understand and improve performance and stability.
 
 We do not sell your data and do not use it to build advertising profiles of our own.
@@ -94,7 +94,7 @@ We do not sell your data and do not use it to build advertising profiles of our 
 - **Supabase** hosts our database, sign-in, file storage, and server functions.
 - **Vercel** hosts the daily-challenge judge.
 - **Cloudflare R2** serves public Projects Store files.
-- **Anthropic** runs the models behind CodeAssist Free AI.
+- **Anthropic** runs the models behind Code Studio Free AI.
 - **Google (Firebase Cloud Messaging, AdMob)** and the ad partners listed above.
 - **GitHub or Google**, when you sign in with them.
 - The **AI provider** you choose, when you use your own API key, and the **Git remote** you configure.
@@ -106,28 +106,28 @@ Each acts under its own terms for its part of the service. We may also disclose 
 - Data on your device stays until you delete it or uninstall the app.
 - Raw telemetry events are kept for 7 days; after that only daily totals remain, which cannot be linked to an install.
 - Account data, published projects, reviews, challenge results, and AI points and usage records are kept while your account exists.
-- Conversation content sent through CodeAssist Free AI is not stored on our servers. Anthropic's own retention is described in its privacy policy.
+- Conversation content sent through Code Studio Free AI is not stored on our servers. Anthropic's own retention is described in its privacy policy.
 
 To have telemetry removed, send the install identifier shown in the app's analytics settings to the address below.
 
 ## Deleting your account
 
-You can delete your CodeAssist account at any time:
+You can delete your Code Studio account at any time:
 
 1. In the app, open the **Store** tab and tap your profile picture to open **You**.
 2. Scroll to the bottom and tap **Delete account**, then confirm.
 
-This permanently deletes the account and everything stored with it: your publisher profile, the projects you published and their files, your reviews, ratings, likes and follows, your daily-challenge results, your CodeAssist Free AI points and usage records, and your push-notification registration. Projects on your device are not affected. Deletion happens immediately and cannot be undone.
+This permanently deletes the account and everything stored with it: your publisher profile, the projects you published and their files, your reviews, ratings, likes and follows, your daily-challenge results, your Code Studio Free AI points and usage records, and your push-notification registration. Projects on your device are not affected. Deletion happens immediately and cannot be undone.
 
-If you can no longer open the app, email **contact.tyronscott@gmail.com** from the email address of the GitHub or Google account you signed in with, or naming that account, and ask for your account to be deleted. We will delete it within 30 days and confirm by email.
+If you can no longer open the app, email **contact.sagirhossendhali1999-cyberscott@gmail.com** from the email address of the GitHub or Google account you signed in with, or naming that account, and ask for your account to be deleted. We will delete it within 30 days and confirm by email.
 
 ## Security
 
-All connections to our servers use HTTPS. Access to stored data is restricted by database access rules, and AI provider keys for CodeAssist Free AI are held on our servers, never in the app.
+All connections to our servers use HTTPS. Access to stored data is restricted by database access rules, and AI provider keys for Code Studio Free AI are held on our servers, never in the app.
 
 ## Children
 
-CodeAssist is a developer tool and is not directed to children under 13. It does not knowingly collect personal information from children under 13. If you believe a child has created an account, contact us and we will delete it.
+Code Studio is a developer tool and is not directed to children under 13. It does not knowingly collect personal information from children under 13. If you believe a child has created an account, contact us and we will delete it.
 
 ## Changes to this policy
 
@@ -137,6 +137,6 @@ This policy may be updated as the app changes. Material changes will be reflecte
 
 Questions about this policy, or requests to access or delete your data, can be sent to:
 
-**contact.tyronscott@gmail.com**
+**contact.sagirhossendhali1999-cyberscott@gmail.com**
 
-The app's source code is available at https://github.com/tyron12233/CodeAssist
+The app's source code is available at https://github.com/sagirhossendhali1999-cyber/Code Studio

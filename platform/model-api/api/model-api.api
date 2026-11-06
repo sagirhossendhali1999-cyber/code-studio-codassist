@@ -1,14 +1,14 @@
-# The compiled surface of io.github.tyron12233:model-api, pinned at SPI 3.0.0.
+# The compiled surface of io.github.sagirhossendhali1999-cyber:model-api, pinned at SPI 3.0.0.
 # A plugin links against these by name and descriptor; see :spi-compat.
 # Regenerate with: ./gradlew :spi-compat:test -Dspi.updateBaselines=true
-dev/ide/index/AnnotatedExternalizer
+com/shd/codestudio/index/AnnotatedExternalizer
 	kind class
 	super java/lang/Object
-	implements dev/ide/index/Externalizer
-	field static INSTANCE Ldev/ide/index/AnnotatedExternalizer;
-	method read(Ldev/ide/platform/DataReader;)Ldev/ide/index/AnnotatedValue;
-	method write(Ldev/ide/platform/DataWriter;Ldev/ide/index/AnnotatedValue;)V
-dev/ide/index/AnnotatedValue
+	implements com/shd/codestudio/index/Externalizer
+	field static INSTANCE Lcom/shd/codestudio/index/AnnotatedExternalizer;
+	method read(Lcom/shd/codestudio/platform/DataReader;)Lcom/shd/codestudio/index/AnnotatedValue;
+	method write(Lcom/shd/codestudio/platform/DataWriter;Lcom/shd/codestudio/index/AnnotatedValue;)V
+com/shd/codestudio/index/AnnotatedValue
 	kind class
 	super java/lang/Object
 	ctor (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)V
@@ -17,102 +17,102 @@ dev/ide/index/AnnotatedValue
 	method component2()Ljava/lang/String;
 	method component3()Ljava/lang/String;
 	method component4()I
-	method copy(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)Ldev/ide/index/AnnotatedValue;
+	method copy(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)Lcom/shd/codestudio/index/AnnotatedValue;
 	method equals(Ljava/lang/Object;)Z
 	method getAnnotation()Ljava/lang/String;
 	method getFileId()I
 	method getFqn()Ljava/lang/String;
 	method getKind()Ljava/lang/String;
 	method hashCode()I
-	method static copy$default(Ldev/ide/index/AnnotatedValue;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IILjava/lang/Object;)Ldev/ide/index/AnnotatedValue;
+	method static copy$default(Lcom/shd/codestudio/index/AnnotatedValue;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IILjava/lang/Object;)Lcom/shd/codestudio/index/AnnotatedValue;
 	method toString()Ljava/lang/String;
-dev/ide/index/AnnotationIndex
+com/shd/codestudio/index/AnnotationIndex
 	kind class
 	super java/lang/Object
-	field static INSTANCE Ldev/ide/index/AnnotationIndex;
+	field static INSTANCE Lcom/shd/codestudio/index/AnnotationIndex;
 	method getALL()Ljava/util/List;
 	method getBINARY-MdtDh_0()Ljava/lang/String;
 	method getJAVA_SOURCE-MdtDh_0()Ljava/lang/String;
 	method getKOTLIN_SOURCE-MdtDh_0()Ljava/lang/String;
 	method key(Ljava/lang/String;)Ljava/lang/String;
-dev/ide/index/ClassNameExternalizer
+com/shd/codestudio/index/ClassNameExternalizer
 	kind class
 	super java/lang/Object
-	implements dev/ide/index/Externalizer
-	field static INSTANCE Ldev/ide/index/ClassNameExternalizer;
-	method read(Ldev/ide/platform/DataReader;)Ldev/ide/index/ClassNameValue;
-	method write(Ldev/ide/platform/DataWriter;Ldev/ide/index/ClassNameValue;)V
-dev/ide/index/ClassNameIndex
+	implements com/shd/codestudio/index/Externalizer
+	field static INSTANCE Lcom/shd/codestudio/index/ClassNameExternalizer;
+	method read(Lcom/shd/codestudio/platform/DataReader;)Lcom/shd/codestudio/index/ClassNameValue;
+	method write(Lcom/shd/codestudio/platform/DataWriter;Lcom/shd/codestudio/index/ClassNameValue;)V
+com/shd/codestudio/index/ClassNameIndex
 	kind class
 	super java/lang/Object
-	field static INSTANCE Ldev/ide/index/ClassNameIndex;
+	field static INSTANCE Lcom/shd/codestudio/index/ClassNameIndex;
 	method getALL()Ljava/util/List;
 	method getJAVA-MdtDh_0()Ljava/lang/String;
 	method getKOTLIN-MdtDh_0()Ljava/lang/String;
-dev/ide/index/ClassNameValue
+com/shd/codestudio/index/ClassNameValue
 	kind class
 	super java/lang/Object
-	ctor (Ljava/lang/String;Ldev/ide/index/IndexOrigin;Ljava/lang/String;)V
+	ctor (Ljava/lang/String;Lcom/shd/codestudio/index/IndexOrigin;Ljava/lang/String;)V
 	method component1()Ljava/lang/String;
-	method component2()Ldev/ide/index/IndexOrigin;
+	method component2()Lcom/shd/codestudio/index/IndexOrigin;
 	method component3()Ljava/lang/String;
-	method copy(Ljava/lang/String;Ldev/ide/index/IndexOrigin;Ljava/lang/String;)Ldev/ide/index/ClassNameValue;
+	method copy(Ljava/lang/String;Lcom/shd/codestudio/index/IndexOrigin;Ljava/lang/String;)Lcom/shd/codestudio/index/ClassNameValue;
 	method equals(Ljava/lang/Object;)Z
 	method getFqn()Ljava/lang/String;
 	method getKind()Ljava/lang/String;
-	method getOrigin()Ldev/ide/index/IndexOrigin;
+	method getOrigin()Lcom/shd/codestudio/index/IndexOrigin;
 	method hashCode()I
-	method static copy$default(Ldev/ide/index/ClassNameValue;Ljava/lang/String;Ldev/ide/index/IndexOrigin;Ljava/lang/String;ILjava/lang/Object;)Ldev/ide/index/ClassNameValue;
+	method static copy$default(Lcom/shd/codestudio/index/ClassNameValue;Ljava/lang/String;Lcom/shd/codestudio/index/IndexOrigin;Ljava/lang/String;ILjava/lang/Object;)Lcom/shd/codestudio/index/ClassNameValue;
 	method toString()Ljava/lang/String;
-dev/ide/index/EntryPointExternalizer
+com/shd/codestudio/index/EntryPointExternalizer
 	kind class
 	super java/lang/Object
-	implements dev/ide/index/Externalizer
-	field static INSTANCE Ldev/ide/index/EntryPointExternalizer;
-	method read(Ldev/ide/platform/DataReader;)Ldev/ide/index/EntryPointValue;
-	method write(Ldev/ide/platform/DataWriter;Ldev/ide/index/EntryPointValue;)V
-dev/ide/index/EntryPointIndex
+	implements com/shd/codestudio/index/Externalizer
+	field static INSTANCE Lcom/shd/codestudio/index/EntryPointExternalizer;
+	method read(Lcom/shd/codestudio/platform/DataReader;)Lcom/shd/codestudio/index/EntryPointValue;
+	method write(Lcom/shd/codestudio/platform/DataWriter;Lcom/shd/codestudio/index/EntryPointValue;)V
+com/shd/codestudio/index/EntryPointIndex
 	kind class
 	super java/lang/Object
-	field static INSTANCE Ldev/ide/index/EntryPointIndex;
+	field static INSTANCE Lcom/shd/codestudio/index/EntryPointIndex;
 	field static KEY Ljava/lang/String;
 	method getJAVA-MdtDh_0()Ljava/lang/String;
 	method getKOTLIN-MdtDh_0()Ljava/lang/String;
-dev/ide/index/EntryPointValue
+com/shd/codestudio/index/EntryPointValue
 	kind class
 	super java/lang/Object
 	ctor (Ljava/lang/String;IZ)V
 	method component1()Ljava/lang/String;
 	method component2()I
 	method component3()Z
-	method copy(Ljava/lang/String;IZ)Ldev/ide/index/EntryPointValue;
+	method copy(Ljava/lang/String;IZ)Lcom/shd/codestudio/index/EntryPointValue;
 	method equals(Ljava/lang/Object;)Z
 	method getFileId()I
 	method getFqn()Ljava/lang/String;
 	method getInstance()Z
 	method hashCode()I
-	method static copy$default(Ldev/ide/index/EntryPointValue;Ljava/lang/String;IZILjava/lang/Object;)Ldev/ide/index/EntryPointValue;
+	method static copy$default(Lcom/shd/codestudio/index/EntryPointValue;Ljava/lang/String;IZILjava/lang/Object;)Lcom/shd/codestudio/index/EntryPointValue;
 	method toString()Ljava/lang/String;
-dev/ide/index/Externalizer
+com/shd/codestudio/index/Externalizer
 	kind interface
-	method abstract read(Ldev/ide/platform/DataReader;)Ljava/lang/Object;
-	method abstract write(Ldev/ide/platform/DataWriter;Ljava/lang/Object;)V
-dev/ide/index/Hit
+	method abstract read(Lcom/shd/codestudio/platform/DataReader;)Ljava/lang/Object;
+	method abstract write(Lcom/shd/codestudio/platform/DataWriter;Ljava/lang/Object;)V
+com/shd/codestudio/index/Hit
 	kind class
 	super java/lang/Object
 	ctor (Ljava/lang/String;Ljava/lang/Object;I)V
 	method component1()Ljava/lang/String;
 	method component2()Ljava/lang/Object;
 	method component3()I
-	method copy(Ljava/lang/String;Ljava/lang/Object;I)Ldev/ide/index/Hit;
+	method copy(Ljava/lang/String;Ljava/lang/Object;I)Lcom/shd/codestudio/index/Hit;
 	method equals(Ljava/lang/Object;)Z
 	method getKey()Ljava/lang/String;
 	method getScore()I
 	method getValue()Ljava/lang/Object;
 	method hashCode()I
-	method static copy$default(Ldev/ide/index/Hit;Ljava/lang/String;Ljava/lang/Object;IILjava/lang/Object;)Ldev/ide/index/Hit;
+	method static copy$default(Lcom/shd/codestudio/index/Hit;Ljava/lang/String;Ljava/lang/Object;IILjava/lang/Object;)Lcom/shd/codestudio/index/Hit;
 	method toString()Ljava/lang/String;
-dev/ide/index/IndexBuildStats
+com/shd/codestudio/index/IndexBuildStats
 	kind class
 	super java/lang/Object
 	ctor ()V
@@ -125,7 +125,7 @@ dev/ide/index/IndexBuildStats
 	method component5()I
 	method component6()I
 	method component7()I
-	method copy(JJIIIII)Ldev/ide/index/IndexBuildStats;
+	method copy(JJIIIII)Lcom/shd/codestudio/index/IndexBuildStats;
 	method equals(Ljava/lang/Object;)Z
 	method getArtifacts()I
 	method getArtifactsBuilt()I
@@ -135,24 +135,24 @@ dev/ide/index/IndexBuildStats
 	method getSourceMs()J
 	method getSourceParsed()I
 	method hashCode()I
-	method static copy$default(Ldev/ide/index/IndexBuildStats;JJIIIIIILjava/lang/Object;)Ldev/ide/index/IndexBuildStats;
+	method static copy$default(Lcom/shd/codestudio/index/IndexBuildStats;JJIIIIIILjava/lang/Object;)Lcom/shd/codestudio/index/IndexBuildStats;
 	method toString()Ljava/lang/String;
-dev/ide/index/IndexExtension
+com/shd/codestudio/index/IndexExtension
 	kind interface
 	method abstract getId-MdtDh_0()Ljava/lang/String;
-	method abstract getInputFilter()Ldev/ide/index/InputFilter;
-	method abstract getKeyDescriptor()Ldev/ide/index/KeyDescriptor;
-	method abstract getMatching()Ldev/ide/index/MatchingMode;
-	method abstract getValueExternalizer()Ldev/ide/index/Externalizer;
+	method abstract getInputFilter()Lcom/shd/codestudio/index/InputFilter;
+	method abstract getKeyDescriptor()Lcom/shd/codestudio/index/KeyDescriptor;
+	method abstract getMatching()Lcom/shd/codestudio/index/MatchingMode;
+	method abstract getValueExternalizer()Lcom/shd/codestudio/index/Externalizer;
 	method abstract getVersion()I
-	method abstract index(Ldev/ide/index/IndexInput;)Ljava/util/Map;
-dev/ide/index/IndexHelpersKt
+	method abstract index(Lcom/shd/codestudio/index/IndexInput;)Ljava/util/Map;
+com/shd/codestudio/index/IndexHelpersKt
 	kind class
 	super java/lang/Object
 	method static classEntryToFqn(Ljava/lang/String;)Lkotlin/Pair;
 	method static nestedClassEntryToFqn(Ljava/lang/String;)Lkotlin/Pair;
 	method static packagePrefixes(Ljava/lang/String;)Ljava/util/List;
-dev/ide/index/IndexId
+com/shd/codestudio/index/IndexId
 	kind class
 	super java/lang/Object
 	method equals(Ljava/lang/Object;)Z
@@ -164,94 +164,94 @@ dev/ide/index/IndexId
 	method static hashCode-impl(Ljava/lang/String;)I
 	method static toString-impl(Ljava/lang/String;)Ljava/lang/String;
 	method toString()Ljava/lang/String;
-dev/ide/index/IndexInput
+com/shd/codestudio/index/IndexInput
 	kind interface
 	field static CLASS_FILE Ljava/lang/String;
 	field static CLASS_READER Ljava/lang/String;
-	field static Companion Ldev/ide/index/IndexInput$Companion;
+	field static Companion Lcom/shd/codestudio/index/IndexInput$Companion;
 	method abstract bytes()[B
-	method abstract dom()Ldev/ide/lang/dom/ParsedFile;
+	method abstract dom()Lcom/shd/codestudio/lang/dom/ParsedFile;
 	method abstract getContentHash-Q9wPEHw()Ljava/lang/String;
-	method abstract getOrigin()Ldev/ide/index/IndexOrigin;
+	method abstract getOrigin()Lcom/shd/codestudio/index/IndexOrigin;
 	method abstract getSourcePath()Ljava/lang/String;
 	method abstract getUnitName()Ljava/lang/String;
 	method abstract text()Ljava/lang/String;
 	method getFileId()I
 	method shared(Ljava/lang/String;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
-dev/ide/index/IndexInput$Companion
+com/shd/codestudio/index/IndexInput$Companion
 	kind class
 	super java/lang/Object
 	field static CLASS_FILE Ljava/lang/String;
 	field static CLASS_READER Ljava/lang/String;
-dev/ide/index/IndexInput$DefaultImpls
+com/shd/codestudio/index/IndexInput$DefaultImpls
 	kind class
 	super java/lang/Object
-	method static getFileId(Ldev/ide/index/IndexInput;)I
-	method static shared(Ldev/ide/index/IndexInput;Ljava/lang/String;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
-dev/ide/index/IndexItem
+	method static getFileId(Lcom/shd/codestudio/index/IndexInput;)I
+	method static shared(Lcom/shd/codestudio/index/IndexInput;Ljava/lang/String;Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
+com/shd/codestudio/index/IndexItem
 	kind class
 	super java/lang/Object
-	ctor (Ljava/lang/String;Ldev/ide/index/IndexItemState;)V
-	ctor (Ljava/lang/String;Ldev/ide/index/IndexItemState;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	ctor (Ljava/lang/String;Lcom/shd/codestudio/index/IndexItemState;)V
+	ctor (Ljava/lang/String;Lcom/shd/codestudio/index/IndexItemState;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	method component1()Ljava/lang/String;
-	method component2()Ldev/ide/index/IndexItemState;
-	method copy(Ljava/lang/String;Ldev/ide/index/IndexItemState;)Ldev/ide/index/IndexItem;
+	method component2()Lcom/shd/codestudio/index/IndexItemState;
+	method copy(Ljava/lang/String;Lcom/shd/codestudio/index/IndexItemState;)Lcom/shd/codestudio/index/IndexItem;
 	method equals(Ljava/lang/Object;)Z
 	method getLabel()Ljava/lang/String;
-	method getState()Ldev/ide/index/IndexItemState;
+	method getState()Lcom/shd/codestudio/index/IndexItemState;
 	method hashCode()I
-	method static copy$default(Ldev/ide/index/IndexItem;Ljava/lang/String;Ldev/ide/index/IndexItemState;ILjava/lang/Object;)Ldev/ide/index/IndexItem;
+	method static copy$default(Lcom/shd/codestudio/index/IndexItem;Ljava/lang/String;Lcom/shd/codestudio/index/IndexItemState;ILjava/lang/Object;)Lcom/shd/codestudio/index/IndexItem;
 	method toString()Ljava/lang/String;
-dev/ide/index/IndexItemState
+com/shd/codestudio/index/IndexItemState
 	kind enum
 	super java/lang/Enum
-	field static ACTIVE Ldev/ide/index/IndexItemState;
-	field static DONE Ldev/ide/index/IndexItemState;
-	field static PENDING Ldev/ide/index/IndexItemState;
+	field static ACTIVE Lcom/shd/codestudio/index/IndexItemState;
+	field static DONE Lcom/shd/codestudio/index/IndexItemState;
+	field static PENDING Lcom/shd/codestudio/index/IndexItemState;
 	method static getEntries()Lkotlin/enums/EnumEntries;
-	method static valueOf(Ljava/lang/String;)Ldev/ide/index/IndexItemState;
-	method static values()[Ldev/ide/index/IndexItemState;
-dev/ide/index/IndexOrigin
+	method static valueOf(Ljava/lang/String;)Lcom/shd/codestudio/index/IndexItemState;
+	method static values()[Lcom/shd/codestudio/index/IndexItemState;
+com/shd/codestudio/index/IndexOrigin
 	kind enum
 	super java/lang/Enum
-	field static LIBRARY Ldev/ide/index/IndexOrigin;
-	field static LIBRARY_SOURCE Ldev/ide/index/IndexOrigin;
-	field static SDK Ldev/ide/index/IndexOrigin;
-	field static SOURCE Ldev/ide/index/IndexOrigin;
+	field static LIBRARY Lcom/shd/codestudio/index/IndexOrigin;
+	field static LIBRARY_SOURCE Lcom/shd/codestudio/index/IndexOrigin;
+	field static SDK Lcom/shd/codestudio/index/IndexOrigin;
+	field static SOURCE Lcom/shd/codestudio/index/IndexOrigin;
 	method static getEntries()Lkotlin/enums/EnumEntries;
-	method static valueOf(Ljava/lang/String;)Ldev/ide/index/IndexOrigin;
-	method static values()[Ldev/ide/index/IndexOrigin;
-dev/ide/index/IndexQueries
+	method static valueOf(Ljava/lang/String;)Lcom/shd/codestudio/index/IndexOrigin;
+	method static values()[Lcom/shd/codestudio/index/IndexOrigin;
+com/shd/codestudio/index/IndexQueries
 	kind interface
 	method abstract exact-3Nq2rn8(Ljava/lang/String;Ljava/lang/String;)Lkotlin/sequences/Sequence;
 	method abstract fuzzy-7277RlM(Ljava/lang/String;Ljava/lang/String;I)Lkotlin/sequences/Sequence;
-	method abstract getStatus()Ldev/ide/index/IndexStatus;
+	method abstract getStatus()Lcom/shd/codestudio/index/IndexStatus;
 	method abstract prefix-7277RlM(Ljava/lang/String;Ljava/lang/String;I)Lkotlin/sequences/Sequence;
 	method filePath(I)Ljava/lang/String;
-	method static fuzzy-7277RlM$default(Ldev/ide/index/IndexQueries;Ljava/lang/String;Ljava/lang/String;IILjava/lang/Object;)Lkotlin/sequences/Sequence;
-	method static prefix-7277RlM$default(Ldev/ide/index/IndexQueries;Ljava/lang/String;Ljava/lang/String;IILjava/lang/Object;)Lkotlin/sequences/Sequence;
-dev/ide/index/IndexQueries$DefaultImpls
+	method static fuzzy-7277RlM$default(Lcom/shd/codestudio/index/IndexQueries;Ljava/lang/String;Ljava/lang/String;IILjava/lang/Object;)Lkotlin/sequences/Sequence;
+	method static prefix-7277RlM$default(Lcom/shd/codestudio/index/IndexQueries;Ljava/lang/String;Ljava/lang/String;IILjava/lang/Object;)Lkotlin/sequences/Sequence;
+com/shd/codestudio/index/IndexQueries$DefaultImpls
 	kind class
 	super java/lang/Object
-	method static filePath(Ldev/ide/index/IndexQueries;I)Ljava/lang/String;
-	method static fuzzy-7277RlM$default(Ldev/ide/index/IndexQueries;Ljava/lang/String;Ljava/lang/String;IILjava/lang/Object;)Lkotlin/sequences/Sequence;
-	method static prefix-7277RlM$default(Ldev/ide/index/IndexQueries;Ljava/lang/String;Ljava/lang/String;IILjava/lang/Object;)Lkotlin/sequences/Sequence;
-dev/ide/index/IndexQueriesKt
+	method static filePath(Lcom/shd/codestudio/index/IndexQueries;I)Ljava/lang/String;
+	method static fuzzy-7277RlM$default(Lcom/shd/codestudio/index/IndexQueries;Ljava/lang/String;Ljava/lang/String;IILjava/lang/Object;)Lkotlin/sequences/Sequence;
+	method static prefix-7277RlM$default(Lcom/shd/codestudio/index/IndexQueries;Ljava/lang/String;Ljava/lang/String;IILjava/lang/Object;)Lkotlin/sequences/Sequence;
+com/shd/codestudio/index/IndexQueriesKt
 	kind class
 	super java/lang/Object
-	method static exactAll(Ldev/ide/index/IndexQueries;Ljava/util/List;Ljava/lang/String;)Lkotlin/sequences/Sequence;
-	method static fuzzyAll$default(Ldev/ide/index/IndexQueries;Ljava/util/List;Ljava/lang/String;IILjava/lang/Object;)Ljava/util/List;
-	method static fuzzyAll(Ldev/ide/index/IndexQueries;Ljava/util/List;Ljava/lang/String;I)Ljava/util/List;
-	method static prefixAll$default(Ldev/ide/index/IndexQueries;Ljava/util/List;Ljava/lang/String;IILjava/lang/Object;)Ljava/util/List;
-	method static prefixAll(Ldev/ide/index/IndexQueries;Ljava/util/List;Ljava/lang/String;I)Ljava/util/List;
-dev/ide/index/IndexStatus
+	method static exactAll(Lcom/shd/codestudio/index/IndexQueries;Ljava/util/List;Ljava/lang/String;)Lkotlin/sequences/Sequence;
+	method static fuzzyAll$default(Lcom/shd/codestudio/index/IndexQueries;Ljava/util/List;Ljava/lang/String;IILjava/lang/Object;)Ljava/util/List;
+	method static fuzzyAll(Lcom/shd/codestudio/index/IndexQueries;Ljava/util/List;Ljava/lang/String;I)Ljava/util/List;
+	method static prefixAll$default(Lcom/shd/codestudio/index/IndexQueries;Ljava/util/List;Ljava/lang/String;IILjava/lang/Object;)Ljava/util/List;
+	method static prefixAll(Lcom/shd/codestudio/index/IndexQueries;Ljava/util/List;Ljava/lang/String;I)Ljava/util/List;
+com/shd/codestudio/index/IndexStatus
 	kind class
 	super java/lang/Object
 	ctor ()V
-	ctor (ZLjava/lang/String;DZLjava/lang/String;Ljava/util/List;IILjava/util/List;Ldev/ide/index/IndexBuildStats;)V
-	ctor (ZLjava/lang/String;DZLjava/lang/String;Ljava/util/List;IILjava/util/List;Ldev/ide/index/IndexBuildStats;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	ctor (ZLjava/lang/String;DZLjava/lang/String;Ljava/util/List;IILjava/util/List;Lcom/shd/codestudio/index/IndexBuildStats;)V
+	ctor (ZLjava/lang/String;DZLjava/lang/String;Ljava/util/List;IILjava/util/List;Lcom/shd/codestudio/index/IndexBuildStats;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	method component1()Z
-	method component10()Ldev/ide/index/IndexBuildStats;
+	method component10()Lcom/shd/codestudio/index/IndexBuildStats;
 	method component2()Ljava/lang/String;
 	method component3()D
 	method component4()Z
@@ -260,7 +260,7 @@ dev/ide/index/IndexStatus
 	method component7()I
 	method component8()I
 	method component9()Ljava/util/List;
-	method copy(ZLjava/lang/String;DZLjava/lang/String;Ljava/util/List;IILjava/util/List;Ldev/ide/index/IndexBuildStats;)Ldev/ide/index/IndexStatus;
+	method copy(ZLjava/lang/String;DZLjava/lang/String;Ljava/util/List;IILjava/util/List;Lcom/shd/codestudio/index/IndexBuildStats;)Lcom/shd/codestudio/index/IndexStatus;
 	method equals(Ljava/lang/Object;)Z
 	method getBreakdown()Ljava/util/List;
 	method getBuilding()Z
@@ -271,51 +271,51 @@ dev/ide/index/IndexStatus
 	method getProcessed()I
 	method getReady()Z
 	method getSettled()Z
-	method getStats()Ldev/ide/index/IndexBuildStats;
+	method getStats()Lcom/shd/codestudio/index/IndexBuildStats;
 	method getTotal()I
 	method hashCode()I
-	method static copy$default(Ldev/ide/index/IndexStatus;ZLjava/lang/String;DZLjava/lang/String;Ljava/util/List;IILjava/util/List;Ldev/ide/index/IndexBuildStats;ILjava/lang/Object;)Ldev/ide/index/IndexStatus;
+	method static copy$default(Lcom/shd/codestudio/index/IndexStatus;ZLjava/lang/String;DZLjava/lang/String;Ljava/util/List;IILjava/util/List;Lcom/shd/codestudio/index/IndexBuildStats;ILjava/lang/Object;)Lcom/shd/codestudio/index/IndexStatus;
 	method toString()Ljava/lang/String;
-dev/ide/index/IndexerStat
+com/shd/codestudio/index/IndexerStat
 	kind class
 	super java/lang/Object
 	ctor (Ljava/lang/String;JJ)V
 	method component1()Ljava/lang/String;
 	method component2()J
 	method component3()J
-	method copy(Ljava/lang/String;JJ)Ldev/ide/index/IndexerStat;
+	method copy(Ljava/lang/String;JJ)Lcom/shd/codestudio/index/IndexerStat;
 	method equals(Ljava/lang/Object;)Z
 	method getEntries()J
 	method getId()Ljava/lang/String;
 	method getIndexMs()J
 	method hashCode()I
-	method static copy$default(Ldev/ide/index/IndexerStat;Ljava/lang/String;JJILjava/lang/Object;)Ldev/ide/index/IndexerStat;
+	method static copy$default(Lcom/shd/codestudio/index/IndexerStat;Ljava/lang/String;JJILjava/lang/Object;)Lcom/shd/codestudio/index/IndexerStat;
 	method toString()Ljava/lang/String;
-dev/ide/index/InputFilter
+com/shd/codestudio/index/InputFilter
 	kind interface
-	method abstract accepts(Ldev/ide/index/IndexInput;)Z
-dev/ide/index/JavaSourceMemberCodec
+	method abstract accepts(Lcom/shd/codestudio/index/IndexInput;)Z
+com/shd/codestudio/index/JavaSourceMemberCodec
 	kind class
 	super java/lang/Object
-	field static INSTANCE Ldev/ide/index/JavaSourceMemberCodec;
-	method decodeField(Ljava/lang/String;)Ldev/ide/index/JavaSourceMemberCodec$Field;
-	method decodeMethod(Ljava/lang/String;)Ldev/ide/index/JavaSourceMemberCodec$Method;
+	field static INSTANCE Lcom/shd/codestudio/index/JavaSourceMemberCodec;
+	method decodeField(Ljava/lang/String;)Lcom/shd/codestudio/index/JavaSourceMemberCodec$Field;
+	method decodeMethod(Ljava/lang/String;)Lcom/shd/codestudio/index/JavaSourceMemberCodec$Method;
 	method encodeField(ZLjava/lang/String;)Ljava/lang/String;
 	method encodeMethod(ZLjava/util/List;Ljava/util/List;Ljava/lang/String;I)Ljava/lang/String;
-dev/ide/index/JavaSourceMemberCodec$Field
+com/shd/codestudio/index/JavaSourceMemberCodec$Field
 	kind class
 	super java/lang/Object
 	ctor (ZLjava/lang/String;)V
 	method component1()Z
 	method component2()Ljava/lang/String;
-	method copy(ZLjava/lang/String;)Ldev/ide/index/JavaSourceMemberCodec$Field;
+	method copy(ZLjava/lang/String;)Lcom/shd/codestudio/index/JavaSourceMemberCodec$Field;
 	method equals(Ljava/lang/Object;)Z
 	method getStatic()Z
 	method getType()Ljava/lang/String;
 	method hashCode()I
-	method static copy$default(Ldev/ide/index/JavaSourceMemberCodec$Field;ZLjava/lang/String;ILjava/lang/Object;)Ldev/ide/index/JavaSourceMemberCodec$Field;
+	method static copy$default(Lcom/shd/codestudio/index/JavaSourceMemberCodec$Field;ZLjava/lang/String;ILjava/lang/Object;)Lcom/shd/codestudio/index/JavaSourceMemberCodec$Field;
 	method toString()Ljava/lang/String;
-dev/ide/index/JavaSourceMemberCodec$Method
+com/shd/codestudio/index/JavaSourceMemberCodec$Method
 	kind class
 	super java/lang/Object
 	ctor (ZLjava/util/List;Ljava/util/List;Ljava/lang/String;I)V
@@ -324,7 +324,7 @@ dev/ide/index/JavaSourceMemberCodec$Method
 	method component3()Ljava/util/List;
 	method component4()Ljava/lang/String;
 	method component5()I
-	method copy(ZLjava/util/List;Ljava/util/List;Ljava/lang/String;I)Ldev/ide/index/JavaSourceMemberCodec$Method;
+	method copy(ZLjava/util/List;Ljava/util/List;Ljava/lang/String;I)Lcom/shd/codestudio/index/JavaSourceMemberCodec$Method;
 	method equals(Ljava/lang/Object;)Z
 	method getParamNames()Ljava/util/List;
 	method getParamTypes()Ljava/util/List;
@@ -332,29 +332,29 @@ dev/ide/index/JavaSourceMemberCodec$Method
 	method getStatic()Z
 	method getVarargIndex()I
 	method hashCode()I
-	method static copy$default(Ldev/ide/index/JavaSourceMemberCodec$Method;ZLjava/util/List;Ljava/util/List;Ljava/lang/String;IILjava/lang/Object;)Ldev/ide/index/JavaSourceMemberCodec$Method;
+	method static copy$default(Lcom/shd/codestudio/index/JavaSourceMemberCodec$Method;ZLjava/util/List;Ljava/util/List;Ljava/lang/String;IILjava/lang/Object;)Lcom/shd/codestudio/index/JavaSourceMemberCodec$Method;
 	method toString()Ljava/lang/String;
-dev/ide/index/KeyDescriptor
+com/shd/codestudio/index/KeyDescriptor
 	kind interface
 	implements java/util/Comparator
 	method abstract asTerm(Ljava/lang/Object;)Ljava/lang/String;
 	method abstract fromTerm(Ljava/lang/String;)Ljava/lang/Object;
-dev/ide/index/MatchingMode
+com/shd/codestudio/index/MatchingMode
 	kind enum
 	super java/lang/Enum
-	field static PREFIX_AND_FUZZY Ldev/ide/index/MatchingMode;
-	field static PREFIX_ONLY Ldev/ide/index/MatchingMode;
+	field static PREFIX_AND_FUZZY Lcom/shd/codestudio/index/MatchingMode;
+	field static PREFIX_ONLY Lcom/shd/codestudio/index/MatchingMode;
 	method static getEntries()Lkotlin/enums/EnumEntries;
-	method static valueOf(Ljava/lang/String;)Ldev/ide/index/MatchingMode;
-	method static values()[Ldev/ide/index/MatchingMode;
-dev/ide/index/MemberExternalizer
+	method static valueOf(Ljava/lang/String;)Lcom/shd/codestudio/index/MatchingMode;
+	method static values()[Lcom/shd/codestudio/index/MatchingMode;
+com/shd/codestudio/index/MemberExternalizer
 	kind class
 	super java/lang/Object
-	implements dev/ide/index/Externalizer
-	field static INSTANCE Ldev/ide/index/MemberExternalizer;
-	method read(Ldev/ide/platform/DataReader;)Ldev/ide/index/MemberValue;
-	method write(Ldev/ide/platform/DataWriter;Ldev/ide/index/MemberValue;)V
-dev/ide/index/MemberValue
+	implements com/shd/codestudio/index/Externalizer
+	field static INSTANCE Lcom/shd/codestudio/index/MemberExternalizer;
+	method read(Lcom/shd/codestudio/platform/DataReader;)Lcom/shd/codestudio/index/MemberValue;
+	method write(Lcom/shd/codestudio/platform/DataWriter;Lcom/shd/codestudio/index/MemberValue;)V
+com/shd/codestudio/index/MemberValue
 	kind class
 	super java/lang/Object
 	ctor (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
@@ -362,44 +362,44 @@ dev/ide/index/MemberValue
 	method component2()Ljava/lang/String;
 	method component3()Ljava/lang/String;
 	method component4()Ljava/lang/String;
-	method copy(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ldev/ide/index/MemberValue;
+	method copy(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lcom/shd/codestudio/index/MemberValue;
 	method equals(Ljava/lang/Object;)Z
 	method getKind()Ljava/lang/String;
 	method getName()Ljava/lang/String;
 	method getOwner()Ljava/lang/String;
 	method getSignature()Ljava/lang/String;
 	method hashCode()I
-	method static copy$default(Ldev/ide/index/MemberValue;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ldev/ide/index/MemberValue;
+	method static copy$default(Lcom/shd/codestudio/index/MemberValue;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/shd/codestudio/index/MemberValue;
 	method toString()Ljava/lang/String;
-dev/ide/index/MembersIndex
+com/shd/codestudio/index/MembersIndex
 	kind class
 	super java/lang/Object
-	field static INSTANCE Ldev/ide/index/MembersIndex;
+	field static INSTANCE Lcom/shd/codestudio/index/MembersIndex;
 	method getALL()Ljava/util/List;
 	method getJAVA-MdtDh_0()Ljava/lang/String;
 	method getKOTLIN-MdtDh_0()Ljava/lang/String;
-dev/ide/index/PackageTypesIndex
+com/shd/codestudio/index/PackageTypesIndex
 	kind class
 	super java/lang/Object
-	field static INSTANCE Ldev/ide/index/PackageTypesIndex;
+	field static INSTANCE Lcom/shd/codestudio/index/PackageTypesIndex;
 	method getALL()Ljava/util/List;
 	method getJAVA-MdtDh_0()Ljava/lang/String;
 	method getKOTLIN-MdtDh_0()Ljava/lang/String;
-dev/ide/index/PackagesIndex
+com/shd/codestudio/index/PackagesIndex
 	kind class
 	super java/lang/Object
-	field static INSTANCE Ldev/ide/index/PackagesIndex;
+	field static INSTANCE Lcom/shd/codestudio/index/PackagesIndex;
 	method getALL()Ljava/util/List;
 	method getJAVA-MdtDh_0()Ljava/lang/String;
 	method getKOTLIN-MdtDh_0()Ljava/lang/String;
-dev/ide/index/SourceDocExternalizer
+com/shd/codestudio/index/SourceDocExternalizer
 	kind class
 	super java/lang/Object
-	implements dev/ide/index/Externalizer
-	field static INSTANCE Ldev/ide/index/SourceDocExternalizer;
-	method read(Ldev/ide/platform/DataReader;)Ldev/ide/index/SourceDocValue;
-	method write(Ldev/ide/platform/DataWriter;Ldev/ide/index/SourceDocValue;)V
-dev/ide/index/SourceDocValue
+	implements com/shd/codestudio/index/Externalizer
+	field static INSTANCE Lcom/shd/codestudio/index/SourceDocExternalizer;
+	method read(Lcom/shd/codestudio/platform/DataReader;)Lcom/shd/codestudio/index/SourceDocValue;
+	method write(Lcom/shd/codestudio/platform/DataWriter;Lcom/shd/codestudio/index/SourceDocValue;)V
+com/shd/codestudio/index/SourceDocValue
 	kind class
 	super java/lang/Object
 	ctor (Ljava/lang/String;ILjava/util/List;Ljava/lang/String;)V
@@ -407,54 +407,54 @@ dev/ide/index/SourceDocValue
 	method component2()I
 	method component3()Ljava/util/List;
 	method component4()Ljava/lang/String;
-	method copy(Ljava/lang/String;ILjava/util/List;Ljava/lang/String;)Ldev/ide/index/SourceDocValue;
+	method copy(Ljava/lang/String;ILjava/util/List;Ljava/lang/String;)Lcom/shd/codestudio/index/SourceDocValue;
 	method equals(Ljava/lang/Object;)Z
 	method getArity()I
 	method getDoc()Ljava/lang/String;
 	method getName()Ljava/lang/String;
 	method getNames()Ljava/util/List;
 	method hashCode()I
-	method static copy$default(Ldev/ide/index/SourceDocValue;Ljava/lang/String;ILjava/util/List;Ljava/lang/String;ILjava/lang/Object;)Ldev/ide/index/SourceDocValue;
+	method static copy$default(Lcom/shd/codestudio/index/SourceDocValue;Ljava/lang/String;ILjava/util/List;Ljava/lang/String;ILjava/lang/Object;)Lcom/shd/codestudio/index/SourceDocValue;
 	method toString()Ljava/lang/String;
-dev/ide/index/SourceSymbolIndex
+com/shd/codestudio/index/SourceSymbolIndex
 	kind class
 	super java/lang/Object
-	field static INSTANCE Ldev/ide/index/SourceSymbolIndex;
+	field static INSTANCE Lcom/shd/codestudio/index/SourceSymbolIndex;
 	method getALL()Ljava/util/List;
 	method getJAVA-MdtDh_0()Ljava/lang/String;
 	method getKOTLIN-MdtDh_0()Ljava/lang/String;
-dev/ide/index/StringExternalizer
+com/shd/codestudio/index/StringExternalizer
 	kind class
 	super java/lang/Object
-	implements dev/ide/index/Externalizer
-	field static INSTANCE Ldev/ide/index/StringExternalizer;
-	method read(Ldev/ide/platform/DataReader;)Ljava/lang/String;
-	method write(Ldev/ide/platform/DataWriter;Ljava/lang/String;)V
-dev/ide/index/StringKeyDescriptor
+	implements com/shd/codestudio/index/Externalizer
+	field static INSTANCE Lcom/shd/codestudio/index/StringExternalizer;
+	method read(Lcom/shd/codestudio/platform/DataReader;)Ljava/lang/String;
+	method write(Lcom/shd/codestudio/platform/DataWriter;Ljava/lang/String;)V
+com/shd/codestudio/index/StringKeyDescriptor
 	kind class
 	super java/lang/Object
-	implements dev/ide/index/KeyDescriptor
-	field static INSTANCE Ldev/ide/index/StringKeyDescriptor;
+	implements com/shd/codestudio/index/KeyDescriptor
+	field static INSTANCE Lcom/shd/codestudio/index/StringKeyDescriptor;
 	method asTerm(Ljava/lang/String;)Ljava/lang/String;
 	method compare(Ljava/lang/String;Ljava/lang/String;)I
 	method fromTerm(Ljava/lang/String;)Ljava/lang/String;
-dev/ide/index/SubtypeExternalizer
+com/shd/codestudio/index/SubtypeExternalizer
 	kind class
 	super java/lang/Object
-	implements dev/ide/index/Externalizer
-	field static INSTANCE Ldev/ide/index/SubtypeExternalizer;
-	method read(Ldev/ide/platform/DataReader;)Ldev/ide/index/SubtypeValue;
-	method write(Ldev/ide/platform/DataWriter;Ldev/ide/index/SubtypeValue;)V
-dev/ide/index/SubtypeIndex
+	implements com/shd/codestudio/index/Externalizer
+	field static INSTANCE Lcom/shd/codestudio/index/SubtypeExternalizer;
+	method read(Lcom/shd/codestudio/platform/DataReader;)Lcom/shd/codestudio/index/SubtypeValue;
+	method write(Lcom/shd/codestudio/platform/DataWriter;Lcom/shd/codestudio/index/SubtypeValue;)V
+com/shd/codestudio/index/SubtypeIndex
 	kind class
 	super java/lang/Object
-	field static INSTANCE Ldev/ide/index/SubtypeIndex;
+	field static INSTANCE Lcom/shd/codestudio/index/SubtypeIndex;
 	method getALL()Ljava/util/List;
 	method getBINARY-MdtDh_0()Ljava/lang/String;
 	method getJAVA_SOURCE-MdtDh_0()Ljava/lang/String;
 	method getKOTLIN_SOURCE-MdtDh_0()Ljava/lang/String;
 	method key(Ljava/lang/String;)Ljava/lang/String;
-dev/ide/index/SubtypeValue
+com/shd/codestudio/index/SubtypeValue
 	kind class
 	super java/lang/Object
 	ctor (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)V
@@ -463,23 +463,23 @@ dev/ide/index/SubtypeValue
 	method component2()Ljava/lang/String;
 	method component3()Ljava/lang/String;
 	method component4()I
-	method copy(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)Ldev/ide/index/SubtypeValue;
+	method copy(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;I)Lcom/shd/codestudio/index/SubtypeValue;
 	method equals(Ljava/lang/Object;)Z
 	method getFileId()I
 	method getFqn()Ljava/lang/String;
 	method getKind()Ljava/lang/String;
 	method getSupertype()Ljava/lang/String;
 	method hashCode()I
-	method static copy$default(Ldev/ide/index/SubtypeValue;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IILjava/lang/Object;)Ldev/ide/index/SubtypeValue;
+	method static copy$default(Lcom/shd/codestudio/index/SubtypeValue;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;IILjava/lang/Object;)Lcom/shd/codestudio/index/SubtypeValue;
 	method toString()Ljava/lang/String;
-dev/ide/index/SymbolExternalizer
+com/shd/codestudio/index/SymbolExternalizer
 	kind class
 	super java/lang/Object
-	implements dev/ide/index/Externalizer
-	field static INSTANCE Ldev/ide/index/SymbolExternalizer;
-	method read(Ldev/ide/platform/DataReader;)Ldev/ide/index/SymbolValue;
-	method write(Ldev/ide/platform/DataWriter;Ldev/ide/index/SymbolValue;)V
-dev/ide/index/SymbolValue
+	implements com/shd/codestudio/index/Externalizer
+	field static INSTANCE Lcom/shd/codestudio/index/SymbolExternalizer;
+	method read(Lcom/shd/codestudio/platform/DataReader;)Lcom/shd/codestudio/index/SymbolValue;
+	method write(Lcom/shd/codestudio/platform/DataWriter;Lcom/shd/codestudio/index/SymbolValue;)V
+com/shd/codestudio/index/SymbolValue
 	kind class
 	super java/lang/Object
 	ctor (Ljava/lang/String;Ljava/lang/String;IILjava/lang/String;)V
@@ -488,7 +488,7 @@ dev/ide/index/SymbolValue
 	method component3()I
 	method component4()I
 	method component5()Ljava/lang/String;
-	method copy(Ljava/lang/String;Ljava/lang/String;IILjava/lang/String;)Ldev/ide/index/SymbolValue;
+	method copy(Ljava/lang/String;Ljava/lang/String;IILjava/lang/String;)Lcom/shd/codestudio/index/SymbolValue;
 	method equals(Ljava/lang/Object;)Z
 	method getContainer()Ljava/lang/String;
 	method getFileId()I
@@ -496,49 +496,49 @@ dev/ide/index/SymbolValue
 	method getName()Ljava/lang/String;
 	method getOffset()I
 	method hashCode()I
-	method static copy$default(Ldev/ide/index/SymbolValue;Ljava/lang/String;Ljava/lang/String;IILjava/lang/String;ILjava/lang/Object;)Ldev/ide/index/SymbolValue;
+	method static copy$default(Lcom/shd/codestudio/index/SymbolValue;Ljava/lang/String;Ljava/lang/String;IILjava/lang/String;ILjava/lang/Object;)Lcom/shd/codestudio/index/SymbolValue;
 	method toString()Ljava/lang/String;
-dev/ide/lang/dom/Diagnostic
+com/shd/codestudio/lang/dom/Diagnostic
 	kind class
 	super java/lang/Object
-	ctor (Ldev/ide/lang/dom/TextRange;Ldev/ide/lang/dom/Severity;Ljava/lang/String;Ljava/lang/String;)V
-	ctor (Ldev/ide/lang/dom/TextRange;Ldev/ide/lang/dom/Severity;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	method component1()Ldev/ide/lang/dom/TextRange;
-	method component2()Ldev/ide/lang/dom/Severity;
+	ctor (Lcom/shd/codestudio/lang/dom/TextRange;Lcom/shd/codestudio/lang/dom/Severity;Ljava/lang/String;Ljava/lang/String;)V
+	ctor (Lcom/shd/codestudio/lang/dom/TextRange;Lcom/shd/codestudio/lang/dom/Severity;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	method component1()Lcom/shd/codestudio/lang/dom/TextRange;
+	method component2()Lcom/shd/codestudio/lang/dom/Severity;
 	method component3()Ljava/lang/String;
 	method component4()Ljava/lang/String;
-	method copy(Ldev/ide/lang/dom/TextRange;Ldev/ide/lang/dom/Severity;Ljava/lang/String;Ljava/lang/String;)Ldev/ide/lang/dom/Diagnostic;
+	method copy(Lcom/shd/codestudio/lang/dom/TextRange;Lcom/shd/codestudio/lang/dom/Severity;Ljava/lang/String;Ljava/lang/String;)Lcom/shd/codestudio/lang/dom/Diagnostic;
 	method equals(Ljava/lang/Object;)Z
 	method getCode()Ljava/lang/String;
 	method getMessage()Ljava/lang/String;
-	method getRange()Ldev/ide/lang/dom/TextRange;
-	method getSeverity()Ldev/ide/lang/dom/Severity;
+	method getRange()Lcom/shd/codestudio/lang/dom/TextRange;
+	method getSeverity()Lcom/shd/codestudio/lang/dom/Severity;
 	method hashCode()I
-	method static copy$default(Ldev/ide/lang/dom/Diagnostic;Ldev/ide/lang/dom/TextRange;Ldev/ide/lang/dom/Severity;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ldev/ide/lang/dom/Diagnostic;
+	method static copy$default(Lcom/shd/codestudio/lang/dom/Diagnostic;Lcom/shd/codestudio/lang/dom/TextRange;Lcom/shd/codestudio/lang/dom/Severity;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/shd/codestudio/lang/dom/Diagnostic;
 	method toString()Ljava/lang/String;
-dev/ide/lang/dom/DomKt
+com/shd/codestudio/lang/dom/DomKt
 	kind class
 	super java/lang/Object
-	method static argumentNodes(Ldev/ide/lang/dom/DomNode;)Ljava/util/List;
-	method static calleeName(Ldev/ide/lang/dom/DomNode;)Ljava/lang/String;
-	method static expandSelection(Ldev/ide/lang/dom/ParsedFile;III)Ldev/ide/lang/dom/TextRange;
-dev/ide/lang/dom/DomNode
+	method static argumentNodes(Lcom/shd/codestudio/lang/dom/DomNode;)Ljava/util/List;
+	method static calleeName(Lcom/shd/codestudio/lang/dom/DomNode;)Ljava/lang/String;
+	method static expandSelection(Lcom/shd/codestudio/lang/dom/ParsedFile;III)Lcom/shd/codestudio/lang/dom/TextRange;
+com/shd/codestudio/lang/dom/DomNode
 	kind interface
 	method abstract getChildren()Ljava/util/List;
 	method abstract getKind-Iaadglk()Ljava/lang/String;
-	method abstract getParent()Ldev/ide/lang/dom/DomNode;
-	method abstract getRange()Ldev/ide/lang/dom/TextRange;
+	method abstract getParent()Lcom/shd/codestudio/lang/dom/DomNode;
+	method abstract getRange()Lcom/shd/codestudio/lang/dom/TextRange;
 	method abstract text()Ljava/lang/CharSequence;
-dev/ide/lang/dom/JavaNodeKinds
+com/shd/codestudio/lang/dom/JavaNodeKinds
 	kind class
 	super java/lang/Object
-	field static INSTANCE Ldev/ide/lang/dom/JavaNodeKinds;
+	field static INSTANCE Lcom/shd/codestudio/lang/dom/JavaNodeKinds;
 	method getNEW_EXPR-Iaadglk()Ljava/lang/String;
 	method getOTHER-Iaadglk()Ljava/lang/String;
-dev/ide/lang/dom/KotlinNodeKinds
+com/shd/codestudio/lang/dom/KotlinNodeKinds
 	kind class
 	super java/lang/Object
-	field static INSTANCE Ldev/ide/lang/dom/KotlinNodeKinds;
+	field static INSTANCE Lcom/shd/codestudio/lang/dom/KotlinNodeKinds;
 	method getANNOTATED_EXPRESSION-Iaadglk()Ljava/lang/String;
 	method getANNOTATION_ENTRY-Iaadglk()Ljava/lang/String;
 	method getANNOTATION_GROUP-Iaadglk()Ljava/lang/String;
@@ -641,10 +641,10 @@ dev/ide/lang/dom/KotlinNodeKinds
 	method getWHEN_ENTRY-Iaadglk()Ljava/lang/String;
 	method getWHEN_ENTRY_GUARD-Iaadglk()Ljava/lang/String;
 	method getWHILE-Iaadglk()Ljava/lang/String;
-dev/ide/lang/dom/NodeKind
+com/shd/codestudio/lang/dom/NodeKind
 	kind class
 	super java/lang/Object
-	field static Companion Ldev/ide/lang/dom/NodeKind$Companion;
+	field static Companion Lcom/shd/codestudio/lang/dom/NodeKind$Companion;
 	method equals(Ljava/lang/Object;)Z
 	method getId()Ljava/lang/String;
 	method hashCode()I
@@ -654,7 +654,7 @@ dev/ide/lang/dom/NodeKind
 	method static hashCode-impl(Ljava/lang/String;)I
 	method static toString-impl(Ljava/lang/String;)Ljava/lang/String;
 	method toString()Ljava/lang/String;
-dev/ide/lang/dom/NodeKind$Companion
+com/shd/codestudio/lang/dom/NodeKind$Companion
 	kind class
 	super java/lang/Object
 	ctor (Lkotlin/jvm/internal/DefaultConstructorMarker;)V
@@ -678,44 +678,44 @@ dev/ide/lang/dom/NodeKind$Companion
 	method getPARAMETER-Iaadglk()Ljava/lang/String;
 	method getSTRING_LITERAL-Iaadglk()Ljava/lang/String;
 	method getTYPE_REF-Iaadglk()Ljava/lang/String;
-dev/ide/lang/dom/ParsedFile
+com/shd/codestudio/lang/dom/ParsedFile
 	kind interface
-	implements dev/ide/lang/dom/DomNode
+	implements com/shd/codestudio/lang/dom/DomNode
 	method abstract getDiagnostics()Ljava/util/List;
 	method abstract getDocumentVersion()J
-	method abstract getFile()Ldev/ide/vfs/VirtualFile;
-	method abstract nodeAt(I)Ldev/ide/lang/dom/DomNode;
-	method abstract nodesIn(Ldev/ide/lang/dom/TextRange;)Lkotlin/sequences/Sequence;
-dev/ide/lang/dom/Severity
+	method abstract getFile()Lcom/shd/codestudio/vfs/VirtualFile;
+	method abstract nodeAt(I)Lcom/shd/codestudio/lang/dom/DomNode;
+	method abstract nodesIn(Lcom/shd/codestudio/lang/dom/TextRange;)Lkotlin/sequences/Sequence;
+com/shd/codestudio/lang/dom/Severity
 	kind enum
 	super java/lang/Enum
-	field static ERROR Ldev/ide/lang/dom/Severity;
-	field static HINT Ldev/ide/lang/dom/Severity;
-	field static INFO Ldev/ide/lang/dom/Severity;
-	field static WARNING Ldev/ide/lang/dom/Severity;
+	field static ERROR Lcom/shd/codestudio/lang/dom/Severity;
+	field static HINT Lcom/shd/codestudio/lang/dom/Severity;
+	field static INFO Lcom/shd/codestudio/lang/dom/Severity;
+	field static WARNING Lcom/shd/codestudio/lang/dom/Severity;
 	method static getEntries()Lkotlin/enums/EnumEntries;
-	method static valueOf(Ljava/lang/String;)Ldev/ide/lang/dom/Severity;
-	method static values()[Ldev/ide/lang/dom/Severity;
-dev/ide/lang/dom/TextRange
+	method static valueOf(Ljava/lang/String;)Lcom/shd/codestudio/lang/dom/Severity;
+	method static values()[Lcom/shd/codestudio/lang/dom/Severity;
+com/shd/codestudio/lang/dom/TextRange
 	kind class
 	super java/lang/Object
 	ctor (II)V
 	method component1()I
 	method component2()I
 	method contains(I)Z
-	method copy(II)Ldev/ide/lang/dom/TextRange;
+	method copy(II)Lcom/shd/codestudio/lang/dom/TextRange;
 	method equals(Ljava/lang/Object;)Z
 	method getEnd()I
 	method getLength()I
 	method getStart()I
 	method hashCode()I
-	method intersects(Ldev/ide/lang/dom/TextRange;)Z
-	method static copy$default(Ldev/ide/lang/dom/TextRange;IIILjava/lang/Object;)Ldev/ide/lang/dom/TextRange;
+	method intersects(Lcom/shd/codestudio/lang/dom/TextRange;)Z
+	method static copy$default(Lcom/shd/codestudio/lang/dom/TextRange;IIILjava/lang/Object;)Lcom/shd/codestudio/lang/dom/TextRange;
 	method toString()Ljava/lang/String;
-dev/ide/lang/dom/XmlNodeKinds
+com/shd/codestudio/lang/dom/XmlNodeKinds
 	kind class
 	super java/lang/Object
-	field static INSTANCE Ldev/ide/lang/dom/XmlNodeKinds;
+	field static INSTANCE Lcom/shd/codestudio/lang/dom/XmlNodeKinds;
 	method getATTRIBUTE-Iaadglk()Ljava/lang/String;
 	method getATTR_VALUE-Iaadglk()Ljava/lang/String;
 	method getCDATA-Iaadglk()Ljava/lang/String;
@@ -725,236 +725,236 @@ dev/ide/lang/dom/XmlNodeKinds
 	method getPROLOG-Iaadglk()Ljava/lang/String;
 	method getTAG-Iaadglk()Ljava/lang/String;
 	method getTEXT-Iaadglk()Ljava/lang/String;
-dev/ide/lang/resolve/DocFormat
+com/shd/codestudio/lang/resolve/DocFormat
 	kind enum
 	super java/lang/Enum
-	field static JAVADOC Ldev/ide/lang/resolve/DocFormat;
-	field static KDOC Ldev/ide/lang/resolve/DocFormat;
-	field static PLAIN Ldev/ide/lang/resolve/DocFormat;
+	field static JAVADOC Lcom/shd/codestudio/lang/resolve/DocFormat;
+	field static KDOC Lcom/shd/codestudio/lang/resolve/DocFormat;
+	field static PLAIN Lcom/shd/codestudio/lang/resolve/DocFormat;
 	method static getEntries()Lkotlin/enums/EnumEntries;
-	method static valueOf(Ljava/lang/String;)Ldev/ide/lang/resolve/DocFormat;
-	method static values()[Ldev/ide/lang/resolve/DocFormat;
-dev/ide/lang/resolve/Modifier
+	method static valueOf(Ljava/lang/String;)Lcom/shd/codestudio/lang/resolve/DocFormat;
+	method static values()[Lcom/shd/codestudio/lang/resolve/DocFormat;
+com/shd/codestudio/lang/resolve/Modifier
 	kind enum
 	super java/lang/Enum
-	field static ABSTRACT Ldev/ide/lang/resolve/Modifier;
-	field static DEFAULT Ldev/ide/lang/resolve/Modifier;
-	field static FINAL Ldev/ide/lang/resolve/Modifier;
-	field static PRIVATE Ldev/ide/lang/resolve/Modifier;
-	field static PROTECTED Ldev/ide/lang/resolve/Modifier;
-	field static PUBLIC Ldev/ide/lang/resolve/Modifier;
-	field static STATIC Ldev/ide/lang/resolve/Modifier;
-	field static SYNCHRONIZED Ldev/ide/lang/resolve/Modifier;
+	field static ABSTRACT Lcom/shd/codestudio/lang/resolve/Modifier;
+	field static DEFAULT Lcom/shd/codestudio/lang/resolve/Modifier;
+	field static FINAL Lcom/shd/codestudio/lang/resolve/Modifier;
+	field static PRIVATE Lcom/shd/codestudio/lang/resolve/Modifier;
+	field static PROTECTED Lcom/shd/codestudio/lang/resolve/Modifier;
+	field static PUBLIC Lcom/shd/codestudio/lang/resolve/Modifier;
+	field static STATIC Lcom/shd/codestudio/lang/resolve/Modifier;
+	field static SYNCHRONIZED Lcom/shd/codestudio/lang/resolve/Modifier;
 	method static getEntries()Lkotlin/enums/EnumEntries;
-	method static valueOf(Ljava/lang/String;)Ldev/ide/lang/resolve/Modifier;
-	method static values()[Ldev/ide/lang/resolve/Modifier;
-dev/ide/lang/resolve/QuickDocInfo
+	method static valueOf(Ljava/lang/String;)Lcom/shd/codestudio/lang/resolve/Modifier;
+	method static values()[Lcom/shd/codestudio/lang/resolve/Modifier;
+com/shd/codestudio/lang/resolve/QuickDocInfo
 	kind class
 	super java/lang/Object
-	ctor (Ljava/lang/String;Ljava/lang/String;Ldev/ide/lang/resolve/SymbolKind;Ljava/lang/String;Ljava/lang/String;Ldev/ide/lang/resolve/DocFormat;)V
+	ctor (Ljava/lang/String;Ljava/lang/String;Lcom/shd/codestudio/lang/resolve/SymbolKind;Ljava/lang/String;Ljava/lang/String;Lcom/shd/codestudio/lang/resolve/DocFormat;)V
 	method component1()Ljava/lang/String;
 	method component2()Ljava/lang/String;
-	method component3()Ldev/ide/lang/resolve/SymbolKind;
+	method component3()Lcom/shd/codestudio/lang/resolve/SymbolKind;
 	method component4()Ljava/lang/String;
 	method component5()Ljava/lang/String;
-	method component6()Ldev/ide/lang/resolve/DocFormat;
-	method copy(Ljava/lang/String;Ljava/lang/String;Ldev/ide/lang/resolve/SymbolKind;Ljava/lang/String;Ljava/lang/String;Ldev/ide/lang/resolve/DocFormat;)Ldev/ide/lang/resolve/QuickDocInfo;
+	method component6()Lcom/shd/codestudio/lang/resolve/DocFormat;
+	method copy(Ljava/lang/String;Ljava/lang/String;Lcom/shd/codestudio/lang/resolve/SymbolKind;Ljava/lang/String;Ljava/lang/String;Lcom/shd/codestudio/lang/resolve/DocFormat;)Lcom/shd/codestudio/lang/resolve/QuickDocInfo;
 	method equals(Ljava/lang/Object;)Z
 	method getContainer()Ljava/lang/String;
 	method getDoc()Ljava/lang/String;
-	method getDocFormat()Ldev/ide/lang/resolve/DocFormat;
-	method getKind()Ldev/ide/lang/resolve/SymbolKind;
+	method getDocFormat()Lcom/shd/codestudio/lang/resolve/DocFormat;
+	method getKind()Lcom/shd/codestudio/lang/resolve/SymbolKind;
 	method getName()Ljava/lang/String;
 	method getSignature()Ljava/lang/String;
 	method hashCode()I
-	method static copy$default(Ldev/ide/lang/resolve/QuickDocInfo;Ljava/lang/String;Ljava/lang/String;Ldev/ide/lang/resolve/SymbolKind;Ljava/lang/String;Ljava/lang/String;Ldev/ide/lang/resolve/DocFormat;ILjava/lang/Object;)Ldev/ide/lang/resolve/QuickDocInfo;
+	method static copy$default(Lcom/shd/codestudio/lang/resolve/QuickDocInfo;Ljava/lang/String;Ljava/lang/String;Lcom/shd/codestudio/lang/resolve/SymbolKind;Ljava/lang/String;Ljava/lang/String;Lcom/shd/codestudio/lang/resolve/DocFormat;ILjava/lang/Object;)Lcom/shd/codestudio/lang/resolve/QuickDocInfo;
 	method toString()Ljava/lang/String;
-dev/ide/lang/resolve/ResolveResult
+com/shd/codestudio/lang/resolve/ResolveResult
 	kind interface
-dev/ide/lang/resolve/ResolveResult$Ambiguous
+com/shd/codestudio/lang/resolve/ResolveResult$Ambiguous
 	kind class
 	super java/lang/Object
-	implements dev/ide/lang/resolve/ResolveResult
+	implements com/shd/codestudio/lang/resolve/ResolveResult
 	ctor (Ljava/util/List;)V
 	method component1()Ljava/util/List;
-	method copy(Ljava/util/List;)Ldev/ide/lang/resolve/ResolveResult$Ambiguous;
+	method copy(Ljava/util/List;)Lcom/shd/codestudio/lang/resolve/ResolveResult$Ambiguous;
 	method equals(Ljava/lang/Object;)Z
 	method getCandidates()Ljava/util/List;
 	method hashCode()I
-	method static copy$default(Ldev/ide/lang/resolve/ResolveResult$Ambiguous;Ljava/util/List;ILjava/lang/Object;)Ldev/ide/lang/resolve/ResolveResult$Ambiguous;
+	method static copy$default(Lcom/shd/codestudio/lang/resolve/ResolveResult$Ambiguous;Ljava/util/List;ILjava/lang/Object;)Lcom/shd/codestudio/lang/resolve/ResolveResult$Ambiguous;
 	method toString()Ljava/lang/String;
-dev/ide/lang/resolve/ResolveResult$Resolved
+com/shd/codestudio/lang/resolve/ResolveResult$Resolved
 	kind class
 	super java/lang/Object
-	implements dev/ide/lang/resolve/ResolveResult
-	ctor (Ldev/ide/lang/resolve/Symbol;)V
-	method component1()Ldev/ide/lang/resolve/Symbol;
-	method copy(Ldev/ide/lang/resolve/Symbol;)Ldev/ide/lang/resolve/ResolveResult$Resolved;
+	implements com/shd/codestudio/lang/resolve/ResolveResult
+	ctor (Lcom/shd/codestudio/lang/resolve/Symbol;)V
+	method component1()Lcom/shd/codestudio/lang/resolve/Symbol;
+	method copy(Lcom/shd/codestudio/lang/resolve/Symbol;)Lcom/shd/codestudio/lang/resolve/ResolveResult$Resolved;
 	method equals(Ljava/lang/Object;)Z
-	method getSymbol()Ldev/ide/lang/resolve/Symbol;
+	method getSymbol()Lcom/shd/codestudio/lang/resolve/Symbol;
 	method hashCode()I
-	method static copy$default(Ldev/ide/lang/resolve/ResolveResult$Resolved;Ldev/ide/lang/resolve/Symbol;ILjava/lang/Object;)Ldev/ide/lang/resolve/ResolveResult$Resolved;
+	method static copy$default(Lcom/shd/codestudio/lang/resolve/ResolveResult$Resolved;Lcom/shd/codestudio/lang/resolve/Symbol;ILjava/lang/Object;)Lcom/shd/codestudio/lang/resolve/ResolveResult$Resolved;
 	method toString()Ljava/lang/String;
-dev/ide/lang/resolve/ResolveResult$Unresolved
+com/shd/codestudio/lang/resolve/ResolveResult$Unresolved
 	kind class
 	super java/lang/Object
-	implements dev/ide/lang/resolve/ResolveResult
-	field static INSTANCE Ldev/ide/lang/resolve/ResolveResult$Unresolved;
-dev/ide/lang/resolve/Scope
+	implements com/shd/codestudio/lang/resolve/ResolveResult
+	field static INSTANCE Lcom/shd/codestudio/lang/resolve/ResolveResult$Unresolved;
+com/shd/codestudio/lang/resolve/Scope
 	kind interface
-	method abstract getEnclosing()Ldev/ide/lang/resolve/Scope;
-	method abstract resolve(Ljava/lang/String;)Ldev/ide/lang/resolve/ResolveResult;
-	method abstract symbols(Ldev/ide/lang/resolve/SymbolFilter;)Ljava/util/List;
-	method static symbols$default(Ldev/ide/lang/resolve/Scope;Ldev/ide/lang/resolve/SymbolFilter;ILjava/lang/Object;)Ljava/util/List;
-dev/ide/lang/resolve/Scope$DefaultImpls
+	method abstract getEnclosing()Lcom/shd/codestudio/lang/resolve/Scope;
+	method abstract resolve(Ljava/lang/String;)Lcom/shd/codestudio/lang/resolve/ResolveResult;
+	method abstract symbols(Lcom/shd/codestudio/lang/resolve/SymbolFilter;)Ljava/util/List;
+	method static symbols$default(Lcom/shd/codestudio/lang/resolve/Scope;Lcom/shd/codestudio/lang/resolve/SymbolFilter;ILjava/lang/Object;)Ljava/util/List;
+com/shd/codestudio/lang/resolve/Scope$DefaultImpls
 	kind class
 	super java/lang/Object
-	method static symbols$default(Ldev/ide/lang/resolve/Scope;Ldev/ide/lang/resolve/SymbolFilter;ILjava/lang/Object;)Ljava/util/List;
-dev/ide/lang/resolve/StructureItem
+	method static symbols$default(Lcom/shd/codestudio/lang/resolve/Scope;Lcom/shd/codestudio/lang/resolve/SymbolFilter;ILjava/lang/Object;)Ljava/util/List;
+com/shd/codestudio/lang/resolve/StructureItem
 	kind class
 	super java/lang/Object
-	ctor (Ljava/lang/String;Ljava/lang/String;Ldev/ide/lang/resolve/SymbolKind;III)V
+	ctor (Ljava/lang/String;Ljava/lang/String;Lcom/shd/codestudio/lang/resolve/SymbolKind;III)V
 	method component1()Ljava/lang/String;
 	method component2()Ljava/lang/String;
-	method component3()Ldev/ide/lang/resolve/SymbolKind;
+	method component3()Lcom/shd/codestudio/lang/resolve/SymbolKind;
 	method component4()I
 	method component5()I
 	method component6()I
-	method copy(Ljava/lang/String;Ljava/lang/String;Ldev/ide/lang/resolve/SymbolKind;III)Ldev/ide/lang/resolve/StructureItem;
+	method copy(Ljava/lang/String;Ljava/lang/String;Lcom/shd/codestudio/lang/resolve/SymbolKind;III)Lcom/shd/codestudio/lang/resolve/StructureItem;
 	method equals(Ljava/lang/Object;)Z
 	method getDepth()I
 	method getDetail()Ljava/lang/String;
 	method getEndOffset()I
-	method getKind()Ldev/ide/lang/resolve/SymbolKind;
+	method getKind()Lcom/shd/codestudio/lang/resolve/SymbolKind;
 	method getName()Ljava/lang/String;
 	method getNameOffset()I
 	method hashCode()I
-	method static copy$default(Ldev/ide/lang/resolve/StructureItem;Ljava/lang/String;Ljava/lang/String;Ldev/ide/lang/resolve/SymbolKind;IIIILjava/lang/Object;)Ldev/ide/lang/resolve/StructureItem;
+	method static copy$default(Lcom/shd/codestudio/lang/resolve/StructureItem;Ljava/lang/String;Ljava/lang/String;Lcom/shd/codestudio/lang/resolve/SymbolKind;IIIILjava/lang/Object;)Lcom/shd/codestudio/lang/resolve/StructureItem;
 	method toString()Ljava/lang/String;
-dev/ide/lang/resolve/Symbol
+com/shd/codestudio/lang/resolve/Symbol
 	kind interface
-	method abstract declaration()Ldev/ide/lang/dom/DomNode;
+	method abstract declaration()Lcom/shd/codestudio/lang/dom/DomNode;
 	method abstract documentation()Ljava/lang/String;
-	method abstract getKind()Ldev/ide/lang/resolve/SymbolKind;
+	method abstract getKind()Lcom/shd/codestudio/lang/resolve/SymbolKind;
 	method abstract getModifiers()Ljava/util/Set;
 	method abstract getName()Ljava/lang/String;
-	method abstract getOrigin()Ldev/ide/lang/resolve/SymbolOrigin;
-	method abstract getOwner()Ldev/ide/lang/resolve/Symbol;
-	method abstract getType()Ldev/ide/lang/resolve/TypeRef;
-dev/ide/lang/resolve/SymbolFilter
+	method abstract getOrigin()Lcom/shd/codestudio/lang/resolve/SymbolOrigin;
+	method abstract getOwner()Lcom/shd/codestudio/lang/resolve/Symbol;
+	method abstract getType()Lcom/shd/codestudio/lang/resolve/TypeRef;
+com/shd/codestudio/lang/resolve/SymbolFilter
 	kind class
 	super java/lang/Object
 	ctor ()V
 	ctor (Ljava/util/Set;ZZ)V
 	ctor (Ljava/util/Set;ZZILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	field static Companion Ldev/ide/lang/resolve/SymbolFilter$Companion;
+	field static Companion Lcom/shd/codestudio/lang/resolve/SymbolFilter$Companion;
 	method component1()Ljava/util/Set;
 	method component2()Z
 	method component3()Z
-	method copy(Ljava/util/Set;ZZ)Ldev/ide/lang/resolve/SymbolFilter;
+	method copy(Ljava/util/Set;ZZ)Lcom/shd/codestudio/lang/resolve/SymbolFilter;
 	method equals(Ljava/lang/Object;)Z
 	method getInstanceOnly()Z
 	method getKinds()Ljava/util/Set;
 	method getStaticOnly()Z
 	method hashCode()I
-	method static copy$default(Ldev/ide/lang/resolve/SymbolFilter;Ljava/util/Set;ZZILjava/lang/Object;)Ldev/ide/lang/resolve/SymbolFilter;
+	method static copy$default(Lcom/shd/codestudio/lang/resolve/SymbolFilter;Ljava/util/Set;ZZILjava/lang/Object;)Lcom/shd/codestudio/lang/resolve/SymbolFilter;
 	method toString()Ljava/lang/String;
-dev/ide/lang/resolve/SymbolFilter$Companion
+com/shd/codestudio/lang/resolve/SymbolFilter$Companion
 	kind class
 	super java/lang/Object
 	ctor (Lkotlin/jvm/internal/DefaultConstructorMarker;)V
-	method getALL()Ldev/ide/lang/resolve/SymbolFilter;
-dev/ide/lang/resolve/SymbolKind
+	method getALL()Lcom/shd/codestudio/lang/resolve/SymbolFilter;
+com/shd/codestudio/lang/resolve/SymbolKind
 	kind enum
 	super java/lang/Enum
-	field static ANNOTATION_TYPE Ldev/ide/lang/resolve/SymbolKind;
-	field static CLASS Ldev/ide/lang/resolve/SymbolKind;
-	field static CONSTRUCTOR Ldev/ide/lang/resolve/SymbolKind;
-	field static ENUM Ldev/ide/lang/resolve/SymbolKind;
-	field static ENUM_CONSTANT Ldev/ide/lang/resolve/SymbolKind;
-	field static FIELD Ldev/ide/lang/resolve/SymbolKind;
-	field static INTERFACE Ldev/ide/lang/resolve/SymbolKind;
-	field static LOCAL_VARIABLE Ldev/ide/lang/resolve/SymbolKind;
-	field static METHOD Ldev/ide/lang/resolve/SymbolKind;
-	field static PACKAGE Ldev/ide/lang/resolve/SymbolKind;
-	field static PARAMETER Ldev/ide/lang/resolve/SymbolKind;
-	field static RECORD Ldev/ide/lang/resolve/SymbolKind;
-	field static TYPE_PARAMETER Ldev/ide/lang/resolve/SymbolKind;
+	field static ANNOTATION_TYPE Lcom/shd/codestudio/lang/resolve/SymbolKind;
+	field static CLASS Lcom/shd/codestudio/lang/resolve/SymbolKind;
+	field static CONSTRUCTOR Lcom/shd/codestudio/lang/resolve/SymbolKind;
+	field static ENUM Lcom/shd/codestudio/lang/resolve/SymbolKind;
+	field static ENUM_CONSTANT Lcom/shd/codestudio/lang/resolve/SymbolKind;
+	field static FIELD Lcom/shd/codestudio/lang/resolve/SymbolKind;
+	field static INTERFACE Lcom/shd/codestudio/lang/resolve/SymbolKind;
+	field static LOCAL_VARIABLE Lcom/shd/codestudio/lang/resolve/SymbolKind;
+	field static METHOD Lcom/shd/codestudio/lang/resolve/SymbolKind;
+	field static PACKAGE Lcom/shd/codestudio/lang/resolve/SymbolKind;
+	field static PARAMETER Lcom/shd/codestudio/lang/resolve/SymbolKind;
+	field static RECORD Lcom/shd/codestudio/lang/resolve/SymbolKind;
+	field static TYPE_PARAMETER Lcom/shd/codestudio/lang/resolve/SymbolKind;
 	method static getEntries()Lkotlin/enums/EnumEntries;
-	method static valueOf(Ljava/lang/String;)Ldev/ide/lang/resolve/SymbolKind;
-	method static values()[Ldev/ide/lang/resolve/SymbolKind;
-dev/ide/lang/resolve/SymbolOrigin
+	method static valueOf(Ljava/lang/String;)Lcom/shd/codestudio/lang/resolve/SymbolKind;
+	method static values()[Lcom/shd/codestudio/lang/resolve/SymbolKind;
+com/shd/codestudio/lang/resolve/SymbolOrigin
 	kind class
 	super java/lang/Object
-	ctor (ZLdev/ide/vfs/VirtualFile;)V
+	ctor (ZLcom/shd/codestudio/vfs/VirtualFile;)V
 	method component1()Z
-	method component2()Ldev/ide/vfs/VirtualFile;
-	method copy(ZLdev/ide/vfs/VirtualFile;)Ldev/ide/lang/resolve/SymbolOrigin;
+	method component2()Lcom/shd/codestudio/vfs/VirtualFile;
+	method copy(ZLcom/shd/codestudio/vfs/VirtualFile;)Lcom/shd/codestudio/lang/resolve/SymbolOrigin;
 	method equals(Ljava/lang/Object;)Z
-	method getFile()Ldev/ide/vfs/VirtualFile;
+	method getFile()Lcom/shd/codestudio/vfs/VirtualFile;
 	method getFromSource()Z
 	method hashCode()I
-	method static copy$default(Ldev/ide/lang/resolve/SymbolOrigin;ZLdev/ide/vfs/VirtualFile;ILjava/lang/Object;)Ldev/ide/lang/resolve/SymbolOrigin;
+	method static copy$default(Lcom/shd/codestudio/lang/resolve/SymbolOrigin;ZLcom/shd/codestudio/vfs/VirtualFile;ILjava/lang/Object;)Lcom/shd/codestudio/lang/resolve/SymbolOrigin;
 	method toString()Ljava/lang/String;
-dev/ide/lang/resolve/TypeRef
+com/shd/codestudio/lang/resolve/TypeRef
 	kind interface
 	method abstract getQualifiedName()Ljava/lang/String;
 	method abstract getTypeArguments()Ljava/util/List;
-	method abstract isAssignableFrom(Ldev/ide/lang/resolve/TypeRef;)Z
-	method abstract members(Ldev/ide/lang/resolve/Symbol;)Ljava/util/List;
+	method abstract isAssignableFrom(Lcom/shd/codestudio/lang/resolve/TypeRef;)Z
+	method abstract members(Lcom/shd/codestudio/lang/resolve/Symbol;)Ljava/util/List;
 	method abstract supertypes()Ljava/util/List;
-dev/ide/model/Coordinate
+com/shd/codestudio/model/Coordinate
 	kind class
 	super java/lang/Object
 	ctor (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)V
 	ctor (Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	field static Companion Ldev/ide/model/Coordinate$Companion;
+	field static Companion Lcom/shd/codestudio/model/Coordinate$Companion;
 	method component1()Ljava/lang/String;
 	method component2()Ljava/lang/String;
 	method component3()Ljava/lang/String;
 	method component4()Ljava/lang/String;
-	method copy(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Ldev/ide/model/Coordinate;
+	method copy(Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;)Lcom/shd/codestudio/model/Coordinate;
 	method equals(Ljava/lang/Object;)Z
 	method getClassifier()Ljava/lang/String;
 	method getGroup()Ljava/lang/String;
 	method getName()Ljava/lang/String;
 	method getVersion()Ljava/lang/String;
 	method hashCode()I
-	method static copy$default(Ldev/ide/model/Coordinate;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ldev/ide/model/Coordinate;
+	method static copy$default(Lcom/shd/codestudio/model/Coordinate;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/shd/codestudio/model/Coordinate;
 	method toString()Ljava/lang/String;
-dev/ide/model/Coordinate$Companion
+com/shd/codestudio/model/Coordinate$Companion
 	kind class
 	super java/lang/Object
 	ctor (Lkotlin/jvm/internal/DefaultConstructorMarker;)V
-	method parseOrNull(Ljava/lang/String;)Ldev/ide/model/Coordinate;
-dev/ide/model/CoordinatesKt
+	method parseOrNull(Ljava/lang/String;)Lcom/shd/codestudio/model/Coordinate;
+com/shd/codestudio/model/CoordinatesKt
 	kind class
 	super java/lang/Object
-	method static sanitizeCoordinate(Ldev/ide/model/Coordinate;)Ldev/ide/model/Coordinate;
+	method static sanitizeCoordinate(Lcom/shd/codestudio/model/Coordinate;)Lcom/shd/codestudio/model/Coordinate;
 	method static sanitizeCoordinate(Ljava/lang/String;)Ljava/lang/String;
-dev/ide/model/Exclusion
+com/shd/codestudio/model/Exclusion
 	kind class
 	super java/lang/Object
 	ctor (Ljava/lang/String;Ljava/lang/String;)V
-	field static Companion Ldev/ide/model/Exclusion$Companion;
+	field static Companion Lcom/shd/codestudio/model/Exclusion$Companion;
 	method component1()Ljava/lang/String;
 	method component2()Ljava/lang/String;
-	method copy(Ljava/lang/String;Ljava/lang/String;)Ldev/ide/model/Exclusion;
+	method copy(Ljava/lang/String;Ljava/lang/String;)Lcom/shd/codestudio/model/Exclusion;
 	method equals(Ljava/lang/Object;)Z
 	method getGroup()Ljava/lang/String;
 	method getName()Ljava/lang/String;
 	method hashCode()I
-	method static copy$default(Ldev/ide/model/Exclusion;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ldev/ide/model/Exclusion;
+	method static copy$default(Lcom/shd/codestudio/model/Exclusion;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/shd/codestudio/model/Exclusion;
 	method toString()Ljava/lang/String;
-dev/ide/model/Exclusion$Companion
+com/shd/codestudio/model/Exclusion$Companion
 	kind class
 	super java/lang/Object
 	ctor (Lkotlin/jvm/internal/DefaultConstructorMarker;)V
-	method parse(Ljava/lang/String;)Ldev/ide/model/Exclusion;
-dev/ide/platform/ByteArrayDataReader
+	method parse(Ljava/lang/String;)Lcom/shd/codestudio/model/Exclusion;
+com/shd/codestudio/platform/ByteArrayDataReader
 	kind class
 	super java/lang/Object
-	implements dev/ide/platform/DataReader
+	implements com/shd/codestudio/platform/DataReader
 	ctor ([BI)V
 	ctor ([BIILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	method getHasMore()Z
@@ -967,10 +967,10 @@ dev/ide/platform/ByteArrayDataReader
 	method readShort()I
 	method readUTF()Ljava/lang/String;
 	method readUnsignedByte()I
-dev/ide/platform/ByteArrayDataWriter
+com/shd/codestudio/platform/ByteArrayDataWriter
 	kind class
 	super java/lang/Object
-	implements dev/ide/platform/DataWriter
+	implements com/shd/codestudio/platform/DataWriter
 	ctor ()V
 	method getSize()I
 	method toByteArray()[B
@@ -981,28 +981,28 @@ dev/ide/platform/ByteArrayDataWriter
 	method writeLong(J)V
 	method writeShort(I)V
 	method writeUTF(Ljava/lang/String;)V
-dev/ide/platform/ByteArraySource
+com/shd/codestudio/platform/ByteArraySource
 	kind class
 	super java/lang/Object
-	implements dev/ide/platform/ByteSource
+	implements com/shd/codestudio/platform/ByteSource
 	ctor ([B)V
 	method getSize()J
 	method read(JI)[B
-dev/ide/platform/ByteSource
+com/shd/codestudio/platform/ByteSource
 	kind interface
 	method abstract getSize()J
 	method abstract read(JI)[B
-dev/ide/platform/CancelToken
+com/shd/codestudio/platform/CancelToken
 	kind class
 	super java/lang/Object
 	ctor ()V
 	method cancel()V
 	method getCanceled()Z
-dev/ide/platform/Clock_jvmKt
+com/shd/codestudio/platform/Clock_jvmKt
 	kind class
 	super java/lang/Object
 	method static epochMillis()J
-dev/ide/platform/ConcurrentMap
+com/shd/codestudio/platform/ConcurrentMap
 	kind class
 	super java/lang/Object
 	ctor ()V
@@ -1014,10 +1014,10 @@ dev/ide/platform/ConcurrentMap
 	method getValues()Ljava/util/Collection;
 	method remove(Ljava/lang/Object;)Ljava/lang/Object;
 	method set(Ljava/lang/Object;Ljava/lang/Object;)V
-dev/ide/platform/ContentHash
+com/shd/codestudio/platform/ContentHash
 	kind class
 	super java/lang/Object
-	field static Companion Ldev/ide/platform/ContentHash$Companion;
+	field static Companion Lcom/shd/codestudio/platform/ContentHash$Companion;
 	method equals(Ljava/lang/Object;)Z
 	method getValue()Ljava/lang/String;
 	method hashCode()I
@@ -1027,30 +1027,30 @@ dev/ide/platform/ContentHash
 	method static hashCode-impl(Ljava/lang/String;)I
 	method static toString-impl(Ljava/lang/String;)Ljava/lang/String;
 	method toString()Ljava/lang/String;
-dev/ide/platform/ContentHash$Companion
+com/shd/codestudio/platform/ContentHash$Companion
 	kind class
 	super java/lang/Object
 	ctor (Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	method of-sdcvfw4(Ljava/lang/String;)Ljava/lang/String;
 	method of-sdcvfw4([B)Ljava/lang/String;
-dev/ide/platform/ContentHash_jvmKt
+com/shd/codestudio/platform/ContentHash_jvmKt
 	kind class
 	super java/lang/Object
 	method static sha256Hex([B)Ljava/lang/String;
-dev/ide/platform/Contribution
+com/shd/codestudio/platform/Contribution
 	kind class
 	super java/lang/Object
 	ctor (Ljava/lang/Object;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	method component1()Ljava/lang/Object;
 	method component2-0MWS1W8()Ljava/lang/String;
-	method copy-oepbLLw(Ljava/lang/Object;Ljava/lang/String;)Ldev/ide/platform/Contribution;
+	method copy-oepbLLw(Ljava/lang/Object;Ljava/lang/String;)Lcom/shd/codestudio/platform/Contribution;
 	method equals(Ljava/lang/Object;)Z
 	method getImpl()Ljava/lang/Object;
 	method getPlugin-0MWS1W8()Ljava/lang/String;
 	method hashCode()I
-	method static copy-oepbLLw$default(Ldev/ide/platform/Contribution;Ljava/lang/Object;Ljava/lang/String;ILjava/lang/Object;)Ldev/ide/platform/Contribution;
+	method static copy-oepbLLw$default(Lcom/shd/codestudio/platform/Contribution;Ljava/lang/Object;Ljava/lang/String;ILjava/lang/Object;)Lcom/shd/codestudio/platform/Contribution;
 	method toString()Ljava/lang/String;
-dev/ide/platform/CopyOnWriteList
+com/shd/codestudio/platform/CopyOnWriteList
 	kind class
 	super java/lang/Object
 	ctor ()V
@@ -1062,7 +1062,7 @@ dev/ide/platform/CopyOnWriteList
 	method remove(Ljava/lang/Object;)Z
 	method removeAll(Lkotlin/jvm/functions/Function1;)Z
 	method snapshot()Ljava/util/List;
-dev/ide/platform/DataReader
+com/shd/codestudio/platform/DataReader
 	kind interface
 	method abstract readBoolean()Z
 	method abstract readByte()I
@@ -1071,7 +1071,7 @@ dev/ide/platform/DataReader
 	method abstract readShort()I
 	method abstract readUTF()Ljava/lang/String;
 	method abstract readUnsignedByte()I
-dev/ide/platform/DataWriter
+com/shd/codestudio/platform/DataWriter
 	kind interface
 	method abstract writeBoolean(Z)V
 	method abstract writeByte(I)V
@@ -1079,40 +1079,40 @@ dev/ide/platform/DataWriter
 	method abstract writeLong(J)V
 	method abstract writeShort(I)V
 	method abstract writeUTF(Ljava/lang/String;)V
-dev/ide/platform/Disposable
+com/shd/codestudio/platform/Disposable
 	kind interface
 	method abstract dispose()V
-dev/ide/platform/EngineCanceledException
+com/shd/codestudio/platform/EngineCanceledException
 	kind class
 	super java/lang/RuntimeException
 	ctor ()V
-dev/ide/platform/EngineCancellation
+com/shd/codestudio/platform/EngineCancellation
 	kind class
 	super java/lang/Object
-	field static INSTANCE Ldev/ide/platform/EngineCancellation;
+	field static INSTANCE Lcom/shd/codestudio/platform/EngineCancellation;
 	method checkCanceled()V
-	method withToken(Ldev/ide/platform/CancelToken;Lkotlin/jvm/functions/Function1;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-dev/ide/platform/EngineCancellation_jvmKt
+	method withToken(Lcom/shd/codestudio/platform/CancelToken;Lkotlin/jvm/functions/Function1;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+com/shd/codestudio/platform/EngineCancellation_jvmKt
 	kind class
 	super java/lang/Object
-	method static currentCancelToken()Ldev/ide/platform/CancelToken;
-	method static withCancelToken(Ldev/ide/platform/CancelToken;Lkotlin/jvm/functions/Function1;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-dev/ide/platform/ExtensionPoint
+	method static currentCancelToken()Lcom/shd/codestudio/platform/CancelToken;
+	method static withCancelToken(Lcom/shd/codestudio/platform/CancelToken;Lkotlin/jvm/functions/Function1;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+com/shd/codestudio/platform/ExtensionPoint
 	kind class
 	super java/lang/Object
 	ctor (Ljava/lang/String;)V
 	method getId()Ljava/lang/String;
-dev/ide/platform/ExtensionRegistry
+com/shd/codestudio/platform/ExtensionRegistry
 	kind interface
-	method abstract extensions(Ldev/ide/platform/ExtensionPoint;)Ljava/util/List;
-	method abstract register-CaD5b6o(Ldev/ide/platform/ExtensionPoint;Ljava/lang/Object;Ljava/lang/String;)Ldev/ide/platform/Disposable;
+	method abstract extensions(Lcom/shd/codestudio/platform/ExtensionPoint;)Ljava/util/List;
+	method abstract register-CaD5b6o(Lcom/shd/codestudio/platform/ExtensionPoint;Ljava/lang/Object;Ljava/lang/String;)Lcom/shd/codestudio/platform/Disposable;
 	method abstract unregisterAll-s5lgTNk(Ljava/lang/String;)V
-	method contributions(Ldev/ide/platform/ExtensionPoint;)Ljava/util/List;
-dev/ide/platform/ExtensionRegistry$DefaultImpls
+	method contributions(Lcom/shd/codestudio/platform/ExtensionPoint;)Ljava/util/List;
+com/shd/codestudio/platform/ExtensionRegistry$DefaultImpls
 	kind class
 	super java/lang/Object
-	method static contributions(Ldev/ide/platform/ExtensionRegistry;Ldev/ide/platform/ExtensionPoint;)Ljava/util/List;
-dev/ide/platform/FileInfo
+	method static contributions(Lcom/shd/codestudio/platform/ExtensionRegistry;Lcom/shd/codestudio/platform/ExtensionPoint;)Ljava/util/List;
+com/shd/codestudio/platform/FileInfo
 	kind class
 	super java/lang/Object
 	ctor (Ljava/lang/String;ZJJ)V
@@ -1120,39 +1120,39 @@ dev/ide/platform/FileInfo
 	method getPath()Ljava/lang/String;
 	method getSize()J
 	method isDirectory()Z
-dev/ide/platform/FileSink
+com/shd/codestudio/platform/FileSink
 	kind interface
 	method abstract close()V
 	method abstract flush()V
 	method abstract write([BII)V
-	method static write$default(Ldev/ide/platform/FileSink;[BIIILjava/lang/Object;)V
-dev/ide/platform/FileSink$DefaultImpls
+	method static write$default(Lcom/shd/codestudio/platform/FileSink;[BIIILjava/lang/Object;)V
+com/shd/codestudio/platform/FileSink$DefaultImpls
 	kind class
 	super java/lang/Object
-	method static write$default(Ldev/ide/platform/FileSink;[BIIILjava/lang/Object;)V
-dev/ide/platform/FileSink_jvmKt
+	method static write$default(Lcom/shd/codestudio/platform/FileSink;[BIIILjava/lang/Object;)V
+com/shd/codestudio/platform/FileSink_jvmKt
 	kind class
 	super java/lang/Object
 	method static moveFile(Ljava/lang/String;Ljava/lang/String;)Z
-	method static openFileForWrite(Ljava/lang/String;)Ldev/ide/platform/FileSink;
-dev/ide/platform/FileSource
+	method static openFileForWrite(Ljava/lang/String;)Lcom/shd/codestudio/platform/FileSink;
+com/shd/codestudio/platform/FileSource
 	kind interface
-	implements dev/ide/platform/ByteSource
+	implements com/shd/codestudio/platform/ByteSource
 	method abstract close()V
-dev/ide/platform/FileSource_jvmKt
+com/shd/codestudio/platform/FileSource_jvmKt
 	kind class
 	super java/lang/Object
-	method static openFile(Ljava/lang/String;)Ldev/ide/platform/FileSource;
-dev/ide/platform/FileSystem_jvmKt
+	method static openFile(Ljava/lang/String;)Lcom/shd/codestudio/platform/FileSource;
+com/shd/codestudio/platform/FileSystem_jvmKt
 	kind class
 	super java/lang/Object
 	method static createDirectories(Ljava/lang/String;)Z
 	method static deleteFile(Ljava/lang/String;)Z
-	method static fileInfo(Ljava/lang/String;)Ldev/ide/platform/FileInfo;
+	method static fileInfo(Ljava/lang/String;)Lcom/shd/codestudio/platform/FileInfo;
 	method static listDirectory(Ljava/lang/String;)Ljava/util/List;
 	method static readFile(Ljava/lang/String;)[B
 	method static writeFileAtomically(Ljava/lang/String;[B)Z
-dev/ide/platform/IdentitySet
+com/shd/codestudio/platform/IdentitySet
 	kind class
 	super java/lang/Object
 	ctor ()V
@@ -1160,16 +1160,16 @@ dev/ide/platform/IdentitySet
 	method contains(Ljava/lang/Object;)Z
 	method getSize()I
 	method toList()Ljava/util/List;
-dev/ide/platform/IoDispatcher_jvmKt
+com/shd/codestudio/platform/IoDispatcher_jvmKt
 	kind class
 	super java/lang/Object
 	method static getIoDispatcher()Lkotlinx/coroutines/CoroutineDispatcher;
-dev/ide/platform/Lock
+com/shd/codestudio/platform/Lock
 	kind class
 	super java/lang/Object
 	ctor ()V
 	method withLock(Lkotlin/jvm/functions/Function0;)Ljava/lang/Object;
-dev/ide/platform/PathNamesKt
+com/shd/codestudio/platform/PathNamesKt
 	kind class
 	super java/lang/Object
 	field static PATH_SEPARATOR C
@@ -1179,10 +1179,10 @@ dev/ide/platform/PathNamesKt
 	method static parentPath(Ljava/lang/String;)Ljava/lang/String;
 	method static relativizePath(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
 	method static resolvePath(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/String;
-dev/ide/platform/PluginId
+com/shd/codestudio/platform/PluginId
 	kind class
 	super java/lang/Object
-	field static Companion Ldev/ide/platform/PluginId$Companion;
+	field static Companion Lcom/shd/codestudio/platform/PluginId$Companion;
 	method equals(Ljava/lang/Object;)Z
 	method getValue()Ljava/lang/String;
 	method hashCode()I
@@ -1192,76 +1192,76 @@ dev/ide/platform/PluginId
 	method static hashCode-impl(Ljava/lang/String;)I
 	method static toString-impl(Ljava/lang/String;)Ljava/lang/String;
 	method toString()Ljava/lang/String;
-dev/ide/platform/PluginId$Companion
+com/shd/codestudio/platform/PluginId$Companion
 	kind class
 	super java/lang/Object
 	ctor (Lkotlin/jvm/internal/DefaultConstructorMarker;)V
 	method getUNKNOWN-0MWS1W8()Ljava/lang/String;
-dev/ide/platform/ProgressReporter
+com/shd/codestudio/platform/ProgressReporter
 	kind interface
 	method abstract checkCanceled()V
 	method abstract isCanceled()Z
 	method abstract report(DLjava/lang/String;)V
-	method static report$default(Ldev/ide/platform/ProgressReporter;DLjava/lang/String;ILjava/lang/Object;)V
-dev/ide/platform/ProgressReporter$DefaultImpls
+	method static report$default(Lcom/shd/codestudio/platform/ProgressReporter;DLjava/lang/String;ILjava/lang/Object;)V
+com/shd/codestudio/platform/ProgressReporter$DefaultImpls
 	kind class
 	super java/lang/Object
-	method static report$default(Ldev/ide/platform/ProgressReporter;DLjava/lang/String;ILjava/lang/Object;)V
-dev/ide/platform/ServiceKey
+	method static report$default(Lcom/shd/codestudio/platform/ProgressReporter;DLjava/lang/String;ILjava/lang/Object;)V
+com/shd/codestudio/platform/ServiceKey
 	kind class
 	super java/lang/Object
 	ctor (Ljava/lang/String;)V
 	method getId()Ljava/lang/String;
-dev/ide/platform/ThreadLocalValue
+com/shd/codestudio/platform/ThreadLocalValue
 	kind class
 	super java/lang/Object
 	ctor (Lkotlin/jvm/functions/Function0;)V
 	method get()Ljava/lang/Object;
-dev/ide/platform/log/ConsoleLogSink
+com/shd/codestudio/platform/log/ConsoleLogSink
 	kind class
 	super java/lang/Object
-	implements dev/ide/platform/log/LogSink
+	implements com/shd/codestudio/platform/log/LogSink
 	ctor ()V
 	ctor (Ljava/io/PrintStream;Ljava/io/PrintStream;)V
 	ctor (Ljava/io/PrintStream;Ljava/io/PrintStream;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	method log(Ldev/ide/platform/log/LogRecord;)V
-dev/ide/platform/log/Log
+	method log(Lcom/shd/codestudio/platform/log/LogRecord;)V
+com/shd/codestudio/platform/log/Log
 	kind class
 	super java/lang/Object
-	field static INSTANCE Ldev/ide/platform/log/Log;
-	method addSink(Ldev/ide/platform/log/LogSink;)V
-	method getMinLevel()Ldev/ide/platform/log/LogLevel;
-	method getRing()Ldev/ide/platform/log/RingBufferSink;
-	method logger(Ljava/lang/String;)Ldev/ide/platform/log/Logger;
-	method logger(Ljava/lang/String;Ljava/lang/String;)Ldev/ide/platform/log/Logger;
+	field static INSTANCE Lcom/shd/codestudio/platform/log/Log;
+	method addSink(Lcom/shd/codestudio/platform/log/LogSink;)V
+	method getMinLevel()Lcom/shd/codestudio/platform/log/LogLevel;
+	method getRing()Lcom/shd/codestudio/platform/log/RingBufferSink;
+	method logger(Ljava/lang/String;)Lcom/shd/codestudio/platform/log/Logger;
+	method logger(Ljava/lang/String;Ljava/lang/String;)Lcom/shd/codestudio/platform/log/Logger;
 	method recent()Ljava/util/List;
-	method removeSink(Ldev/ide/platform/log/LogSink;)V
-	method setMinLevel(Ldev/ide/platform/log/LogLevel;)V
-dev/ide/platform/log/LogLevel
+	method removeSink(Lcom/shd/codestudio/platform/log/LogSink;)V
+	method setMinLevel(Lcom/shd/codestudio/platform/log/LogLevel;)V
+com/shd/codestudio/platform/log/LogLevel
 	kind enum
 	super java/lang/Enum
-	field static DEBUG Ldev/ide/platform/log/LogLevel;
-	field static ERROR Ldev/ide/platform/log/LogLevel;
-	field static INFO Ldev/ide/platform/log/LogLevel;
-	field static WARN Ldev/ide/platform/log/LogLevel;
+	field static DEBUG Lcom/shd/codestudio/platform/log/LogLevel;
+	field static ERROR Lcom/shd/codestudio/platform/log/LogLevel;
+	field static INFO Lcom/shd/codestudio/platform/log/LogLevel;
+	field static WARN Lcom/shd/codestudio/platform/log/LogLevel;
 	method static getEntries()Lkotlin/enums/EnumEntries;
-	method static valueOf(Ljava/lang/String;)Ldev/ide/platform/log/LogLevel;
-	method static values()[Ldev/ide/platform/log/LogLevel;
-dev/ide/platform/log/LogRecord
+	method static valueOf(Ljava/lang/String;)Lcom/shd/codestudio/platform/log/LogLevel;
+	method static values()[Lcom/shd/codestudio/platform/log/LogLevel;
+com/shd/codestudio/platform/log/LogRecord
 	kind class
 	super java/lang/Object
-	ctor (Ldev/ide/platform/log/LogLevel;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;JLjava/lang/String;Ljava/lang/String;)V
-	ctor (Ldev/ide/platform/log/LogLevel;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;JLjava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	method component1()Ldev/ide/platform/log/LogLevel;
+	ctor (Lcom/shd/codestudio/platform/log/LogLevel;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;JLjava/lang/String;Ljava/lang/String;)V
+	ctor (Lcom/shd/codestudio/platform/log/LogLevel;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;JLjava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	method component1()Lcom/shd/codestudio/platform/log/LogLevel;
 	method component2()Ljava/lang/String;
 	method component3()Ljava/lang/String;
 	method component4()Ljava/lang/Throwable;
 	method component5()J
 	method component6()Ljava/lang/String;
 	method component7()Ljava/lang/String;
-	method copy(Ldev/ide/platform/log/LogLevel;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;JLjava/lang/String;Ljava/lang/String;)Ldev/ide/platform/log/LogRecord;
+	method copy(Lcom/shd/codestudio/platform/log/LogLevel;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;JLjava/lang/String;Ljava/lang/String;)Lcom/shd/codestudio/platform/log/LogRecord;
 	method equals(Ljava/lang/Object;)Z
-	method getLevel()Ldev/ide/platform/log/LogLevel;
+	method getLevel()Lcom/shd/codestudio/platform/log/LogLevel;
 	method getMessage()Ljava/lang/String;
 	method getSource()Ljava/lang/String;
 	method getTag()Ljava/lang/String;
@@ -1269,17 +1269,17 @@ dev/ide/platform/log/LogRecord
 	method getThrowable()Ljava/lang/Throwable;
 	method getTimestampMs()J
 	method hashCode()I
-	method static copy$default(Ldev/ide/platform/log/LogRecord;Ldev/ide/platform/log/LogLevel;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;JLjava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ldev/ide/platform/log/LogRecord;
+	method static copy$default(Lcom/shd/codestudio/platform/log/LogRecord;Lcom/shd/codestudio/platform/log/LogLevel;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Throwable;JLjava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/shd/codestudio/platform/log/LogRecord;
 	method toString()Ljava/lang/String;
-dev/ide/platform/log/LogSink
+com/shd/codestudio/platform/log/LogSink
 	kind interface
-	method abstract log(Ldev/ide/platform/log/LogRecord;)V
-dev/ide/platform/log/Log_jvmKt
+	method abstract log(Lcom/shd/codestudio/platform/log/LogRecord;)V
+com/shd/codestudio/platform/log/Log_jvmKt
 	kind class
 	super java/lang/Object
 	method static currentThreadName()Ljava/lang/String;
-	method static defaultLogSink()Ldev/ide/platform/log/LogSink;
-dev/ide/platform/log/Logger
+	method static defaultLogSink()Lcom/shd/codestudio/platform/log/LogSink;
+com/shd/codestudio/platform/log/Logger
 	kind class
 	super java/lang/Object
 	ctor (Ljava/lang/String;Ljava/lang/String;)V
@@ -1287,28 +1287,28 @@ dev/ide/platform/log/Logger
 	method debug(Ljava/lang/String;)V
 	method error(Ljava/lang/String;Ljava/lang/Throwable;)V
 	method info(Ljava/lang/String;)V
-	method static error$default(Ldev/ide/platform/log/Logger;Ljava/lang/String;Ljava/lang/Throwable;ILjava/lang/Object;)V
-	method static warn$default(Ldev/ide/platform/log/Logger;Ljava/lang/String;Ljava/lang/Throwable;ILjava/lang/Object;)V
+	method static error$default(Lcom/shd/codestudio/platform/log/Logger;Ljava/lang/String;Ljava/lang/Throwable;ILjava/lang/Object;)V
+	method static warn$default(Lcom/shd/codestudio/platform/log/Logger;Ljava/lang/String;Ljava/lang/Throwable;ILjava/lang/Object;)V
 	method warn(Ljava/lang/String;Ljava/lang/Throwable;)V
-dev/ide/platform/log/PerfTrace
+com/shd/codestudio/platform/log/PerfTrace
 	kind class
 	super java/lang/Object
-	field static INSTANCE Ldev/ide/platform/log/PerfTrace;
+	field static INSTANCE Lcom/shd/codestudio/platform/log/PerfTrace;
 	method applyUserPreference(Z)V
 	method getEnabled()Z
 	method setEnabled(Z)V
-dev/ide/platform/log/PerfTrace_jvmKt
+com/shd/codestudio/platform/log/PerfTrace_jvmKt
 	kind class
 	super java/lang/Object
 	method static perfTraceLaunchFlag()Z
-dev/ide/platform/log/RingBufferSink
+com/shd/codestudio/platform/log/RingBufferSink
 	kind class
 	super java/lang/Object
-	implements dev/ide/platform/log/LogSink
+	implements com/shd/codestudio/platform/log/LogSink
 	ctor (I)V
-	method log(Ldev/ide/platform/log/LogRecord;)V
+	method log(Lcom/shd/codestudio/platform/log/LogRecord;)V
 	method snapshot()Ljava/util/List;
-dev/ide/vfs/VirtualFile
+com/shd/codestudio/vfs/VirtualFile
 	kind interface
 	method abstract children()Ljava/util/List;
 	method abstract contentHash-Q9wPEHw()Ljava/lang/String;
@@ -1317,6 +1317,6 @@ dev/ide/vfs/VirtualFile
 	method abstract getName()Ljava/lang/String;
 	method abstract getPath()Ljava/lang/String;
 	method abstract isDirectory()Z
-	method abstract parent()Ldev/ide/vfs/VirtualFile;
+	method abstract parent()Lcom/shd/codestudio/vfs/VirtualFile;
 	method abstract readBytes()[B
 	method abstract readText()Ljava/lang/CharSequence;

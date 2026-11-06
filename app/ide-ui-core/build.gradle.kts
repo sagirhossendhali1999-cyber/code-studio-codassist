@@ -9,8 +9,8 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 // composables that render them. Everything the upper layers *share* is collected here, and only things with
 // no dependency on a screen, a component or a composable editor are allowed in.
 //
-// The packages are unchanged from when this code lived in :ide-ui -- `dev.ide.ui`, `dev.ide.ui.theme`,
-// `dev.ide.ui.editor.core` and the rest -- so the split moved no imports at all. What moved is the module
+// The packages are unchanged from when this code lived in :ide-ui -- `com.shd.codestudio.ui`, `com.shd.codestudio.ui.theme`,
+// `com.shd.codestudio.ui.editor.core` and the rest -- so the split moved no imports at all. What moved is the module
 // boundary, and with it the guarantee that the arrows only point one way.
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
@@ -25,7 +25,7 @@ kotlin {
     }
 
     android {
-        namespace = "dev.ide.ui.core"
+        namespace = "com.shd.codestudio.ui.core"
         compileSdk = 36
         minSdk = 24
         compilerOptions { jvmTarget.set(JvmTarget.JVM_17) }

@@ -1,11 +1,11 @@
-# CodeAssist
+# Code Studio
 
-[![CI](https://img.shields.io/github/actions/workflow/status/tyron12233/CodeAssist/ci.yml?branch=main&label=CI)](https://github.com/tyron12233/CodeAssist/actions)
-[![Release](https://img.shields.io/github/v/release/tyron12233/CodeAssist?display_name=tag&sort=semver)](https://github.com/tyron12233/CodeAssist/releases)
-[![License](https://img.shields.io/github/license/tyron12233/CodeAssist)](LICENSE)
+[![CI](https://img.shields.io/github/actions/workflow/status/sagirhossendhali1999-cyber/Code Studio/ci.yml?branch=main&label=CI)](https://github.com/sagirhossendhali1999-cyber/Code Studio/actions)
+[![Release](https://img.shields.io/github/v/release/sagirhossendhali1999-cyber/Code Studio?display_name=tag&sort=semver)](https://github.com/sagirhossendhali1999-cyber/Code Studio/releases)
+[![License](https://img.shields.io/github/license/sagirhossendhali1999-cyber/Code Studio)](LICENSE)
 [![Discord](https://img.shields.io/badge/chat-Discord-5865F2)](https://discord.gg/y2gycT6pDW)
 
-CodeAssist is an IDE for Android that runs on Android. You can write Kotlin and Java, preview Compose and
+Code Studio is an IDE for Android that runs on Android. You can write Kotlin and Java, preview Compose and
 XML layouts, and build, sign and install APKs on the phone itself, without a computer or a remote build
 server. A desktop version for Windows and Linux is built from the same code.
 
@@ -36,7 +36,7 @@ server. A desktop version for Windows and Linux is built from the same code.
 
 ## Limitations
 
-- CodeAssist does not run Gradle. Build scripts are read when a project is imported (dependencies,
+- Code Studio does not run Gradle. Build scripts are read when a project is imported (dependencies,
   version catalogs, the common `android {}` options), but Gradle plugins and custom build logic are not
   executed.
 - Only the bundled Kotlin compiler plugins are available: Compose, kotlinx.serialization and Parcelize.
@@ -47,21 +47,21 @@ If something you need is missing, open an issue. It helps to know what people ar
 
 ## Download
 
-- [GitHub Releases](https://github.com/tyron12233/CodeAssist/releases): the Android APK, and the desktop
+- [GitHub Releases](https://github.com/sagirhossendhali1999-cyber/Code Studio/releases): the Android APK, and the desktop
   builds for Windows and Linux.
-- [Google Play](https://play.google.com/store/apps/details?id=com.tyron.code)
+- [Google Play](https://play.google.com/store/apps/details?id=com.sagirhossendhali1999-cyber.code)
 
 The Play build and the GitHub APK are signed with different keys, so one can't be installed over the
 other.
 
 ## How it works
 
-Gradle is too heavy to run on a phone, so CodeAssist keeps its own project model. Each module's build is a
+Gradle is too heavy to run on a phone, so Code Studio keeps its own project model. Each module's build is a
 graph of tasks with up-to-date checks, much like Gradle's, and the tasks call the Android tools directly
 instead of going through the Android Gradle Plugin. Changing one file only re-runs the tasks that depend
 on it.
 
-Java analysis uses Eclipse JDT. Kotlin uses the Kotlin compiler's parser with CodeAssist's own analysis on
+Java analysis uses Eclipse JDT. Kotlin uses the Kotlin compiler's parser with Code Studio's own analysis on
 top, so completion doesn't have to start a full compiler session on every keystroke. Symbol indexes for
 libraries and the Android SDK are stored on disk and read in place, which keeps memory use flat as
 projects grow.
@@ -141,9 +141,9 @@ For questions and discussion, join the [Discord server](https://discord.gg/y2gyc
 
 ## License
 
-CodeAssist is licensed under the GNU General Public License v3.0 or later. See [LICENSE](LICENSE).
+Code Studio is licensed under the GNU General Public License v3.0 or later. See [LICENSE](LICENSE).
 
 The plugin SPI modules (`plugin-api`, `plugin-ui-api`, `platform-core`, `vfs-api`, `project-model-api`,
-`language-api`, `index-api`, `analysis-api` and `build-api`, published under `io.github.tyron12233`) also
+`language-api`, `index-api`, `analysis-api` and `build-api`, published under `io.github.sagirhossendhali1999-cyber`) also
 carry the Classpath exception (see [LICENSE-EXCEPTION](LICENSE-EXCEPTION)), so a plugin compiled against
 them can use any license.

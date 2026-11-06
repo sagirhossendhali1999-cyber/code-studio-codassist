@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
     `java-library`
     // Published for plugin authors to compile against; see the convention plugin for the coordinate.
-    id("dev.ide.spi-publish")
+    id("com.shd.codestudio.spi-publish")
 }
 
 // vcs-api -> platform-core. The version-control SPI: the repository/branch/commit/status model, the

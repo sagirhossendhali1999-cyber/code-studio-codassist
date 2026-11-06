@@ -225,7 +225,7 @@
     <string name="vcs_tab_conflict">合并冲突</string>
     <string name="vcs_tab_untracked">未纳入版本控制</string>
     <string name="vcs_tab_changed">自 HEAD 以来已更改</string>
-    <!-- Engine and backend messages (dev.ide.vcs.VcsMessage). Keep in step with that enum. -->
+    <!-- Engine and backend messages (com.shd.codestudio.vcs.VcsMessage). Keep in step with that enum. -->
     <string name="vcs_msg_with_reason">%1$s：%2$s</string>
     <string name="vcs_msg_something_went_wrong">出了点问题（%1$s）</string>
     <string name="vcs_msg_some_files">部分文件</string>

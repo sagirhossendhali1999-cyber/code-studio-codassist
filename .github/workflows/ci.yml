@@ -191,7 +191,7 @@ jobs:
           disable-animations: true
           script: >-
             ./gradlew :ide-android:connectedDebugAndroidTest
-            -Pandroid.testInstrumentationRunnerArguments.class=dev.ide.android.parity.KotlinAnalysisArtParityTest
+            -Pandroid.testInstrumentationRunnerArguments.class=com.shd.codestudio.android.parity.KotlinAnalysisArtParityTest
             --console=plain --stacktrace
 
       - name: Upload instrumented test reports
@@ -276,12 +276,12 @@ jobs:
           :model-bridge:jvmTest
           --console=plain --stacktrace
 
-      # Linking the `CodeAssistUi` framework the Xcode app embeds. This step was left out at first, on the
+      # Linking the `Code StudioUi` framework the Xcode app embeds. This step was left out at first, on the
       # reasoning that the compiles above already prove every module builds for the target. They do not:
       # Kotlin/Native lowers the WHOLE program at link time, so a tree that every target compiles cleanly can
       # still fail here. It did -- `CastsOptimization` blew its stack on this graph and the iOS app could not
       # be built at all, while every compile task stayed green. A ~6 minute link is worth catching that.
-      - name: Link the CodeAssistUi framework (whole-program lowering)
+      - name: Link the Code StudioUi framework (whole-program lowering)
         env:
           CI_CORE_ONLY: "false"
         run: ./gradlew :ide-ios:linkDebugFrameworkIosSimulatorArm64 --console=plain --stacktrace

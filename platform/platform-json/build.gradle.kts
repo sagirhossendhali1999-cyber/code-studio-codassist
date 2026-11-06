@@ -5,7 +5,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 // These two files used to sit in :platform-core, which is Kotlin/JVM and published as an SPI jar. The
 // Projects Store's transport is the only thing in the build that parses JSON on a hot path, and that
 // transport now has to compile for iOS as well as the JVM and ART, so the reader had to move somewhere a
-// Kotlin/Native target can consume. The package is unchanged (`dev.ide.platform`), so no call site moved
+// Kotlin/Native target can consume. The package is unchanged (`com.shd.codestudio.platform`), so no call site moved
 // with them.
 //
 // Deliberately NOT published: JsonReader was never part of what :platform-core's POM advertises (extension

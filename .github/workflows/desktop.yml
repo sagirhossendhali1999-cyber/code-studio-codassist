@@ -73,7 +73,7 @@ jobs:
       - name: Smoke test, an APK with no Android SDK
         run: |
           set -euo pipefail
-          image=app/ide-desktop/build/compose/binaries/main/app/CodeAssist
+          image=app/ide-desktop/build/compose/binaries/main/app/Code Studio
           ls "$image"
           java="$image/runtime/bin/java.exe"
           toolchain="$image/app/resources/android-toolchain"
@@ -84,8 +84,8 @@ jobs:
           run() {
             env -u ANDROID_HOME -u ANDROID_SDK_ROOT "$java" -cp "$cp" \
               "-Duser.home=$(cygpath -w "$home")" \
-              "-Dcodeassist.android.toolchain=$(cygpath -w "$toolchain")" \
-              dev.ide.buildcli.MainKt "$@"
+              "-Dcodestudio.android.toolchain=$(cygpath -w "$toolchain")" \
+              com.shd.codestudio.buildcli.MainKt "$@"
           }
           # Each template is created and assembled the way the IDE does it: compose-app's Maven dependencies land in
           # a cache OUTSIDE the project, as the IDE's shared cache does, so their absolute paths meet the module's.
@@ -93,7 +93,7 @@ jobs:
             dir="$RUNNER_TEMP/smoke-$template"
             log="$RUNNER_TEMP/smoke-$template.log"
             cache=$(cygpath -w "$RUNNER_TEMP/deps-cache")
-            { run create --project "$(cygpath -w "$dir")" --template "$template" --name SmokeApp --package dev.ide.smoke --cache "$cache" &&
+            { run create --project "$(cygpath -w "$dir")" --template "$template" --name SmokeApp --package com.shd.codestudio.smoke --cache "$cache" &&
               run assemble --project "$(cygpath -w "$dir")" --cache "$cache"; } 2>&1 | tee "$log"
             # A Windows path mistake can be swallowed into a warning (an index pass, a cache write), so look for it.
             if grep -E "Illegal char|InvalidPathException|cannot write|indexing .* failed" "$log"; then
@@ -117,7 +117,7 @@ jobs:
           mkdir -p dist
           cp "$msi" "dist/$name-windows-x64.msi"
           if [ "${{ github.event_name }}" = "release" ]; then
-            (cd "$out/app" && 7z a -tzip -bd "$GITHUB_WORKSPACE/dist/$name-windows-x64-portable.zip" CodeAssist > /dev/null)
+            (cd "$out/app" && 7z a -tzip -bd "$GITHUB_WORKSPACE/dist/$name-windows-x64-portable.zip" Code Studio > /dev/null)
           fi
           ls -lh dist
 
@@ -194,9 +194,9 @@ jobs:
       - name: Smoke test, an APK with no Android SDK
         run: |
           set -euo pipefail
-          image=app/ide-desktop/build/compose/binaries/main/app/CodeAssist
+          image=app/ide-desktop/build/compose/binaries/main/app/Code Studio
           ls "$image" "$image/lib"
-          test -x "$image/bin/CodeAssist" || { echo "::error::the image has no executable launcher"; exit 1; }
+          test -x "$image/bin/Code Studio" || { echo "::error::the image has no executable launcher"; exit 1; }
           java="$image/lib/runtime/bin/java"
           toolchain="$image/lib/app/resources/android-toolchain"
           ls -l "$toolchain"
@@ -208,14 +208,14 @@ jobs:
           run() {
             env -u ANDROID_HOME -u ANDROID_SDK_ROOT "$java" -cp "$cp" \
               "-Duser.home=$home" \
-              "-Dcodeassist.android.toolchain=$toolchain" \
-              dev.ide.buildcli.MainKt "$@"
+              "-Dcodestudio.android.toolchain=$toolchain" \
+              com.shd.codestudio.buildcli.MainKt "$@"
           }
           for template in android-app compose-app; do
             dir="$RUNNER_TEMP/smoke-$template"
             log="$RUNNER_TEMP/smoke-$template.log"
             cache="$RUNNER_TEMP/deps-cache"
-            { run create --project "$dir" --template "$template" --name SmokeApp --package dev.ide.smoke --cache "$cache" &&
+            { run create --project "$dir" --template "$template" --name SmokeApp --package com.shd.codestudio.smoke --cache "$cache" &&
               run assemble --project "$dir" --cache "$cache"; } 2>&1 | tee "$log"
             if grep -E "cannot write|indexing .* failed" "$log"; then
               echo "::error::$template: a write or index pass failed"; exit 1
@@ -233,11 +233,11 @@ jobs:
           out=app/ide-desktop/build/compose/binaries/main
           deb=$(ls "$out"/deb/*.deb | head -1)
           version=$(dpkg-deb -f "$deb" Version | sed 's/-[0-9]*$//')
-          name="CodeAssist-$version"
+          name="Code Studio-$version"
           echo "name=$name" >> "$GITHUB_OUTPUT"
           mkdir -p dist
           cp "$deb" "dist/$name-linux-x64.deb"
-          tar -C "$out/app" -czf "dist/$name-linux-x64-portable.tar.gz" CodeAssist
+          tar -C "$out/app" -czf "dist/$name-linux-x64-portable.tar.gz" Code Studio
           ls -lh dist
 
       - name: Upload the package

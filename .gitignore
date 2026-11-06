@@ -1,5 +1,5 @@
 # Gradle — ignore the module-level output dirs only, NOT source packages named `build`
-# (e.g. dev/ide/build/ in build-api/build-engine). `**/build/` would wrongly exclude that source.
+# (e.g. com/shd/codestudio/build/ in build-api/build-engine). `**/build/` would wrongly exclude that source.
 .gradle/
 .kotlin/
 /build/
@@ -45,7 +45,7 @@ docs/jdt-name-environment.md
 docs/kotlin-compiler-on-art.md
 docs/kotlin-completion-backend.md
 docs/xml-language-support.md
-docs/codeassist-layout-preview-design.md
+docs/codestudio-layout-preview-design.md
 docs/handoff_onboarding_compose/
 docs/design/
 docs/*.png
@@ -64,7 +64,7 @@ dist/
 discord_release_*.txt
 
 # Self-hosting workspace (.platform). The DURABLE half is committed so a fresh checkout can be built by
-# CodeAssist itself: workspace.json (the module list), gradle-model.json (what Gradle exported), and
+# Code Studio itself: workspace.json (the module list), gradle-model.json (what Gradle exported), and
 # repositories.txt. Everything else there is derived or machine-local and must stay out of git — the index
 # and build-fingerprint caches churn on every build, sdks.json holds absolute paths to THIS machine's
 # Android SDK, and the stdlib jar is re-extracted from the app's own assets on demand.

@@ -1,0 +1,429 @@
+package com.shd.codestudio.ui.editor
+
+import com.shd.codestudio.ui.backend.UiFeatures
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.TextRange
+import com.shd.codestudio.ui.backend.IdeBackend
+import com.shd.codestudio.ui.backend.UiAction
+import com.shd.codestudio.ui.backend.UiMenuGroup
+import com.shd.codestudio.ui.backend.UiActionPlaces
+import com.shd.codestudio.ui.backend.UiActionContext
+import com.shd.codestudio.ui.backend.UiDiagnostic
+import com.shd.codestudio.ui.editor.core.EditorSession
+import com.shd.codestudio.ui.editor.core.RangeEdit
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import kotlin.time.Duration.Companion.milliseconds
+import com.shd.codestudio.ui.backend.UiTextEdit
+
+/**
+ * Code-actions (the lightbulb: quick-fixes + caret intentions) and the diagnostic sheet, pulled out of
+ * [CodeEditor]. It tracks which actions are available at the caret, the open menu + its selection, and the
+ * diagnostic detail sheet with that diagnostic's fixes — and applies any chosen action by round-tripping the
+ * backend's edits through the [EditorSession] (so the normal reparse/re-analyze follows).
+ *
+ * [dismissCompletion] is invoked when opening the menu/sheet so the completion popup doesn't overlap them.
+ * Created per file via [rememberEditorActionsController].
+ */
+@Stable
+internal class EditorActionsController(
+    private val session: EditorSession,
+    private val backend: IdeBackend,
+    private val path: String,
+    private val scope: CoroutineScope,
+    private val dismissCompletion: () -> Unit,
+    /** Runs a plugin-tier editor action (see [UiAction.actionId]) through the host's action dispatcher. */
+    private val onPluginAction: suspend (actionId: String, selStart: Int, selEnd: Int) -> Unit =
+        { _, _, _ -> },
+    /** Applies the edits an action makes to files OTHER than this one, through the host's multi-file writer
+     *  (an open tab edited in place, a closed file written through). This controller drives one session and
+     *  cannot reach another tab itself. */
+    private val onOtherFileEdits: suspend (Map<String, List<UiTextEdit>>) -> Unit = { },
+) {
+    var available by mutableStateOf<List<UiAction>>(emptyList())
+        private set
+    /** The diagnostic covering the caret line (drives the proactive gutter lightbulb), or null. */
+    var caretDiagnostic by mutableStateOf<UiDiagnostic?>(null)
+        private set
+    // The range [available] was resolved at — the diagnostic's range when on a diagnostic line, else the
+    // caret selection. Actions are positional (id = index into the resolution at THIS range), so applying must
+    // reuse the same range.
+    private var availStart = 0
+    private var availEnd = 0
+    var menuOpen by mutableStateOf(false)
+        private set
+    var menuSelected by mutableIntStateOf(0)
+        private set
+    /** Every diagnostic in the open sheet's area, i.e. the whole line the tapped chip/gutter glyph speaks
+     *  for, most severe first. Empty means no sheet. */
+    var sheetGroup by mutableStateOf<List<UiDiagnostic>>(emptyList())
+        private set
+    /** Which of [sheetGroup] the sheet is showing in full (message + fixes). */
+    var sheetSelected by mutableIntStateOf(0)
+        private set
+    /** The buffer's [EditorSession.textRevision] when the sheet opened: its diagnostics and fixes describe that text. */
+    private var sheetRevision = 0
+    /** The diagnostic the sheet currently details, or null when the sheet is closed. */
+    val sheet: UiDiagnostic? get() = sheetGroup.getOrNull(sheetSelected)
+    var sheetActions by mutableStateOf<List<UiAction>>(emptyList())
+        private set
+    // The in-flight quick-fix resolution for the sheet's selected diagnostic. Cancelled when the selection
+    // moves to a sibling, so a slow earlier fetch can't land on top of the newer one.
+    private var sheetActionsJob: Job? = null
+
+    /** The plugin action tree for the editor context menu (groups become submenus). Empty until resolved. */
+    var editorMenu by mutableStateOf(UiMenuGroup())
+        private set
+
+    /** The most recent selection-expand request, for the editor to animate the growing highlight. The logical
+     *  selection already jumped to the enclosing node; this only drives the visual tween. Null = nothing to
+     *  animate; [SelectionExpand.token] bumps per request so an identical range still restarts the animation. */
+    var selectionExpand by mutableStateOf<SelectionExpand?>(null)
+        private set
+    private var expandToken = 0
+
+    /** Re-resolve the actions available at the current selection (debounced); driven from an effect. */
+    suspend fun refreshAvailability(focused: Boolean) {
+        delay(250.milliseconds)
+        if (!focused) { available = emptyList(); caretDiagnostic = null; return }
+        val sel = session.selection
+        val diag = diagnosticCoveringLine(session.doc.lineForOffset(sel.min))
+        caretDiagnostic = diag
+        // Resolve actions PROACTIVELY only when the caret is on a diagnostic (the lightbulb case). Resolving
+        // off-diagnostic "caret intentions" here ran on every caret move / on file open — and for Kotlin that
+        // triggers a full-file diagnostics analysis (the unresolved-ref scan behind import fixes), which on a
+        // deeply-nested Compose file is a cold multi-SECOND inference (profiled: `pass=actions` = 110s on open,
+        // returning zero actions — it froze the editor and drove the GC storm). Off-diagnostic intentions are
+        // now resolved ON DEMAND in [openMenu] (Alt-Enter), matching IntelliJ (no proactive lightbulb there).
+        if (diag == null) { available = emptyList(); menuOpen = false; return }
+        val len = session.doc.length
+        val start = diag.startOffset.coerceIn(0, len)
+        val end = diag.endOffset.coerceIn(start, len)
+        // Actions resolved for a different diagnostic must not show (or apply) here while this one resolves.
+        if (start != availStart || end != availEnd) available = emptyList()
+        // Resolving the fixes runs a full-file analysis on the engine, so wait until the caret has rested:
+        // while typing, the caret line almost always carries a transient error (the half-typed name), and
+        // resolving on each pause would keep the engine busy ahead of the next completion. Any edit or caret
+        // move restarts this (the caller's effect is keyed on them), which also cancels a resolution in flight.
+        delay(ACTIONS_SETTLE_DELAY)
+        availStart = start
+        availEnd = end
+        val text = session.doc.awaitText() // off the UI thread when this revision has not built it yet
+        val result = runCatching { backend.editor.actionsAt(path, text, availStart, availEnd) }.getOrNull().orEmpty()
+        available = result
+        when {
+            result.isEmpty() -> menuOpen = false
+            menuSelected >= result.size -> menuSelected = 0
+        }
+    }
+
+    /** The most-severe diagnostic whose line span includes [line], or null — gates the proactive lightbulb so
+     *  it appears only where the caret has entered a diagnostic's line/range, signalling a fix is available. */
+    fun diagnosticCoveringLine(line: Int): UiDiagnostic? {
+        val doc = session.doc
+        var best: UiDiagnostic? = null
+        for (d in session.diagnostics) {
+            val s = d.startOffset.coerceIn(0, doc.length)
+            val e = d.endOffset.coerceIn(s, doc.length)
+            if (line in doc.lineForOffset(s)..doc.lineForOffset(e)) {
+                val cur = best
+                if (cur == null || d.severity.ordinal < cur.severity.ordinal) best = d
+            }
+        }
+        return best
+    }
+
+    fun openMenu() {
+        dismissCompletion()
+        menuSelected = 0
+        menuOpen = true
+        // Off-diagnostic intentions are never pre-resolved, and a diagnostic's fixes only once the caret has
+        // rested (see [refreshAvailability]), so resolve whatever is missing now, on explicit request. When the
+        // caret IS on a diagnostic and its fixes already resolved, [available] is populated: reuse it.
+        if (available.isEmpty()) {
+            val len = session.doc.length
+            val diag = caretDiagnostic
+            if (diag != null) {
+                availStart = diag.startOffset.coerceIn(0, len)
+                availEnd = diag.endOffset.coerceIn(availStart, len)
+            } else {
+                val sel = session.selection
+                availStart = sel.min.coerceIn(0, len)
+                availEnd = sel.max.coerceIn(availStart, len)
+            }
+            scope.launch {
+                val text = session.doc.awaitText()
+                available = runCatching {
+                    backend.editor.actionsAt(path, text, availStart, availEnd)
+                }.getOrNull().orEmpty()
+                if (available.isEmpty()) menuOpen = false
+            }
+        }
+    }
+
+    fun closeMenu() { menuOpen = false }
+
+    /**
+     * Resolve everything the editor context menu lists: the analysis quick-fixes and intentions at the
+     * current selection, plus the plugin action tree for the `EDITOR` place.
+     *
+     * The context menu is opened deliberately, so unlike the proactive lightbulb it can afford to resolve
+     * on demand. That is also the only way its fix and intention sections are populated off a diagnostic
+     * line (see [refreshAvailability] for why nothing is resolved proactively there).
+     */
+    suspend fun resolveContextMenu() {
+        val sel = session.selection
+        val len = session.doc.length
+        availStart = sel.min.coerceIn(0, len)
+        availEnd = sel.max.coerceIn(availStart, len)
+        val text = session.doc.text
+        available = runCatching { backend.editor.actionsAt(path, text, availStart, availEnd) }
+            .getOrNull().orEmpty()
+        val caret = runCatching { backend.editor.caretContext(path, text, availStart) }.getOrNull()
+        editorMenu = runCatching {
+            backend.actions.menuFor(
+                UiActionContext(
+                    place = UiActionPlaces.EDITOR,
+                    activeFilePath = path,
+                    selectionStart = availStart,
+                    selectionEnd = availEnd,
+                    caret = caret,
+                    documentText = text,
+                ),
+            )
+        }.getOrNull() ?: UiMenuGroup()
+    }
+
+    /** Invoke a plugin action picked from the context menu, at the range the menu was resolved for. */
+    fun invokeMenuAction(id: String) {
+        scope.launch { runCatching { onPluginAction(id, availStart, availEnd) } }
+    }
+
+    fun moveSelection(delta: Int) {
+        menuSelected = (menuSelected + delta).coerceIn(0, (available.size - 1).coerceAtLeast(0))
+    }
+
+    fun applyAt(index: Int) {
+        val act = available.getOrNull(index) ?: return
+        menuOpen = false
+        // Apply at the same range [available] was resolved at (the action id is an index into that resolution).
+        runAction(act, availStart, availEnd)
+    }
+
+    /** The most-severe diagnostic whose start sits on [line], or null — drives gutter-glyph and chip taps. */
+    fun diagnosticOnLine(line: Int): UiDiagnostic? {
+        var best: UiDiagnostic? = null
+        for (d in session.diagnostics) {
+            if (session.doc.lineForOffset(d.startOffset.coerceIn(0, session.doc.length)) != line) continue
+            val cur = best
+            if (cur == null || d.severity.ordinal < cur.severity.ordinal) best = d
+        }
+        return best
+    }
+
+    /** Open the diagnostic sheet on [d], carrying every other diagnostic that starts on the same line, and
+     *  fetch the quick-fixes registered for [d]'s range. The chip and the gutter glyph only ever show the most
+     *  severe message on a line; the sheet is where the rest of them become visible and fixable, including
+     *  the ones stacked on the very same span and the Info/Hints that get no chip. */
+    fun openSheet(d: UiDiagnostic) {
+        dismissCompletion()
+        menuOpen = false
+        val group = diagnosticGroupFor(d)
+        sheetRevision = session.textRevision
+        sheetGroup = group
+        sheetSelected = group.indexOf(d).coerceAtLeast(0)
+        fetchSheetActions(group.getOrNull(sheetSelected) ?: d)
+    }
+
+    /** Switch the open sheet to another diagnostic of its group (its quick-fixes are re-resolved). */
+    fun selectSheet(index: Int) {
+        val d = sheetGroup.getOrNull(index) ?: return
+        if (index == sheetSelected) return
+        sheetSelected = index
+        fetchSheetActions(d)
+    }
+
+    /** The diagnostics sharing [d]'s line: the very group its chip counted ([diagnosticsByStartLine]), in the
+     *  same severity-then-position order, so which one was tapped never changes the group's shape. */
+    private fun diagnosticGroupFor(d: UiDiagnostic): List<UiDiagnostic> {
+        val doc = session.doc
+        val lineOf = { off: Int -> doc.lineForOffset(off.coerceIn(0, doc.length)) }
+        val group = diagnosticsByStartLine(session.diagnostics, lineOf)[lineOf(d.startOffset)].orEmpty()
+        // The daemon may have replaced `diagnostics` since the chip was drawn; fall back to the tapped one.
+        return if (group.isEmpty()) listOf(d) else group
+    }
+
+    private fun fetchSheetActions(d: UiDiagnostic) {
+        sheetActions = emptyList()
+        val text = session.doc.text
+        sheetActionsJob?.cancel()
+        sheetActionsJob = scope.launch {
+            // Analysis-tier entries only. The sheet answers "what fixes this problem?", so the plugin
+            // actions that apply anywhere the caret is (they carry an `actionId`) are excluded; they stay
+            // reachable from the Alt-Enter popup and the editor overflow menu.
+            sheetActions = runCatching { backend.editor.actionsAt(path, text, d.startOffset, d.endOffset) }
+                .getOrNull().orEmpty().filter { it.actionId == null }
+        }
+    }
+
+    /**
+     * Close the sheet once the text has changed since it opened, as IntelliJ hides its error tooltip on the next
+     * keystroke. Its message may no longer hold, and its fixes were resolved against the old text: applying one
+     * would edit the diagnostic's old range. The chip is still there to open it again, freshly resolved.
+     */
+    fun closeSheetIfEdited() {
+        if (sheetGroup.isNotEmpty() && session.textRevision != sheetRevision) closeSheet()
+    }
+
+    fun closeSheet() {
+        sheetActionsJob?.cancel()
+        sheetGroup = emptyList()
+        sheetSelected = 0
+        sheetActions = emptyList()
+    }
+
+    /** Expand the selection to the smallest enclosing structural node — the "expand selection" gesture. Walks
+     *  UP the backend's tolerant DOM one level (word → expression → statement → block → method → class …), so
+     *  repeated invocations keep widening it. Triggered by double-clicking/-tapping an existing selection, and
+     *  by a 4th-and-further consecutive click. A no-op when nothing larger encloses the range. */
+    fun expandSelection() {
+        val sel = session.selection
+        expandSelection(sel.min, sel.max)
+    }
+
+    /** Expand from an explicit base range `[fromStart, fromEnd)` rather than the live selection — used by the
+     *  mouse path, where the first click of a double-click has already collapsed the on-screen selection. */
+    fun expandSelection(fromStart: Int, fromEnd: Int) {
+        val text = session.doc.text
+        scope.launch {
+            val range = runCatching {
+                backend.editor.expandSelection(path, text, fromStart, fromEnd)
+            }.getOrNull() ?: return@launch
+            val len = session.doc.length
+            val start = range.start.coerceIn(0, len)
+            val end = range.end.coerceIn(start, len)
+            if (end > start) {
+                val fromMin = minOf(fromStart, fromEnd).coerceIn(0, len)
+                val fromMax = maxOf(fromStart, fromEnd).coerceIn(fromMin, len)
+                selectionExpand = SelectionExpand(fromMin, fromMax, start, end, ++expandToken)
+                session.setSelectionRange(start, end)
+            }
+        }
+    }
+
+    fun applySheetFix(index: Int) {
+        val d = sheet ?: return
+        val act = sheetActions.getOrNull(index) ?: return
+        closeSheet()
+        runAction(act, d.startOffset, d.endOffset)
+    }
+
+    /**
+     * Run a plugin action by registry id at [line]'s start, the path a gutter mark's tap takes.
+     *
+     * The context range is the marked line rather than the caret: a mark says something about that line, and
+     * the caret is usually somewhere else entirely when the user reaches over to tap it.
+     */
+    fun invokeGutterAction(actionId: String, line: Int) {
+        val doc = session.doc
+        val safeLine = line.coerceIn(0, doc.lineCount - 1)
+        val start = doc.lineStart(safeLine)
+        val end = doc.lineEnd(safeLine)
+        scope.launch { runCatching { onPluginAction(actionId, start, end) } }
+    }
+
+    // Apply [act]: ask the backend for its edits over the buffer at the context range [ctxStart,ctxEnd), then
+    // splice them in (the editor round-trip — reparse + re-analyze follow the normal text path). The caret is
+    // kept on its logical spot by shifting it by the net delta of edits that land at/before it.
+    private fun runAction(act: UiAction, ctxStart: Int, ctxEnd: Int) {
+        // A plugin-tier action is invoked by registry id, not by list index, and returns the full effect set
+        // (edits, caret, files, navigation) rather than only edits, so it goes to the host dispatcher, the
+        // same path the toolbar and palette use. Effects that edit land on this very session.
+        act.actionId?.let { id ->
+            scope.launch { runCatching { onPluginAction(id, ctxStart, ctxEnd) } }
+            return
+        }
+        val text = session.doc.text
+        scope.launch {
+            val result = runCatching { backend.editor.applyAction(path, text, ctxStart, ctxEnd, act.id) }
+                .getOrNull() ?: return@launch
+            if (result.isEmpty) return@launch
+            backend.diagnostics.countFeature(UiFeatures.QUICK_FIX)
+            // The other files first: editing another tab has to make it active, and doing that after this
+            // buffer's edit would move the caret away from where the fix just put it.
+            if (result.others.isNotEmpty()) runCatching { onOtherFileEdits(result.others) }
+            if (result.focal.isEmpty()) return@launch
+            val len = session.doc.length
+            val edits = result.focal.map { e ->
+                val st = e.start.coerceIn(0, len)
+                RangeEdit(st, e.end.coerceIn(st, len), e.newText, st + e.newText.length)
+            }
+            session.applyEdits(edits, TextRange(caretAfterEdits(ctxStart, edits)))
+        }
+    }
+}
+
+/**
+ * Where a caret at [caret] belongs once [edits] are spliced in: shifted by the net size of the edits wholly
+ * before it, and placed at the end of the replacement when an edit covers it. Shifting by an edit that
+ * CONTAINS the caret (a fix deleting the very line it sits on) moved it back past the edit's start, into the
+ * middle of a word on an earlier line, where completion then popped up.
+ */
+internal fun caretAfterEdits(caret: Int, edits: List<RangeEdit>): Int {
+    var shift = 0
+    var landed: Int? = null
+    for (e in edits.sortedBy { it.start }) {
+        when {
+            e.end <= caret -> shift += e.text.length - (e.end - e.start)
+            e.start <= caret -> landed = e.start + shift + e.text.length // covers the caret
+        }
+    }
+    return (landed ?: (caret + shift)).coerceAtLeast(0)
+}
+
+/** A one-shot selection-expand animation request (see [EditorActionsController.selectionExpand]): grow the
+ *  drawn highlight from `[fromMin, fromMax)` to `[toMin, toMax)`. [token] bumps per request. */
+internal data class SelectionExpand(
+    val fromMin: Int,
+    val fromMax: Int,
+    val toMin: Int,
+    val toMax: Int,
+    val token: Int,
+)
+
+@Composable
+internal fun rememberEditorActionsController(
+    path: String,
+    session: EditorSession,
+    backend: IdeBackend,
+    onPluginAction: suspend (actionId: String, selStart: Int, selEnd: Int) -> Unit = { _, _, _ -> },
+    onOtherFileEdits: suspend (Map<String, List<UiTextEdit>>) -> Unit = { },
+    dismissCompletion: () -> Unit,
+): EditorActionsController {
+    val scope = rememberCoroutineScope()
+    // The callbacks are re-read through a ref so a recomposition with a new lambda does not rebuild the
+    // controller (which would drop the open menu and the resolved action list).
+    val cb = rememberUpdatedState(onPluginAction)
+    val other = rememberUpdatedState(onOtherFileEdits)
+    return remember(path) {
+        EditorActionsController(
+            session, backend, path, scope, dismissCompletion,
+            onPluginAction = { id, s, e -> cb.value(id, s, e) },
+            onOtherFileEdits = { edits -> other.value(edits) },
+        )
+    }
+}
+
+/** How long the caret must rest on a diagnostic, beyond the availability debounce, before its fixes are
+ *  resolved for the proactive lightbulb. */
+private val ACTIONS_SETTLE_DELAY = 750.milliseconds

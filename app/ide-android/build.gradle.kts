@@ -21,9 +21,9 @@ plugins {
     alias(libs.plugins.compose)
     alias(libs.plugins.kotlin.compose)
     // ASM-rewrites the bundled Kotlin compiler so K2JVMCompiler runs on ART (AGP instrumentation, scope
-    // ALL — see buildSrc dev.ide.build.kotlinc). No-op until the device spike (KotlinCompilerArtSpikeTest)
+    // ALL — see buildSrc com.shd.codestudio.build.kotlinc). No-op until the device spike (KotlinCompilerArtSpikeTest)
     // discovers the first breakage and a pass is added to ArtPatchPasses.
-    id("dev.ide.kotlinc-art")
+    id("com.shd.codestudio.kotlinc-art")
     // Firebase, for push notifications. Declared but NOT applied here: the plugin fails the build when
     // google-services.json is missing, and a contributor cloning this repo has no reason to hold our
     // Firebase config. It is applied below only when that file exists; with it absent FirebaseApp never
@@ -112,7 +112,7 @@ val stripAndroidJarAsset = tasks.register<Zip>("stripAndroidJarAsset") {
 // --- Prebuilt index segments for the bundled jars -------------------------------------------------
 // The IDE indexes android.jar (about 90% of all index entries), the desugar stubs and kotlin-stdlib before
 // completion works, and on a fresh install that meant several seconds on the phone. Instead, run the IDE's own
-// index build (dev.ide.core.PrebuiltIndexSegments, the real IndexServiceImpl with the built-in extensions) on
+// index build (com.shd.codestudio.core.PrebuiltIndexSegments, the real IndexServiceImpl with the built-in extensions) on
 // the build host over the exact bytes the APK ships, and package the segment store as an asset. On device it
 // is unpacked into the shared index cache before the first index pass, which then finds every one as a cache
 // hit. About 3 MB compressed. A segment that doesn't match (another SDK, a newer index format) is just never
@@ -138,7 +138,7 @@ val generatePrebuiltIndexAsset = tasks.register<JavaExec>("generatePrebuiltIndex
     val lambdaStubs = layout.projectDirectory.file("src/main/assets/core-lambda-stubs.jar")
     val outZip = layout.buildDirectory.file("prebuilt-index-asset/index-prebuilt.zip")
     classpath = prebuiltIndexTool
-    mainClass.set("dev.ide.core.PrebuiltIndexSegments")
+    mainClass.set("com.shd.codestudio.core.PrebuiltIndexSegments")
     // Cacheable: a pure function of the shipped jars and the indexing code (the tool classpath, by content).
     inputs.file(androidJar).withPropertyName("androidJar").withPathSensitivity(PathSensitivity.NONE)
     inputs.file(lambdaStubs).withPropertyName("lambdaStubs").withPathSensitivity(PathSensitivity.NONE)
@@ -322,10 +322,10 @@ val bundleKotlincResourcesAsset = tasks.register<Copy>("bundleKotlincResourcesAs
 // R8's whole-program pass needs more heap than an app process's `largeHeap` cap (576MB on the test device);
 // a command-line VM (dalvikvm) forked from the app is NOT a zygote app process, so its `-Xmx` can exceed
 // that cap (measured ceiling ~1.5GB). To run R8 there it needs its classes as a loadable dex, so the r8 tool
-// jar is D8-dexed into a standalone r8.dex.zip asset that `dev.ide.android.R8ForkSupport` extracts and puts
+// jar is D8-dexed into a standalone r8.dex.zip asset that `com.shd.codestudio.android.R8ForkSupport` extracts and puts
 // on `dalvikvm64 -Xmx<n>m -cp <asset> com.android.tools.r8.R8 …`.
 //
-// A fork CAN load the app's own APK instead (the persistent Kotlin compiler VM in `dev.ide.android.fork`
+// A fork CAN load the app's own APK instead (the persistent Kotlin compiler VM in `com.shd.codestudio.android.fork`
 // does exactly that), which would make this asset unnecessary. It is kept because R8/D8 fork PER INVOCATION
 // and a 180MB APK classpath costs ~800ms of class loading per fork against ~130ms for this asset, which the
 // dex merge would pay several times a build.
@@ -421,13 +421,13 @@ val bundleR8DexAsset = tasks.register<JavaExec>("bundleR8DexAsset") {
 // monospace. Stage them into the app's assets at the exact path the Compose resource runtime reads —
 // `composeResources/<resClass-package>/font/…` — so `Res.font.*` / rememberJetBrainsMono() resolve on device
 // with no code change. (Desktop gets these via the JVM resources route and is unaffected.)
-// NOTE: the `dev.ide.ui.generated.resources` segment must match :ide-ui's `packageOfResClass`.
+// NOTE: the `com.shd.codestudio.ui.generated.resources` segment must match :ide-ui's `packageOfResClass`.
 val bundleComposeFontsAsset = tasks.register<Copy>("bundleComposeFontsAsset") {
     description = "Stage :ide-ui's JetBrains Mono compose-resource fonts into the APK assets (Android packaging gap)."
     from(project(":ide-ui-resources").layout.projectDirectory.dir("src/commonMain/composeResources/font")) {
         include("*.ttf")
     }
-    into(layout.buildDirectory.dir("compose-fonts-asset/composeResources/dev.ide.ui.generated.resources/font"))
+    into(layout.buildDirectory.dir("compose-fonts-asset/composeResources/com.shd.codestudio.ui.generated.resources/font"))
 }
 
 // Same Android packaging gap as the fonts above, for the sample-game preview drawables (the store's Explore
@@ -439,7 +439,7 @@ val bundleComposeDrawablesAsset = tasks.register<Copy>("bundleComposeDrawablesAs
     from(project(":ide-ui-resources").layout.projectDirectory.dir("src/commonMain/composeResources/drawable")) {
         include("*.png")
     }
-    into(layout.buildDirectory.dir("compose-drawables-asset/composeResources/dev.ide.ui.generated.resources/drawable"))
+    into(layout.buildDirectory.dir("compose-drawables-asset/composeResources/com.shd.codestudio.ui.generated.resources/drawable"))
 }
 
 // --- AdMob ids (debug/profile = Google TEST ids; release = your real ids) ------------------------
@@ -449,8 +449,8 @@ val bundleComposeDrawablesAsset = tasks.register<Copy>("bundleComposeDrawablesAs
 // back to the test ids so a fork builds fine with AdMob unconfigured. The App id reaches the manifest through
 // the `admobAppId` placeholder; the native ad-unit id is a BuildConfig field AndroidAdHost reads. One native
 // ad unit serves every placement that has no unit of its own (see below). OFFICIAL RELEASES MUST SET BOTH real ids.
-/** The Cloudflare Worker that serves CodeAssist Free AI (see supabase/cloudflare/ai-proxy). */
-val DEFAULT_AI_PROXY_URL = "https://codeassist-ai-proxy.lucena-tyronscott.workers.dev"
+/** The Cloudflare Worker that serves Code Studio Free AI (see supabase/cloudflare/ai-proxy). */
+val DEFAULT_AI_PROXY_URL = "https://codestudio-ai-proxy.lucena-sagirhossendhali1999-cyberscott.workers.dev"
 
 val testAdmobAppId = "ca-app-pub-3940256099942544~3347511713"
 val testAdmobNativeUnitId = "ca-app-pub-3940256099942544/2247696110"
@@ -468,7 +468,7 @@ val realAdmobNativeUnitId = (findProperty("ADMOB_NATIVE_UNIT_ID") as String?) ?:
 val realAdmobInterstitialUnitId = (findProperty("ADMOB_INTERSTITIAL_UNIT_ID") as String?)
     ?: System.getenv("ADMOB_INTERSTITIAL_UNIT_ID")
     ?: "ca-app-pub-7523005242346905/6735189457"
-// Rewarded ads: the one ad a user asks for, in exchange for CodeAssist Free AI points. Google's TEST rewarded unit
+// Rewarded ads: the one ad a user asks for, in exchange for Code Studio Free AI points. Google's TEST rewarded unit
 // for non-shipping builds. The real unit's server-side verification callback is the `ai-reward` Supabase function,
 // which is what credits the points; a fork pointing at its own AdMob account must set up the same callback, and
 // passing a blank id hides the "watch an ad" button in release.
@@ -508,14 +508,14 @@ val realAdmobNativeUnitsByPlacement = mapOf(
 }.filterValues { it.isNotBlank() }.entries.joinToString(";") { "${it.key}=${it.value}" }
 
 android {
-    namespace = "dev.ide.android"
+    namespace = "com.shd.codestudio.android"
     compileSdk = 36
     compileSdkMinor = 1
 
     defaultConfig {
         // The Play Store identity (immutable once published). The Kotlin source package (namespace,
-        // above) stays dev.ide.android — that's an internal build detail, independent of applicationId.
-        applicationId = "com.tyron.code"
+        // above) stays com.shd.codestudio.android — that's an internal build detail, independent of applicationId.
+        applicationId = "com.shd.codestudio"
         // The real engine (project-model-impl/lang-jdt/...) leans on java.nio.file (Path/Files/walk),
         // which is API 26+. Targeting 26 keeps it native and avoids core-library desugaring complexity.
         minSdk = 26
@@ -547,7 +547,7 @@ android {
         buildConfigField("String", "SUPABASE_URL", "\"$supabaseUrl\"")
         buildConfigField("String", "SUPABASE_KEY", "\"$supabaseKey\"")
 
-        // The signing certificates allowed to send analytics, comma-separated SHA-256 prefixes (dev.ide.analytics
+        // The signing certificates allowed to send analytics, comma-separated SHA-256 prefixes (com.shd.codestudio.analytics
         // .Signers). Against our own endpoint the default is our two release certificates, so a fork that keeps
         // the endpoint default sends us nothing: its users agreed to share data with that fork, not with us, and
         // its rows would blend into our crash rates. A build pointed at its own endpoint gets no restriction.
@@ -557,7 +557,7 @@ android {
             ?: if (supabaseUrl == defaultSupabaseUrl) {
                 listOf(
                     "1361a1abfbb2428b", // Google Play app signing key: installs from Play
-                    "a81bf1e053d77f4d", // upload key (CN=tyron scott): the APKs on GitHub Releases
+                    "a81bf1e053d77f4d", // upload key (CN=sagirhossendhali1999-cyber scott): the APKs on GitHub Releases
                 ).joinToString(",")
             } else ""
         buildConfigField("String", "ANALYTICS_SIGNERS", "\"$analyticsSigners\"")
@@ -567,9 +567,9 @@ android {
         // thing that compiles and runs a submission. Blank leaves the tab readable and submitting
         // disabled, which is what a fork with no judge of its own should get.
         val judgeUrl = (findProperty("JUDGE_URL") as String?) ?: System.getenv("JUDGE_URL")
-            ?: "https://codeassist-judge.vercel.app"
+            ?: "https://codestudio-judge.vercel.app"
         buildConfigField("String", "JUDGE_URL", "\"$judgeUrl\"")
-        // CodeAssist Free AI's primary proxy (a Cloudflare Worker); the Supabase `ai-proxy` function is its fallback.
+        // Code Studio Free AI's primary proxy (a Cloudflare Worker); the Supabase `ai-proxy` function is its fallback.
         // Blank uses the Supabase function alone.
         val aiProxyUrl = (findProperty("AI_PROXY_URL") as String?) ?: System.getenv("AI_PROXY_URL") ?: DEFAULT_AI_PROXY_URL
         buildConfigField("String", "AI_PROXY_URL", "\"$aiProxyUrl\"")
@@ -585,7 +585,7 @@ android {
         // AdMob defaults = Google TEST ids. Debug inherits these as-is; `release` overrides to the real ids
         // below, and `profile` (a local perf build) is forced back to test. The App id reaches the manifest
         // via ${admobAppId}; the native ad-unit id is read from BuildConfig by AndroidAdHost.
-        // -PREAL_REWARDED_ADS=true: debug only, for testing the CodeAssist Free AI reward loop end to end. Google's
+        // -PREAL_REWARDED_ADS=true: debug only, for testing the Code Studio Free AI reward loop end to end. Google's
         // TEST rewarded unit never calls the `ai-reward` server, so with it a watched ad credits nothing. This swaps
         // in the real app id + real rewarded unit (the other units stay Google's test ones). Use it ONLY on an
         // emulator or a device registered as an AdMob test device, which get test ads from the real unit.
@@ -894,37 +894,37 @@ tasks.named("preBuild").configure {
 val bundleComposeStringAsset = tasks.register<Copy>("bundleComposeStringAsset") {
     description = "Stage the shared i18n compose-resource strings into the APK assets (Android packaging gap)."
     dependsOn(":ide-ui-resources:desktopProcessResources")
-    from(project(":ide-ui-resources").layout.buildDirectory.dir("processedResources/desktop/main/composeResources/dev.ide.ui.generated.resources")) {
+    from(project(":ide-ui-resources").layout.buildDirectory.dir("processedResources/desktop/main/composeResources/com.shd.codestudio.ui.generated.resources")) {
         include("values*/**/*.cvr")
     }
-    into(layout.buildDirectory.dir("compose-strings-asset/composeResources/dev.ide.ui.generated.resources"))
+    into(layout.buildDirectory.dir("compose-strings-asset/composeResources/com.shd.codestudio.ui.generated.resources"))
 }
 
 // The SAME Android packaging gap, for :agent-ui's OWN compose-resource strings (the chat_* i18n keys, which
-// live in this module's composeResources under package dev.ide.agent.ui.generated.resources — migrated out of
+// live in this module's composeResources under package com.shd.codestudio.agent.ui.generated.resources — migrated out of
 // :ide-ui). Its compiled `.cvr` files must be staged under THAT resClass-package segment; without this the
 // agent chat panel crashes on device with `MissingResourceException: composeResources/
-// dev.ide.agent.ui.generated.resources/values/strings.commonMain.cvr`. Mirrors bundleComposeStringAsset.
+// com.shd.codestudio.agent.ui.generated.resources/values/strings.commonMain.cvr`. Mirrors bundleComposeStringAsset.
 val bundleAgentUiComposeStringAsset = tasks.register<Copy>("bundleAgentUiComposeStringAsset") {
     description = "Stage :agent-ui's i18n compose-resource strings into the APK assets (Android packaging gap)."
     dependsOn(":agent-ui:desktopProcessResources")
-    from(project(":agent-ui").layout.buildDirectory.dir("processedResources/desktop/main/composeResources/dev.ide.agent.ui.generated.resources")) {
+    from(project(":agent-ui").layout.buildDirectory.dir("processedResources/desktop/main/composeResources/com.shd.codestudio.agent.ui.generated.resources")) {
         include("values*/**/*.cvr")
     }
-    into(layout.buildDirectory.dir("agent-ui-strings-asset/composeResources/dev.ide.agent.ui.generated.resources"))
+    into(layout.buildDirectory.dir("agent-ui-strings-asset/composeResources/com.shd.codestudio.agent.ui.generated.resources"))
 }
 
 // The SAME Android packaging gap, for :vcs-ui's OWN compose-resource strings (the vcs_* i18n keys, under
-// package dev.ide.vcs.ui.generated.resources). Without this the Git panel crashes on device the moment it
-// renders, with `MissingResourceException: composeResources/dev.ide.vcs.ui.generated.resources/values/
+// package com.shd.codestudio.vcs.ui.generated.resources). Without this the Git panel crashes on device the moment it
+// renders, with `MissingResourceException: composeResources/com.shd.codestudio.vcs.ui.generated.resources/values/
 // strings.commonMain.cvr`. Mirrors bundleAgentUiComposeStringAsset.
 val bundleVcsUiComposeStringAsset = tasks.register<Copy>("bundleVcsUiComposeStringAsset") {
     description = "Stage :vcs-ui's i18n compose-resource strings into the APK assets (Android packaging gap)."
     dependsOn(":vcs-ui:desktopProcessResources")
-    from(project(":vcs-ui").layout.buildDirectory.dir("processedResources/desktop/main/composeResources/dev.ide.vcs.ui.generated.resources")) {
+    from(project(":vcs-ui").layout.buildDirectory.dir("processedResources/desktop/main/composeResources/com.shd.codestudio.vcs.ui.generated.resources")) {
         include("values*/**/*.cvr")
     }
-    into(layout.buildDirectory.dir("vcs-ui-strings-asset/composeResources/dev.ide.vcs.ui.generated.resources"))
+    into(layout.buildDirectory.dir("vcs-ui-strings-asset/composeResources/com.shd.codestudio.vcs.ui.generated.resources"))
 }
 
 // The staging tasks above are easy to forget, and forgetting one is invisible until the app runs on a device:
@@ -1179,11 +1179,11 @@ dependencies {
     implementation(libs.kotlinx.coroutines.core)
 
     // The on-device Kotlin interpreter (:interp-core) + its Compose bridge/render surface (:interp-compose,
-    // dev.ide.interp.compose — KMP, re-exporting :interp-core): drives a ResolvedTree against the real
+    // com.shd.codestudio.interp.compose — KMP, re-exporting :interp-core): drives a ResolvedTree against the real
     // Compose runtime so the editor's @Preview renders live (docs/compose-interpreter.md, step 4).
     implementation(project(":interp-core"))
     implementation(project(":interp-compose"))
-    // The bytecode VM: the real-view layout preview interprets library/user View classes (dev.ide.jvm.Vm via
+    // The bytecode VM: the real-view layout preview interprets library/user View classes (com.shd.codestudio.jvm.Vm via
     // VmViewFactory) instead of dexing them, and DexPeerFactory realizes their peers. Reaches the app
     // transitively through :interp-compose's jvmShared (api), but the real-view code uses it directly.
     implementation(project(":jvm-interp"))
@@ -1192,7 +1192,7 @@ dependencies {
     implementation(project(":interp-impl"))
 
     // The owned java.awt/javax.swing toolkit. It has to be in the APP dex, not the test APK: an interpreted
-    // program's window class reaches ART as a peer that SUBCLASSES `dev.ide.swing.JPanel`, so the toolkit must
+    // program's window class reaches ART as a peer that SUBCLASSES `com.shd.codestudio.swing.JPanel`, so the toolkit must
     // be loadable by the app class loader the generated dex is defined against. Nothing in the IDE calls it
     // yet (no run path is wired to it); AwtToolkitArtSpike is what exercises it on device.
     implementation(project(":awt-toolkit"))

@@ -1,0 +1,985 @@
+package com.shd.codestudio.core.services
+
+import com.shd.codestudio.android.support.AndroidApiLevels
+import com.shd.codestudio.android.support.AndroidFacet
+import com.shd.codestudio.android.support.AndroidFeatureDependencies
+import com.shd.codestudio.android.support.AndroidPackaging
+import com.shd.codestudio.android.support.BuildFeatures
+import com.shd.codestudio.android.support.JniLibsPackaging
+import com.shd.codestudio.android.support.ResourcePackaging
+import com.shd.codestudio.build.KOTLIN_COMPILER_PLUGIN_EP
+import com.shd.codestudio.core.EngineContext
+import com.shd.codestudio.ksp.KspProcessorCatalog
+import com.shd.codestudio.lang.kotlin.compile.BUILTIN_KOTLIN_COMPILER_PLUGINS
+import com.shd.codestudio.lang.kotlin.compile.ComposeCompilerPlugin
+import com.shd.codestudio.lang.kotlin.compile.ParcelizeCompilerPlugin
+import com.shd.codestudio.lang.kotlin.compile.SerializationCompilerPlugin
+import com.shd.codestudio.model.ClasspathEntryKind
+import com.shd.codestudio.model.ContentRole
+import com.shd.codestudio.model.DependencyScope
+import com.shd.codestudio.model.FacetData
+import com.shd.codestudio.model.LanguageLevel
+import com.shd.codestudio.model.BuildSystemId
+import com.shd.codestudio.model.impl.ExternalModelApplier
+import com.shd.codestudio.model.impl.rootPath
+import com.shd.codestudio.model.sync.ExternalProjectModel
+import com.shd.codestudio.lang.kotlin.build.KotlinFacet
+import com.shd.codestudio.core.gradle.GradleKmp
+import com.shd.codestudio.core.kmp.KmpNative
+import com.shd.codestudio.core.kmp.KmpShapes
+import com.shd.codestudio.core.kmp.KmpSwitch
+import com.shd.codestudio.core.kmp.ModuleFeatures
+import com.shd.codestudio.ui.backend.UiModuleFeature
+import com.shd.codestudio.model.LibraryDependency
+import com.shd.codestudio.model.Module
+import com.shd.codestudio.model.ModuleDependency
+import com.shd.codestudio.model.ModuleSources
+import com.shd.codestudio.model.ModuleTypeRegistry
+import com.shd.codestudio.model.PlatformKind
+import com.shd.codestudio.model.SdkRef
+import com.shd.codestudio.model.SdkResolution
+import com.shd.codestudio.model.SourceSetTemplate
+import com.shd.codestudio.model.bridge.ModuleConfigBridge
+import com.shd.codestudio.model.module
+import com.shd.codestudio.ui.backend.UiBuildFeature
+import com.shd.codestudio.ui.backend.UiBuildFeatures
+import com.shd.codestudio.ui.backend.UiCompilerPlugin
+import com.shd.codestudio.ui.backend.UiCompilerPlugins
+import com.shd.codestudio.ui.backend.UiConfigField
+import com.shd.codestudio.ui.backend.UiConfigResult
+import com.shd.codestudio.ui.backend.UiFacetConfig
+import com.shd.codestudio.ui.backend.UiMissingPlatform
+import com.shd.codestudio.ui.backend.UiMissingProguardFile
+import com.shd.codestudio.ui.backend.UiModuleConfig
+import com.shd.codestudio.ui.backend.UiModuleConfigEdit
+import com.shd.codestudio.ui.backend.UiModuleRef
+import com.shd.codestudio.ui.backend.UiModuleTypeOption
+import com.shd.codestudio.ui.backend.UiPackagingOptions
+import com.shd.codestudio.ui.backend.UiPackagingRules
+import com.shd.codestudio.ui.backend.UiRunConfig
+import com.shd.codestudio.ui.backend.UiSdkOption
+import com.shd.codestudio.ui.backend.UiSourceSetInfo
+import com.shd.codestudio.ui.backend.UiToolchainWarning
+import java.nio.file.Files
+import java.nio.file.Path
+import java.nio.file.Paths
+import kotlin.io.path.writeText
+
+/**
+ * WORKSPACE-scoped engine service: module configuration + management — the Module Settings editor (language
+ * level, facets, build features, proguard files), add/remove modules, and source sets/roots. Carved out of
+ * [com.shd.codestudio.core.IdeServices]. Reaches shared infrastructure (model, prefs) through [EngineContext]; enabling
+ * an Android build feature pulls its runtime dependency through [EngineContext.dependencies], mirroring AGP.
+ */
+internal class ModuleService(private val ctx: EngineContext) : ModuleSources {
+
+    /**
+     * The model half of every answer below, shared with the iOS host.
+     *
+     * Reading a module, writing an edit, adding a source root, creating and removing a module are the same
+     * operations wherever the IDE runs; what this class adds is everything a BUILD brings with it (build
+     * features, compiler plugins, packaging, keep rules, KSP toolchain warnings, a detected main class) and
+     * everything an engine has to do afterwards (invalidate analyzers, re-index). The split is exactly that
+     * line, so a fix to a model operation reaches all three hosts.
+     *
+     * Rebuilt per call because it closes over the store's CURRENT snapshot the same way the reads below do;
+     * the store itself is stable for the life of the engine.
+     */
+    // The `[kotlin]` facet's target records are shown as the Kotlin Multiplatform card, not as raw fields.
+    private val model: ModuleConfigBridge get() = ModuleConfigBridge(ctx.store, setOf(PACKAGING_KEY, "targets", "shared", "activeTarget"))
+
+    /** Starter body for a created `proguard-rules.pro` — comments only (the bundled defaults carry the
+     *  framework keep rules); applied on top of them when the build type has `minifyEnabled = true`. */
+    private val DEFAULT_PROGUARD_RULES: String = """
+        # Add project-specific ProGuard/R8 keep rules here.
+        # Applied on top of the bundled defaults (proguard-android-optimize.txt) when minifyEnabled = true.
+        #
+        # Keep a class referenced only by reflection / from XML, e.g.:
+        # -keep class com.example.SomeClass { *; }
+        #
+        # Preserve line numbers for readable crash stack traces, then hide the original file name:
+        # -keepattributes SourceFile,LineNumberTable
+        # -renamesourcefileattribute SourceFile
+    """.trimIndent() + "\n"
+
+    // ---- module configuration (the Module Settings editor) ----
+
+    /** Modules whose configuration can be edited (the settings screen's switcher). */
+    fun configurableModules(): List<UiModuleRef> = model.configurableModules()
+
+    /**
+     * Read [moduleName]'s editable configuration: type, language level, source sets, and one facet panel
+     * per registered facet. Facet fields are derived generically from the codec's value map, so any
+     * codec-backed facet (Android, future ones) renders without bespoke UI.
+     */
+    fun getModuleConfig(moduleName: String): UiModuleConfig? {
+        val module = ctx.modules().firstOrNull { it.name == moduleName } ?: return null
+        val data = ctx.store.data.projects.flatMap { it.modules }.firstOrNull { it.name == moduleName }
+        val kotlin = module.facets.get(KotlinFacet.KEY)
+        val base = model.moduleConfig(moduleName)?.copy(
+            missingPlatform = missingPlatform(module),
+            kmpTargets = kotlin?.targets?.map { it.name }?.takeIf { it.size > 1 }.orEmpty(),
+            kmpActiveTarget = kotlin?.takeIf { it.targets.size > 1 }?.active?.name,
+            addableFeatures = data?.let { ModuleFeatures.addable(it) }.orEmpty().map(::featureOf),
+        ) ?: return null
+        // The one field the model cannot answer: which `main` this module would run. Detecting it needs the
+        // module's sources analyzed, and running it needs a JVM, so it is added here rather than shared.
+        if (!isConsoleRunModule(module)) return base
+        val detected = MainClassDetection.detect(ctx, module).map { it.mainClass }
+        return base.copy(
+            runConfig = UiRunConfig(
+                mainClass = ctx.mainClassOverride(module) ?: "",
+                detectedMainClasses = detected,
+                autoDetected = detected.firstOrNull(),
+            ),
+        )
+    }
+
+    /**
+     * The compileSdk of an Android [module] when no platform for it is installed, with the level it uses
+     * instead: the default Android SDK's, the bundled jar on device. Null when it resolves its own platform,
+     * or when the user pinned an SDK explicitly.
+     */
+    private fun missingPlatform(module: Module): UiMissingPlatform? {
+        val facet = module.facets.get(AndroidFacet.KEY) ?: return null
+        if (module.sdk != null) return null
+        val sdk = SdkResolution.sdkFor(ctx.store.workspace, module) ?: return null
+        if (sdk.kind != PlatformKind.ANDROID) return null
+        val jar = sdk.bootClasspath.firstOrNull()?.let { Paths.get(it.path) } ?: return null
+        val used = AndroidApiLevels.levelOfPlatformJar(jar)
+        return if (used == facet.compileSdk) null else UiMissingPlatform(facet.compileSdk, used)
+    }
+
+    /** Persist [edit] (language level + facet values) to [moduleName] through a model transaction + save. */
+    fun updateModuleConfig(moduleName: String, edit: UiModuleConfigEdit): UiConfigResult {
+        val module = ctx.modules().firstOrNull { it.name == moduleName }
+            ?: return UiConfigResult(false, "No module '$moduleName'.")
+        val result = model.updateModuleConfig(moduleName, edit)
+        if (!result.success) return result
+        // The Run main-class override is a project PREFERENCE, independent of the model transaction above;
+        // a non-null value sets it, blank clears it back to auto-detect.
+        edit.mainClass?.let { ctx.setMainClassOverride(module, it) }
+        ctx.invalidateAnalyzers()       // language level + facets affect the compile classpath/source sets
+        ctx.invalidateSyntheticClasses() // an Android facet change can move the R package
+        ctx.resyncIndex()
+        return result
+    }
+
+    /** The Android `buildFeatures` of [moduleName] as toggle descriptors, or null for a non-Android module.
+     *  Compiler-plugin features (Compose, Parcelize) live on their own [getCompilerPlugins] tab; Build Features
+     *  keeps only the code-generation toggles (ViewBinding). */
+    fun getBuildFeatures(moduleName: String): UiBuildFeatures? {
+        val module = ctx.modules().firstOrNull { it.name == moduleName } ?: return null
+        val facet = module.facets.get(AndroidFacet.KEY) ?: return null
+        val bf = facet.buildFeatures
+        return UiBuildFeatures(
+            moduleName,
+            listOf(
+                UiBuildFeature(
+                    "viewBinding", "View Binding",
+                    "Generate a type-safe binding class for each layout — a field per view id, plus inflate()/bind(), no findViewById.",
+                    bf.viewBinding,
+                    note = "Adds the ViewBinding runtime and generates a <Layout>Binding for every layout.",
+                ),
+                UiBuildFeature(
+                    "buildConfig", "BuildConfig",
+                    "Generate <namespace>.BuildConfig: DEBUG, APPLICATION_ID, VERSION_CODE, VERSION_NAME and your buildConfigFields.",
+                    bf.buildConfig,
+                    note = "Custom fields go in buildConfigFields (Settings tab), on defaultConfig, a build type or a flavor.",
+                ),
+            ),
+        )
+    }
+
+    /**
+     * A bundled Kotlin compiler plugin the user can toggle per module. Its enable-state is stored in the
+     * [BuildFeatures] flag ([get]/[set]) — reusing the persistence AGP's `buildFeatures` already drives — and
+     * enabling it adds [coords] (the runtime whose presence auto-applies the plugin). [pluginId] matches the
+     * corresponding [com.shd.codestudio.build.KotlinCompilerPlugin.pluginId]. Adding a new toggleable plugin
+     * = register it on the EP + add a [BuildFeatures] field + a dep coordinate list + one row here.
+     */
+    private class ToggleablePlugin(
+        val pluginId: String,
+        val get: (BuildFeatures) -> Boolean,
+        val set: (BuildFeatures, Boolean) -> BuildFeatures,
+        val coords: List<String>,
+    )
+
+    private val toggleablePlugins: List<ToggleablePlugin> = listOf(
+        ToggleablePlugin(ComposeCompilerPlugin.pluginId, { it.compose }, { bf, e -> bf.copy(compose = e) }, AndroidFeatureDependencies.COMPOSE),
+        ToggleablePlugin(SerializationCompilerPlugin.pluginId, { it.serialization }, { bf, e -> bf.copy(serialization = e) }, AndroidFeatureDependencies.SERIALIZATION),
+        ToggleablePlugin(ParcelizeCompilerPlugin.pluginId, { it.parcelize }, { bf, e -> bf.copy(parcelize = e) }, AndroidFeatureDependencies.PARCELIZE),
+    )
+
+    /** The bundled KSP annotation processors (Room/Moshi/Hilt/Glide), toggled the same way as the compiler
+     *  plugins above: enabled-state stored in [BuildFeatures.kspProcessors], enabling adds the runtime whose
+     *  presence runs the processor at build time. The catalog is the source of truth (id/name/description/
+     *  runtime coords/probe). `blessed()` here is metadata-only — no bundled jars needed to describe a toggle. */
+    private val kspProcessors: List<com.shd.codestudio.ksp.KspProcessor> = KspProcessorCatalog.blessed().processors
+
+    /** The registered compiler plugins (EP contributions, or the built-ins for direct/test wiring), by id. Only
+     *  the bundled ones count: the build ignores any other contribution (see BuildService). */
+    private fun registeredPlugins(): Map<String, com.shd.codestudio.build.KotlinCompilerPlugin> =
+        ctx.platform.extensions.extensions(KOTLIN_COMPILER_PLUGIN_EP)
+            .filter { it in BUILTIN_KOTLIN_COMPILER_PLUGINS }
+            .ifEmpty { BUILTIN_KOTLIN_COMPILER_PLUGINS }
+            .associateBy { it.pluginId }
+
+    /** `group:name` from a `group:name[:version[:classifier]]` coordinate, or null when it isn't one. */
+    private fun groupName(coordinate: String): String? {
+        val parts = coordinate.split(':')
+        return if (parts.size >= 2 && parts[0].isNotBlank() && parts[1].isNotBlank()) "${parts[0]}:${parts[1]}" else null
+    }
+
+    /** The LIBRARY jars on [module]'s compile classpath — what a plugin's `appliesTo` classpath probe reads. */
+    private fun compileLibraryClasspath(module: Module): List<Path> =
+        runCatching {
+            module.classpath(DependencyScope.IMPLEMENTATION).entries
+                .filter { it.kind == ClasspathEntryKind.LIBRARY }
+                .mapNotNull { runCatching { Paths.get(it.root.path) }.getOrNull() }
+                .filter { Files.exists(it) }
+        }.getOrDefault(emptyList())
+
+    /** [moduleName]'s directly-declared library coordinates, as declared (version included when it has one):
+     *  the opt-in signal the KSP catalog gates activation on. */
+    private fun declaredCoordinates(module: Module): List<String> = module.dependencies
+        .filterIsInstance<LibraryDependency>().map { it.library.name }.distinct()
+
+    /**
+     * The toolchain problems that will break the build, over EVERY module of the workspace. Today: a bundled KSP
+     * processor whose generated code references types the module's declared runtime does not carry. The IDE runs
+     * the processor version it ships (executed code cannot be downloaded), so the runtime has to agree with it.
+     *
+     * Project-wide rather than per open file: this is a property of a module's configuration, knowable as soon as
+     * the project loads, and the module that has it is often one nobody opens (a `di/` or `data/` module). The
+     * catalog's declared-dependency gate means a module declaring none of the bundled processors costs one list
+     * scan, so walking every module is cheap.
+     *
+     * Already-accepted problems are excluded: the user has been told and chose to build anyway, so the banner
+     * goes away and the build console carries the warning on every build instead.
+     */
+    fun toolchainWarnings(): List<UiToolchainWarning> {
+        val catalog = KspProcessorCatalog.blessed()
+        return ctx.modules().flatMap { module ->
+            val accepted = module.facets.get(AndroidFacet.KEY)?.buildFeatures?.kspRuntimeMismatchAccepted.orEmpty()
+            val declared = declaredCoordinates(module)
+            if (declared.isEmpty()) return@flatMap emptyList()
+            catalog.runtimeMismatches(compileLibraryClasspath(module), declared)
+                .filterNot { it.processor.id in accepted }
+                .map { m ->
+                    UiToolchainWarning(
+                        id = "$KSP_RUNTIME_WARNING_PREFIX${m.processor.id}",
+                        moduleName = module.name,
+                        // The module is in the title because several can be listed at once now.
+                        title = "${module.name}: ${m.processor.displayName} runtime is out of step",
+                        detail = "The bundled ${m.processor.displayName} processor generates code referencing " +
+                            "${m.missingTypeNames.joinToString()}, which ${module.name}'s runtime does not " +
+                            "provide. The IDE always runs the processor version it bundles, so the runtime has " +
+                            "to match.",
+                        fixLabel = m.requiredCoordinates.firstOrNull()?.let { fixLabelFor(m.declared, it) },
+                    )
+                }
+        }
+    }
+
+    /**
+     * "Update" or "Downgrade", chosen by comparing the [declared] version against [required]: the bundled
+     * processor's version is fixed, so aligning to it can go either way, and a label that says the wrong
+     * direction is worse than a vague one.
+     */
+    private fun fixLabelFor(declared: List<String>, required: String): String {
+        val groupName = groupName(required) ?: required
+        val requiredVersion = required.substringAfterLast(':', "")
+        val declaredVersion = declared.firstOrNull { groupName(it) == groupName }
+            ?.substringAfterLast(':', "")?.takeIf { it != groupName.substringAfter(':') }
+        val verb = when {
+            declaredVersion.isNullOrBlank() -> "Set"
+            compareVersions(declaredVersion, requiredVersion) > 0 -> "Downgrade"
+            else -> "Update"
+        }
+        return "$verb ${groupName.substringAfter(':')} to $requiredVersion"
+    }
+
+    /** Dotted-numeric version compare, non-numeric parts falling back to a lexical compare of the whole. */
+    private fun compareVersions(a: String, b: String): Int {
+        val pa = a.split('.', '-')
+        val pb = b.split('.', '-')
+        for (i in 0 until maxOf(pa.size, pb.size)) {
+            val x = pa.getOrNull(i)?.toIntOrNull()
+            val y = pb.getOrNull(i)?.toIntOrNull()
+            if (x == null || y == null) return a.compareTo(b)
+            if (x != y) return x.compareTo(y)
+        }
+        return 0
+    }
+
+    /**
+     * Apply [warningId]'s fix: replace the module's declared runtime coordinate with the version the bundled
+     * processor was built against. A remove-then-add, since that is what rewrites the declaration in the build
+     * files too (for a project whose build scripts own the model, editing only the in-memory model would be
+     * undone by the next sync).
+     */
+    suspend fun fixToolchainWarning(moduleName: String, warningId: String): UiConfigResult {
+        val module = ctx.modules().firstOrNull { it.name == moduleName }
+            ?: return UiConfigResult(false, "No module '$moduleName'.")
+        val processor = kspRuntimeWarningProcessor(warningId)
+            ?: return UiConfigResult(false, "Unknown toolchain warning '$warningId'.")
+        val wanted = processor.runtimeCoordinates
+        var changed = 0
+        for (coordinate in wanted) {
+            val groupName = groupName(coordinate) ?: continue
+            // Drop whatever version is declared for this group:name (there may be none, when the runtime only
+            // arrives transitively), then declare the bundled one.
+            declaredCoordinates(module).filter { groupName(it) == groupName }
+                .forEach { ctx.dependencies.removeDependency(moduleName, it) }
+            val added = ctx.dependencies.addDependency(moduleName, coordinate, "implementation")
+            if (!added.success && !added.message.contains("already a dependency")) {
+                return UiConfigResult(false, "Couldn't set $coordinate: ${added.message}")
+            }
+            changed++
+        }
+        if (changed == 0) return UiConfigResult(false, "Nothing to change for '$warningId'.")
+        // The fix makes the problem go away, so a previously recorded acceptance is stale: clear it, or the
+        // build would keep warning about a mismatch that no longer exists.
+        setKspRuntimeAcceptance(module, processor.id, accepted = false)
+        ctx.invalidateAnalyzers()
+        ctx.resyncIndex()
+        return UiConfigResult(true, "Set ${wanted.joinToString()} on $moduleName.")
+    }
+
+    /**
+     * Record that the user accepts [warningId] on [moduleName]. Source generation stops refusing to run and
+     * reports the problem once per build instead, so the build proceeds to the compile error the generated code
+     * causes. Explicitly NOT a fix; persisted on the module so the build process honours it too.
+     */
+    fun acceptToolchainWarning(moduleName: String, warningId: String): UiConfigResult {
+        val module = ctx.modules().firstOrNull { it.name == moduleName }
+            ?: return UiConfigResult(false, "No module '$moduleName'.")
+        val processor = kspRuntimeWarningProcessor(warningId)
+            ?: return UiConfigResult(false, "Unknown toolchain warning '$warningId'.")
+        if (!setKspRuntimeAcceptance(module, processor.id, accepted = true)) {
+            return UiConfigResult(false, "'$moduleName' is not an Android module.")
+        }
+        return UiConfigResult(true, "${processor.displayName}: building anyway on $moduleName. The compile is still expected to fail.")
+    }
+
+    /** The catalog processor a `ksp-runtime:<id>` warning id refers to, or null when it isn't one. */
+    private fun kspRuntimeWarningProcessor(warningId: String): com.shd.codestudio.ksp.KspProcessor? =
+        warningId.removePrefix(KSP_RUNTIME_WARNING_PREFIX).takeIf { it != warningId }
+            ?.let { id -> kspProcessors.firstOrNull { it.id == id } }
+
+    /** Persist (or clear) the runtime-mismatch acceptance for [processorId]; false when [module] has no facet. */
+    private fun setKspRuntimeAcceptance(module: Module, processorId: String, accepted: Boolean): Boolean {
+        val facet = module.facets.get(AndroidFacet.KEY) ?: return false
+        val bf = facet.buildFeatures
+        val updated = bf.copy(
+            kspRuntimeMismatchAccepted =
+                if (accepted) bf.kspRuntimeMismatchAccepted + processorId
+                else bf.kspRuntimeMismatchAccepted - processorId,
+        )
+        if (updated == bf) return true
+        val project = ctx.projectOf(module) ?: return false
+        runCatching {
+            project.beginModification().apply {
+                module(module.id).putFacet(facet.copy(buildFeatures = updated))
+                commit()
+            }
+        }.onFailure { return false }
+        ctx.store.save()
+        return true
+    }
+
+    /** The bundled Kotlin compiler plugins available to [moduleName] with their enable-state, or null for a
+     *  non-Android module. [UiCompilerPlugin.applied] reflects the real build behavior — a plugin auto-applies
+     *  once its runtime is on the classpath, regardless of the toggle (a transitive runtime still applies it). */
+    fun getCompilerPlugins(moduleName: String): UiCompilerPlugins? {
+        val module = ctx.modules().firstOrNull { it.name == moduleName } ?: return null
+        val facet = module.facets.get(AndroidFacet.KEY) ?: return null
+        val bf = facet.buildFeatures
+        val registered = registeredPlugins()
+        val classpath = compileLibraryClasspath(module)
+        val plugins = toggleablePlugins.mapNotNull { tp ->
+            val plugin = registered[tp.pluginId] ?: return@mapNotNull null
+            UiCompilerPlugin(
+                id = tp.pluginId,
+                title = plugin.displayName,
+                description = plugin.description,
+                enabled = tp.get(bf),
+                applied = runCatching { plugin.appliesTo(module, classpath) }.getOrDefault(false),
+                note = "Applies automatically once its runtime is on the module's classpath.",
+            )
+        }
+        // The bundled KSP processors, toggled the same way (enabled = the facet set; applied = what actually
+        // runs at build time: the runtime is a DIRECTLY-declared dependency AND its marker is on the classpath.
+        // A merely-transitive runtime does not activate the processor, matching AGP's explicit-opt-in rule.)
+        val declaredCoords = module.dependencies.filterIsInstance<LibraryDependency>()
+            .mapNotNull { groupName(it.library.name) }.toSet()
+        val kspRows = kspProcessors.map { p ->
+            val applied = p.runtimeCoordinates.mapNotNull { groupName(it) }.any { it in declaredCoords } &&
+                KspProcessorCatalog.classpathHasClass(classpath, p.probeClassEntry)
+            // A runtime too OLD for the bundled processor's generated code: the row would otherwise read
+            // "applied" while every build fails on symbols that runtime doesn't have. Same probe the build's
+            // preflight uses (KspProcessorCatalog.runtimeMismatches).
+            val staleRuntime = applied && KspProcessorCatalog.hasUnmetRuntimeRequirements(p, classpath)
+            UiCompilerPlugin(
+                id = p.id,
+                title = p.displayName,
+                description = p.description,
+                enabled = p.id in bf.kspProcessors,
+                applied = applied,
+                note = if (staleRuntime)
+                    "Runtime too old for the bundled processor. Update ${p.runtimeCoordinates.joinToString()}."
+                else "KSP annotation processor. Runs once its runtime is a declared dependency of the module.",
+            )
+        }
+        return UiCompilerPlugins(moduleName, plugins + kspRows)
+    }
+
+    /**
+     * Toggle a bundled Kotlin compiler plugin ([pluginId] = its `pluginId`) on [moduleName]. Persists the
+     * enable-state in the module's [BuildFeatures] and — when switching ON — adds the plugin's runtime
+     * dependency, which is what actually activates it (the plugin auto-applies once its runtime resolves) at
+     * build time AND in the editor. Turning it OFF only clears the flag; the dependency is left in place.
+     */
+    suspend fun setCompilerPlugin(
+        moduleName: String, pluginId: String, enabled: Boolean
+    ): UiConfigResult {
+        val module = ctx.modules().firstOrNull { it.name == moduleName }
+            ?: return UiConfigResult(false, "No module '$moduleName'.")
+        val facet = module.facets.get(AndroidFacet.KEY)
+            ?: return UiConfigResult(false, "'$moduleName' is not an Android module.")
+        val project = ctx.projectOf(module)
+            ?: return UiConfigResult(false, "No project owns '$moduleName'.")
+        val tp = toggleablePlugins.firstOrNull { it.pluginId == pluginId }
+        val ksp = if (tp == null) kspProcessors.firstOrNull { it.id == pluginId } else null
+        if (tp == null && ksp == null) return UiConfigResult(false, "Unknown compiler plugin '$pluginId'.")
+        val bf = facet.buildFeatures
+        val updated = when {
+            tp != null -> tp.set(bf, enabled)
+            else -> bf.copy(kspProcessors = if (enabled) bf.kspProcessors + ksp!!.id else bf.kspProcessors - ksp!!.id)
+        }
+        if (updated == bf) return UiConfigResult(true, "No change.")
+        try {
+            project.beginModification().apply {
+                module(module.id).putFacet(facet.copy(buildFeatures = updated))
+                commit()
+            }
+        } catch (e: Exception) {
+            return UiConfigResult(false, "Update failed: ${e.message}")
+        }
+        ctx.store.save()
+
+        // Enabling pulls in the plugin's runtime (its presence is what applies the plugin). A resolution failure
+        // (e.g. offline) doesn't fail the toggle — the flag is set; the deps can be retried from Dependencies.
+        var depNote = ""
+        if (enabled) {
+            val failures = ensureFeatureDependencies(moduleName, tp?.coords ?: ksp!!.runtimeCoordinates)
+            if (failures.isNotEmpty()) depNote = " (couldn't add: ${failures.joinToString(", ")})"
+        }
+
+        ctx.invalidateAnalyzers()
+        ctx.invalidateSyntheticClasses()
+        ctx.resyncIndex()
+        val label = tp?.let { registeredPlugins()[pluginId]?.displayName } ?: ksp?.displayName ?: pluginId
+        val verb = if (enabled) "Enabled" else "Disabled"
+        return UiConfigResult(true, "$verb $label on ${module.name}$depNote")
+    }
+
+    /**
+     * Toggle an Android build feature ([feature] = `viewBinding`/`compose`) on [moduleName]. Persists the
+     * facet, then — when switching ON — adds the dependencies the feature needs (the ViewBinding/Compose
+     * runtime), matching AGP's auto-provisioning. Turning a feature OFF only clears the flag; the
+     * dependencies are left in place (removing them could break code that already uses the feature).
+     */
+    suspend fun setBuildFeature(
+        moduleName: String, feature: String, enabled: Boolean
+    ): UiConfigResult {
+        val module = ctx.modules().firstOrNull { it.name == moduleName } ?: return UiConfigResult(
+            false,
+            "No module '$moduleName'."
+        )
+        val facet = module.facets.get(AndroidFacet.KEY) ?: return UiConfigResult(
+            false,
+            "'$moduleName' is not an Android module."
+        )
+        val project =
+            ctx.projectOf(module) ?: return UiConfigResult(false, "No project owns '$moduleName'.")
+        val bf = facet.buildFeatures
+        val updated = when (feature) {
+            "viewBinding" -> bf.copy(viewBinding = enabled)
+            "compose" -> bf.copy(compose = enabled)
+            "parcelize" -> bf.copy(parcelize = enabled)
+            "buildConfig" -> bf.copy(buildConfig = enabled)
+            else -> return UiConfigResult(false, "Unknown build feature '$feature'.")
+        }
+        if (updated == bf) return UiConfigResult(true, "No change.")
+        try {
+            project.beginModification().apply {
+                module(module.id).putFacet(facet.copy(buildFeatures = updated))
+                commit()
+            }
+        } catch (e: Exception) {
+            return UiConfigResult(false, "Update failed: ${e.message}")
+        }
+        ctx.store.save()
+
+        // Enabling a feature pulls in its runtime dependencies (AGP adds these for you). A resolution failure
+        // (e.g. offline) doesn't fail the toggle — the flag is set; the deps can be retried from Dependencies.
+        var depNote = ""
+        if (enabled) {
+            val coords = when (feature) {
+                "viewBinding" -> AndroidFeatureDependencies.VIEW_BINDING
+                "compose" -> AndroidFeatureDependencies.COMPOSE
+                "parcelize" -> AndroidFeatureDependencies.PARCELIZE
+                else -> emptyList()
+            }
+            val failures = ensureFeatureDependencies(moduleName, coords)
+            if (failures.isNotEmpty()) depNote = " (couldn't add: ${failures.joinToString(", ")})"
+        }
+
+        ctx.invalidateAnalyzers()
+        ctx.invalidateSyntheticClasses() // viewBinding on/off changes the synthetic binding classes
+        ctx.resyncIndex()
+        val verb = if (enabled) "Enabled" else "Disabled"
+        return UiConfigResult(true, "$verb $feature on ${module.name}$depNote")
+    }
+
+    /** The Android packaging options of [moduleName] (Java-resource + native-lib merge rules), or null when
+     *  it is not an Android module. Includes AGP's always-applied defaults so the UI can show them read-only. */
+    fun getPackagingOptions(moduleName: String): UiPackagingOptions? {
+        val facet = ctx.modules().firstOrNull { it.name == moduleName }?.facets?.get(AndroidFacet.KEY) ?: return null
+        val p = facet.packaging
+        return UiPackagingOptions(
+            moduleName = moduleName,
+            resources = UiPackagingRules(p.resources.excludes.toList(), p.resources.pickFirsts.toList(), p.resources.merges.toList()),
+            jniLibs = UiPackagingRules(p.jniLibs.excludes.toList(), p.jniLibs.pickFirsts.toList()),
+            defaultResourceExcludes = AndroidPackaging.DEFAULT_RESOURCE_EXCLUDES,
+            defaultResourceMerges = AndroidPackaging.DEFAULT_RESOURCE_MERGES,
+            noCompress = p.noCompress.toList(),
+            defaultNoCompress = AndroidPackaging.DEFAULT_NO_COMPRESS_EXTENSIONS,
+        )
+    }
+
+    /** Persist [moduleName]'s packaging merge rules and [noCompress] suffixes. Blank patterns are dropped;
+     *  all-empty clears the block (the codec then omits it, so the module falls back to the AGP defaults). */
+    fun updatePackagingOptions(
+        moduleName: String, resources: UiPackagingRules, jniLibs: UiPackagingRules, noCompress: List<String>,
+    ): UiConfigResult {
+        val module = ctx.modules().firstOrNull { it.name == moduleName }
+            ?: return UiConfigResult(false, "No module '$moduleName'.")
+        val facet = module.facets.get(AndroidFacet.KEY)
+            ?: return UiConfigResult(false, "'$moduleName' is not an Android module.")
+        val project = ctx.projectOf(module) ?: return UiConfigResult(false, "No project owns '$moduleName'.")
+        fun clean(xs: List<String>): Set<String> = xs.map { it.trim() }.filter { it.isNotEmpty() }.toCollection(LinkedHashSet())
+        val packaging = AndroidPackaging(
+            resources = ResourcePackaging(clean(resources.excludes), clean(resources.pickFirsts), clean(resources.merges)),
+            jniLibs = JniLibsPackaging(clean(jniLibs.excludes), clean(jniLibs.pickFirsts)),
+            noCompress = clean(noCompress),
+        )
+        if (packaging == facet.packaging) return UiConfigResult(true, "No change.")
+        try {
+            project.beginModification().apply {
+                module(module.id).putFacet(facet.copy(packaging = packaging))
+                commit()
+            }
+        } catch (e: Exception) {
+            return UiConfigResult(false, "Update failed: ${e.message}")
+        }
+        ctx.store.save()
+        ctx.invalidateAnalyzers()
+        return UiConfigResult(true, "Saved packaging options for ${module.name}")
+    }
+
+    /** Add each of [coordinates] to [moduleName] unless a dependency on the same `group:name` already exists.
+     *  Returns the coordinates that failed to resolve (best-effort; the caller surfaces them, not fatal). */
+    private suspend fun ensureFeatureDependencies(
+        moduleName: String, coordinates: List<String>
+    ): List<String> {
+        val failures = ArrayList<String>()
+        for (coord in coordinates) {
+            val module = ctx.modules().firstOrNull { it.name == moduleName } ?: break
+            val groupName = coord.substringBeforeLast(':')   // group:name:version → group:name
+            val present = module.dependencies.any {
+                it is LibraryDependency && it.library.name.substringBeforeLast(':') == groupName
+            }
+            if (present) continue
+            val r = ctx.dependencies.addDependency(moduleName, coord, "implementation")
+            if (!r.success && !r.message.contains("already a dependency")) failures += coord
+        }
+        return failures
+    }
+
+    /** The directory `proguardFiles`/`consumerProguardFiles` entries resolve against (the module root,
+     *  `<module>/build/classes` → `<module>`), or null when the layout is unexpected. */
+    private fun moduleDirOf(module: Module): Path? = Paths.get(module.dir.path)
+
+    /**
+     * The build types' keep-rule files that are module-relative and missing on disk — the ones R8 would
+     * silently skip on a `minifyEnabled` build. Bundled defaults (`proguard-android*.txt`) and absolute
+     * entries are excluded; results are deduped by [entry], keeping the first build type that names it.
+     */
+    fun missingProguardFiles(moduleName: String): List<UiMissingProguardFile> {
+        val module = ctx.modules().firstOrNull { it.name == moduleName } ?: return emptyList()
+        val facet = module.facets.get(AndroidFacet.KEY) ?: return emptyList()
+        val moduleDir = moduleDirOf(module) ?: return emptyList()
+        val out = LinkedHashMap<String, UiMissingProguardFile>()
+        fun consider(
+            bt: com.shd.codestudio.android.support.BuildType, entries: List<String>, consumer: Boolean
+        ) {
+            for (e in entries) {
+                if (com.shd.codestudio.android.support.DefaultProguardFiles.isDefault(e)) continue
+                val p = Paths.get(e)
+                if (p.isAbsolute) continue
+                if (!Files.isRegularFile(moduleDir.resolve(e))) {
+                    out.putIfAbsent(e, UiMissingProguardFile(bt.name, e, consumer))
+                }
+            }
+        }
+        for (bt in facet.buildTypes) {
+            consider(bt, bt.proguardFiles, consumer = false)
+            consider(bt, bt.consumerProguardFiles, consumer = true)
+        }
+        return out.values.toList()
+    }
+
+    /**
+     * Create a referenced-but-missing module-relative keep-rule file [entry] (e.g. `proguard-rules.pro`)
+     * with a starter template body, returning its path. Null for an unknown/non-Android module, a bundled
+     * default or absolute entry, or an I/O failure. Already-present files are returned untouched.
+     */
+    fun createProguardFile(moduleName: String, entry: String): Path? {
+        val module = ctx.modules().firstOrNull { it.name == moduleName } ?: return null
+        module.facets.get(AndroidFacet.KEY) ?: return null
+        if (com.shd.codestudio.android.support.DefaultProguardFiles.isDefault(entry)) return null
+        val rel = Paths.get(entry)
+        if (rel.isAbsolute) return null
+        val moduleDir = moduleDirOf(module) ?: return null
+        val target = moduleDir.resolve(entry)
+        if (Files.exists(target)) return target
+        return runCatching {
+            target.parent?.let { Files.createDirectories(it) }
+            Files.write(target, DEFAULT_PROGUARD_RULES.toByteArray())
+            target
+        }.getOrNull()
+    }
+
+    // ---- module management (add / remove modules) ----
+
+    private fun moduleTypeRegistry() = ModuleTypeRegistry(ctx.platform.extensions)
+
+    private fun isValidModuleName(n: String): Boolean = n.isNotEmpty() && n.first()
+        .isLetter() && n.all { it.isLetterOrDigit() || it == '-' || it == '_' }
+
+    /**
+     * The module types a new module can be created as, each with the language-level choices and starter
+     * facet panels derived from the type's default facets (so an Android module surfaces namespace/SDK
+     * fields). Fields are codec-derived, so a new facet type appears here without bespoke UI.
+     */
+    fun availableModuleTypes(): List<UiModuleTypeOption> = moduleTypeOptions() + kmpModuleOption()
+
+    /** "Kotlin Multiplatform": not a module type of its own but an Android and a desktop target in one module
+     *  (see [KmpNative]), created as whichever type the host builds now. */
+    private fun kmpModuleOption() = UiModuleTypeOption(
+        id = KMP_MODULE_TYPE,
+        displayName = "Kotlin Multiplatform",
+        languageLevels = LanguageLevel.values().map { it.name },
+        defaultLanguageLevel = LanguageLevel.JAVA_17.name,
+        defaultFacets = listOf(
+            UiFacetConfig(
+                KMP_MODULE_TYPE, "Kotlin Multiplatform",
+                listOf(
+                    UiConfigField.Text("namespace", "Package (Android namespace)", "com.example.shared"),
+                    UiConfigField.Bool("application", "Application (APK and desktop window)", false),
+                    UiConfigField.Bool("compose", "Compose Multiplatform", true),
+                    UiConfigField.Bool("composeResources", "Compose resources", false),
+                ),
+            )
+        ),
+    )
+
+    private fun moduleTypeOptions(): List<UiModuleTypeOption> = model.availableModuleTypes { type ->
+        // A type's default facets are codec-described, so only a host with the codecs can prefill them.
+        type.defaultFacets().mapNotNull { tmpl ->
+            val codec = ctx.store.facetCodecs.codecFor(tmpl.key) ?: return@mapNotNull null
+            UiFacetConfig(
+                codec.tomlTable,
+                ModuleConfigBridge.titleCase(codec.tomlTable),
+                tmpl.defaults.map { (k, v) -> ModuleConfigBridge.fieldFor(k, v) },
+            )
+        }
+    }
+
+    /**
+     * Create a new module [name] of [typeId] with [languageLevel] and [facetValues] in [parentDir]`/`[name]
+     * ([name] alone when [parentDir] is blank), laying down the type's default source-set directories on
+     * disk, persisting `module.toml`, and refreshing analyzers/index.
+     */
+    fun createModule(
+        name: String,
+        typeId: String,
+        languageLevel: String?,
+        facetValues: Map<String, Map<String, Any?>>,
+        parentDir: String = "",
+    ): UiConfigResult {
+        if (typeId == KMP_MODULE_TYPE) return createKmpModule(name, languageLevel, facetValues[KMP_MODULE_TYPE].orEmpty(), parentDir)
+        // `src/main/java` rather than the bridge's Kotlin default: this host compiles Java, and its
+        // `JavaPlugin` registers a `compileKotlin` task for any `.kt` under the same root anyway.
+        val result = model.createModule(
+            name, typeId, languageLevel, facetValues, fallbackSourceDir = "src/main/java", parentDir = parentDir,
+        )
+        if (!result.success) return result
+        ctx.invalidateAnalyzers()
+        ctx.invalidateSyntheticClasses()
+        ctx.resyncIndex()
+        return result
+    }
+
+    /**
+     * A new multiplatform module (see [kmpModuleOption]): both targets recorded, shaped for the target the other
+     * multiplatform modules are on (else the host's default), its source folders laid down.
+     */
+    private fun createKmpModule(name: String, languageLevel: String?, values: Map<String, Any?>, parentDir: String): UiConfigResult {
+        if (!isValidModuleName(name)) return UiConfigResult(false, "Invalid module name '$name'.")
+        if (ctx.modules().any { it.name == name }) return UiConfigResult(false, "A module named '$name' already exists.")
+        val project = ctx.store.data.projects.firstOrNull() ?: return UiConfigResult(false, "No project is open.")
+        val level = languageLevel?.let { l -> LanguageLevel.values().firstOrNull { it.name == l } } ?: LanguageLevel.JAVA_17
+        val active = KmpSwitch.choice(ctx.store)?.active
+            ?: if (GradleKmp.hostDefault() == GradleKmp.Platform.ANDROID) KmpShapes.ANDROID else KmpShapes.JVM
+        val dirRel = if (parentDir.isBlank()) name else "${parentDir.trim('/')}/$name"
+        val options = KmpNative.Options(
+            name = name, dirRelPath = dirRel,
+            namespace = (values["namespace"] as? String)?.trim()?.takeIf { it.isNotEmpty() } ?: "com.example.${name.lowercase()}",
+            application = values["application"] as? Boolean ?: false,
+            compose = values["compose"] as? Boolean ?: true,
+            composeResources = values["composeResources"] as? Boolean ?: false,
+            active = active,
+        )
+        ExternalModelApplier(ctx.store).apply(
+            ExternalProjectModel(project.name, BuildSystemId(project.buildSystemId), listOf(KmpNative.module(options))),
+            level, removeAbsent = false,
+        )
+        ctx.store.save()
+        val dir = ctx.store.rootPath.resolve(dirRel)
+        val pkgPath = options.namespace.replace('.', '/')
+        for (rel in listOfNotNull(
+            "src/commonMain/kotlin/$pkgPath", "src/commonTest/kotlin/$pkgPath", "src/androidMain/kotlin/$pkgPath", "src/desktopMain/kotlin/$pkgPath",
+            "src/commonMain/composeResources/drawable".takeIf { options.composeResources },
+        )) runCatching { Files.createDirectories(dir.resolve(rel)) }
+        val manifest = dir.resolve("src/androidMain/AndroidManifest.xml")
+        if (!Files.exists(manifest)) runCatching {
+            manifest.writeText("<?xml version=\"1.0\" encoding=\"utf-8\"?>\n<manifest xmlns:android=\"http://schemas.android.com/apk/res/android\" />\n")
+        }
+        ctx.invalidateAnalyzers()
+        ctx.invalidateSyntheticClasses()
+        ctx.resyncIndex()
+        return UiConfigResult(true, "Created multiplatform module '$name' (Android and desktop, shaped for $active).")
+    }
+
+    /** Add [featureId] (see [ModuleFeatures]) to [moduleName]. */
+    fun addModuleFeature(moduleName: String, featureId: String): UiConfigResult {
+        val level = ctx.modules().firstOrNull { it.name == moduleName }?.languageLevel ?: LanguageLevel.JAVA_17
+        val error = ModuleFeatures.add(ctx.store, ctx.store.rootPath, moduleName, featureId, level)
+        if (error != null) return UiConfigResult(false, error)
+        ctx.invalidateAnalyzers()
+        ctx.invalidateSyntheticClasses()
+        ctx.resyncIndex()
+        return UiConfigResult(true, "Added ${featureOf(featureId).title} to '$moduleName'.")
+    }
+
+    private fun featureOf(id: String): UiModuleFeature = when (id) {
+        ModuleFeatures.COMPOSE_RESOURCES -> UiModuleFeature(id, "Compose resources", "Strings, images and fonts in composeResources/, read through a generated Res class.")
+        ModuleFeatures.KOTLIN_BUILD_CONFIG -> UiModuleFeature(id, "BuildConfig (Kotlin)", "A generated BuildConfig object of constants, as the gmazzo buildconfig plugin makes.")
+        ModuleFeatures.MULTIPLATFORM -> UiModuleFeature(id, "Kotlin Multiplatform", "Shared code in commonMain with an Android and a desktop target, switchable.")
+        else -> UiModuleFeature(id, id, "")
+    }
+
+    /**
+     * The content roots of [sourceSet] worth creating on disk for a freshly-made module: the primary source
+     * dir (the first `SOURCE` root — e.g. `java`, not also an empty `kotlin` sibling) plus any resource / Android
+     * `res` root. Optional roots (a second-language source dir, `assets`, `aidl`, generated) are omitted so the
+     * module tree isn't littered with empty folders; the "New ▸" flow creates them on demand when needed.
+     */
+    private fun materializedRoots(sourceSet: com.shd.codestudio.model.SourceSet): List<com.shd.codestudio.model.ContentRoot> {
+        val roots = sourceSet.contentRoots
+        val firstSourceDir = roots.firstOrNull { ContentRole.SOURCE in it.roles }?.dir?.path
+        return roots.filter { cr ->
+            when {
+                ContentRole.SOURCE in cr.roles -> cr.dir.path == firstSourceDir
+                ContentRole.ANDROID_RES in cr.roles || ContentRole.RESOURCE in cr.roles -> true
+                else -> false
+            }
+        }
+    }
+
+    /**
+     * Remove [name] from the project model (files left on disk), also dropping any module-on-module
+     * dependency other modules declared on it. Refreshes analyzers/index.
+     */
+    fun removeModule(name: String): Boolean {
+        if (!model.removeModule(name)) return false
+        ctx.invalidateAnalyzers()
+        ctx.invalidateSyntheticClasses()
+        ctx.resyncIndex()
+        return true
+    }
+
+    /** Conventional source-set leaf-folder name → the [ContentRole] it implies. Drives both explicit
+     *  "Add source root" presets and the folder-name auto-detect in [maybeRegisterSourceRoot]. */
+    private val conventionRoles: Map<String, ContentRole> = mapOf(
+        "java" to ContentRole.SOURCE,
+        "kotlin" to ContentRole.SOURCE,
+        "resources" to ContentRole.RESOURCE,
+        "res" to ContentRole.ANDROID_RES,
+        "assets" to ContentRole.ASSETS,
+        "aidl" to ContentRole.AIDL,
+        // Prebuilt `<abi>/*.so`. Without this a `jniLibs` folder created in the tree stayed an untyped
+        // folder, so the packager never saw it and the APK shipped no `lib/` (see AndroidBuildSystem's
+        // jniLibRoots, which reads the convention on the build side for folders created outside the IDE).
+        "jniLibs" to ContentRole.JNI_LIBS,
+    )
+
+    /** The source-set names declared on [module], in declaration order. */
+    override fun sourceSetNamesOf(module: Module): List<String> = module.sourceSets.map { it.name }
+
+    /**
+     * The base directory a [sourceSetName]'s roots live under (e.g. `src/main`): the parent of its first
+     * content root, or `<moduleRoot>/src/<name>` when the set is empty or absent. New roots go here.
+     */
+    override fun sourceSetBaseFor(module: Module, sourceSetName: String): Path? {
+        val moduleDir = ctx.moduleRoot(module) ?: return null
+        val fallback = moduleDir.resolve("src").resolve(sourceSetName)
+        val firstRoot =
+            module.sourceSets.firstOrNull { it.name == sourceSetName }?.contentRoots?.firstOrNull()
+                ?: return fallback
+        return Paths.get(firstRoot.dir.path).parent ?: fallback
+    }
+
+    /**
+     * Register a typed content root at `<set-base>/[dirName]` under [sourceSetName] of [moduleName]. See
+     * [addSourceRootAt]. Returns the created directory, or null if the module/project can't be resolved.
+     */
+    override fun addSourceRoot(
+        moduleName: String, sourceSetName: String, dirName: String, roles: Set<ContentRole>
+    ): Path? {
+        val module = ctx.modules().firstOrNull { it.name == moduleName } ?: return null
+        val base = sourceSetBaseFor(module, sourceSetName) ?: return null
+        return addSourceRootAt(moduleName, sourceSetName, base.resolve(dirName), roles)
+    }
+
+    /**
+     * Add [dir] as a content root with [roles] to [sourceSetName] of [moduleName] (creating the set if
+     * needed): persist `module.toml`, create the directory on disk, then refresh analyzers/index. Returns
+     * [dir] on success, or null if the module/project can't be resolved or [dir] isn't under the module.
+     */
+    private fun addSourceRootAt(
+        moduleName: String, sourceSetName: String, dir: Path, roles: Set<ContentRole>
+    ): Path? {
+        val module = ctx.modules().firstOrNull { it.name == moduleName } ?: return null
+        val moduleDir = ctx.moduleRoot(module) ?: return null
+        val target = dir.toAbsolutePath().normalize()
+        val relPath = runCatching {
+            moduleDir.toAbsolutePath().normalize().relativize(target).toString()
+        }.getOrNull()?.replace('\\', '/')?.takeIf { it.isNotEmpty() && !it.startsWith("..") }
+            ?: return null
+        model.addSourceRootAt(moduleName, sourceSetName, relPath, roles) ?: return null
+        ctx.invalidateAnalyzers()
+        if (ContentRole.ANDROID_RES in roles) ctx.invalidateSyntheticClasses()
+        ctx.resyncIndex()
+        return target
+    }
+
+    override fun setFacetData(moduleName: String, data: com.shd.codestudio.model.FacetData): Boolean {
+        if (!model.putFacetData(moduleName, data)) return false
+        // A facet changes what the module builds and analyzes (a plugin's build tasks, a language's flags).
+        ctx.invalidateAnalyzers()
+        ctx.resyncIndex()
+        return true
+    }
+
+    /** Remove the content root at [dirRelPath] (relative to the module dir) from [sourceSetName] of
+     *  [moduleName]. Model-only — the directory on disk is left untouched. Returns true on a model change. */
+    override fun removeSourceRoot(moduleName: String, sourceSetName: String, dirRelPath: String): Boolean {
+        if (!model.removeSourceRoot(moduleName, sourceSetName, dirRelPath)) return false
+        ctx.invalidateAnalyzers()
+        ctx.resyncIndex()
+        return true
+    }
+
+    /** Create an empty source set [name] on [moduleName] (returns false if it already exists). */
+    override fun addSourceSet(moduleName: String, name: String): Boolean =
+        model.addSourceSet(moduleName, name)
+
+    /**
+     * Give [sourceSetName] of [moduleName] a new [scope]: a test-only scope makes it a test set, built apart
+     * from the main output, so the analyzers and the index re-read the module. True on a model change.
+     */
+    fun setSourceSetScope(moduleName: String, sourceSetName: String, scope: DependencyScope): Boolean {
+        if (!model.setSourceSetScope(moduleName, sourceSetName, scope)) return false
+        ctx.invalidateAnalyzers()
+        ctx.resyncIndex()
+        return true
+    }
+
+    /**
+     * If [newDir] is a conventionally-named folder (`resources`/`java`/`kotlin`/`res`/`assets`/`aidl`)
+     * created directly under a source-set base (the parent of an existing content root), register it as the
+     * matching typed content root and return true. Conservative: a folder named `java` anywhere else stays
+     * a plain folder. Called on every directory creation.
+     */
+    fun maybeRegisterSourceRoot(newDir: Path): Boolean {
+        val role = conventionRoles[newDir.fileName?.toString()] ?: return false
+        val dir = newDir.toAbsolutePath().normalize()
+        val parent = dir.parent ?: return false
+        for (module in ctx.modules()) {
+            for (ss in module.sourceSets) {
+                val roots =
+                    ss.contentRoots.map { Paths.get(it.dir.path).toAbsolutePath().normalize() }
+                if (roots.none { it.parent == parent }) continue
+                if (dir in roots) return false // already a registered root
+                return addSourceRootAt(module.name, ss.name, dir, setOf(role)) != null
+            }
+        }
+        return false
+    }
+
+    /** Map a codec value to a typed UI field: Long→Number, Boolean→Bool, String→Text, lists→StringList/TableList. */
+    private fun configFieldFor(key: String, value: Any?): UiConfigField = when (value) {
+        is Boolean -> UiConfigField.Bool(key, humanizeKey(key), value)
+        is Long -> UiConfigField.Number(key, humanizeKey(key), value)
+        is Int -> UiConfigField.Number(key, humanizeKey(key), value.toLong())
+        is Number -> UiConfigField.Number(key, humanizeKey(key), value.toLong())
+        is String -> UiConfigField.Text(key, humanizeKey(key), value)
+        is List<*> -> if (value.isNotEmpty() && value.all { it is Map<*, *> }) {
+            @Suppress("UNCHECKED_CAST") val rows = value.map { row ->
+                (row as Map<String, Any?>).map { (k, v) ->
+                    configFieldFor(
+                        k, v
+                    )
+                }
+            }
+            UiConfigField.TableList(key, humanizeKey(key), rows)
+        } else {
+            UiConfigField.StringList(key, humanizeKey(key), value.mapNotNull { it as? String })
+        }
+
+        else -> UiConfigField.Text(key, humanizeKey(key), value?.toString() ?: "")
+    }
+
+    private fun titleCase(s: String): String = s.replaceFirstChar { it.uppercase() }
+
+    /** "compileSdk" → "Compile Sdk", "applicationIdSuffix" → "Application Id Suffix". */
+    private fun humanizeKey(key: String): String =
+        key.replace(Regex("([a-z])([A-Z])"), "$1 $2").replaceFirstChar { it.uppercase() }
+
+    private companion object {
+        /** The `[android]` codec key for the packaging block — edited via the Packaging tab, not the Settings fields. */
+        const val PACKAGING_KEY = "packaging"
+
+        /** The New Module option for a multiplatform module (see `kmpModuleOption`). */
+        const val KMP_MODULE_TYPE = "kotlin-multiplatform"
+
+        /** [UiToolchainWarning.id] prefix for a bundled-KSP-processor runtime mismatch; the suffix is the
+         *  catalog processor id, which is what the acceptance is persisted under. */
+        const val KSP_RUNTIME_WARNING_PREFIX = "ksp-runtime:"
+    }
+}

@@ -1,7 +1,7 @@
 // The publishing identity every artifact a plugin author resolves shares: the coordinate, the SPI version,
 // the POM the Central Portal requires, the staging repository, and opt-in signing.
 //
-// Applied by `dev.ide.spi-publish` for the SPI jars, and directly by `:plugin-bom`, which is a
+// Applied by `com.shd.codestudio.spi-publish` for the SPI jars, and directly by `:plugin-bom`, which is a
 // `java-platform` and so cannot apply that one (a project is a library or a platform, not both). Publications
 // are configured as they are created, so each of those decides what it publishes and this decides what the
 // POM says about it.
@@ -11,11 +11,11 @@ plugins {
     signing
 }
 
-val projectUrl = "https://github.com/tyron12233/CodeAssist"
+val projectUrl = "https://github.com/sagirhossendhali1999-cyber/Code Studio"
 
 /** The published SPI version, taken from the constant the Create-Project template also emits. */
 val spiVersion: String = run {
-    val source = rootProject.file("plugins/plugin-api/src/main/kotlin/dev/ide/plugin/PluginManifest.kt")
+    val source = rootProject.file("plugins/plugin-api/src/main/kotlin/com/shd/codestudio/plugin/PluginManifest.kt")
     val match = Regex("""PLUGIN_SPI_VERSION:\s*String\s*=\s*"([^"]+)"""").find(source.readText())
     requireNotNull(match) {
         "PLUGIN_SPI_VERSION not found in ${source.name}. The publish version is read from that constant so " +
@@ -23,61 +23,61 @@ val spiVersion: String = run {
     }.groupValues[1]
 }
 
-group = "io.github.tyron12233"
+group = "io.github.sagirhossendhali1999-cyber"
 version = spiVersion
 
 publishing {
     publications.withType<MavenPublication>().configureEach {
         pom {
-            name.set("CodeAssist ${project.name}")
+            name.set("Code Studio ${project.name}")
             description.set(
                 when (project.name) {
                     "plugin-api" ->
-                        "The CodeAssist plugin SPI: the Plugin entry point, its manifest, the " +
+                        "The Code Studio plugin SPI: the Plugin entry point, its manifest, the " +
                             "registration API, and the action model."
                     "plugin-ui-api" ->
-                        "The CodeAssist plugin UI SPI: what a plugin implements to contribute a tool " +
+                        "The Code Studio plugin UI SPI: what a plugin implements to contribute a tool " +
                             "window, a screen, or an overlay, and the context those bodies render against."
                     "model-api" ->
-                        "The platform-free core of the CodeAssist SPI: the symbol model, the neutral " +
+                        "The platform-free core of the Code Studio SPI: the symbol model, the neutral " +
                             "syntax tree, VirtualFile, and the content digest they are keyed by. " +
                             "Multiplatform, and exposed by every other SPI artifact."
                     "platform-core" ->
-                        "The CodeAssist platform substrate the plugin SPI exposes: extension points, " +
+                        "The Code Studio platform substrate the plugin SPI exposes: extension points, " +
                             "scoped services, the message bus, logging, and the settings model."
                     "project-model-api" ->
-                        "The CodeAssist project model: module types, project templates, facets and " +
+                        "The Code Studio project model: module types, project templates, facets and " +
                             "their codecs, and file icons."
                     "language-api" ->
-                        "The CodeAssist language SPI: the neutral syntax tree, resolution, file types, " +
+                        "The Code Studio language SPI: the neutral syntax tree, resolution, file types, " +
                             "completion, formatting, folding, and a language's compilation context."
                     "analysis-api" ->
-                        "The CodeAssist analysis SPI: analyzers, the diagnostic model, quick fixes, and " +
+                        "The Code Studio analysis SPI: analyzers, the diagnostic model, quick fixes, and " +
                             "editor action providers."
                     "index-api" ->
-                        "The CodeAssist index SPI: persisted, incrementally maintained project indexes."
+                        "The Code Studio index SPI: persisted, incrementally maintained project indexes."
                     "build-api" ->
-                        "The CodeAssist build SPI: build systems, build plugins, source generators, and " +
+                        "The Code Studio build SPI: build systems, build plugins, source generators, and " +
                             "run tasks."
                     "vfs-api" ->
-                        "The CodeAssist virtual file system, which the other SPI artifacts expose."
+                        "The Code Studio virtual file system, which the other SPI artifacts expose."
                     "interp-api" ->
-                        "The CodeAssist interpreter SPI: lowering a project's Kotlin and running it, or its " +
+                        "The Code Studio interpreter SPI: lowering a project's Kotlin and running it, or its " +
                             "compiled classes, from a plugin, for a preview or a run of the plugin's own."
                     "vcs-api" ->
-                        "The CodeAssist version-control SPI: the repository, branch, commit and status " +
+                        "The Code Studio version-control SPI: the repository, branch, commit and status " +
                             "model, the provider extension point a checkout is resolved through, and the " +
                             "account, credential and forge ports a sign-in flow is built on."
                     "agent-api" ->
-                        "The CodeAssist coding-agent SPI: the tools an agent can call, the workspace it " +
+                        "The Code Studio coding-agent SPI: the tools an agent can call, the workspace it " +
                             "reads and edits, and the provider-neutral LLM interface behind it."
                     "block-api" ->
-                        "The CodeAssist block-editor SPI: the projection of a language's syntax tree onto " +
+                        "The Code Studio block-editor SPI: the projection of a language's syntax tree onto " +
                             "a block surface, and the mapping a language contributes to define it."
                     "plugin-bom" ->
-                        "Versions for everything a CodeAssist plugin compiles against: the SPI artifacts " +
+                        "Versions for everything a Code Studio plugin compiles against: the SPI artifacts " +
                             "and the Compose the IDE provides at runtime."
-                    else -> "A CodeAssist plugin SPI artifact."
+                    else -> "A Code Studio plugin SPI artifact."
                 }
             )
             url.set(projectUrl)
@@ -87,22 +87,22 @@ publishing {
                     url.set("$projectUrl/blob/main/LICENSE-EXCEPTION")
                     distribution.set("repo")
                     comments.set(
-                        "CodeAssist is GPL-3.0-or-later. This module adds the Classpath exception so a " +
+                        "Code Studio is GPL-3.0-or-later. This module adds the Classpath exception so a " +
                             "plugin that links against it may be released under any license."
                     )
                 }
             }
             developers {
                 developer {
-                    id.set("tyron12233")
-                    name.set("tyron12233")
-                    url.set("https://github.com/tyron12233")
+                    id.set("sagirhossendhali1999-cyber")
+                    name.set("sagirhossendhali1999-cyber")
+                    url.set("https://github.com/sagirhossendhali1999-cyber")
                 }
             }
             scm {
                 url.set(projectUrl)
                 connection.set("scm:git:$projectUrl.git")
-                developerConnection.set("scm:git:ssh://git@github.com/tyron12233/CodeAssist.git")
+                developerConnection.set("scm:git:ssh://git@github.com/sagirhossendhali1999-cyber/Code Studio.git")
             }
             issueManagement {
                 system.set("GitHub Issues")

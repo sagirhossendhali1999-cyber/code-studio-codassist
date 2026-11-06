@@ -1,0 +1,330 @@
+package com.shd.codestudio.ui.screens
+
+import com.shd.codestudio.ui.LtrContent
+import com.shd.codestudio.ui.clipForClipboard
+import com.shd.codestudio.ui.theme.Ide
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.material3.Icon
+import androidx.compose.material3.Text
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.platform.LocalClipboardManager
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.shd.codestudio.ui.backend.FileActions
+import com.shd.codestudio.ui.backend.IdeBackend
+import com.shd.codestudio.ui.backend.UiLogEntry
+import com.shd.codestudio.ui.components.HideToolWindowButton
+import com.shd.codestudio.ui.components.ToolWindowPaneButtons
+import com.shd.codestudio.ui.components.PeekTimestampReveal
+import com.shd.codestudio.ui.generated.resources.Res
+import com.shd.codestudio.ui.generated.resources.logs_copy_all
+import com.shd.codestudio.ui.generated.resources.logs_empty
+import com.shd.codestudio.ui.generated.resources.logs_filter_all
+import com.shd.codestudio.ui.generated.resources.logs_filter_all_plugins
+import com.shd.codestudio.ui.generated.resources.logs_filter_errors
+import com.shd.codestudio.ui.generated.resources.logs_filter_hint
+import com.shd.codestudio.ui.generated.resources.logs_filter_warnings
+import com.shd.codestudio.ui.generated.resources.logs_no_match
+import com.shd.codestudio.ui.generated.resources.logs_pause
+import com.shd.codestudio.ui.generated.resources.logs_resume
+import com.shd.codestudio.ui.generated.resources.logs_title
+import com.shd.codestudio.ui.generated.resources.refresh
+import com.shd.codestudio.ui.generated.resources.share
+import com.shd.codestudio.ui.icons.CaIcons
+import com.shd.codestudio.ui.theme.Ca
+import org.jetbrains.compose.resources.StringResource
+import org.jetbrains.compose.resources.stringResource
+
+/** Which severities the Logs viewer shows. */
+internal enum class LogFilter(val labelRes: StringResource, val keep: (String) -> Boolean) {
+    All(Res.string.logs_filter_all, { true }),
+    Warnings(Res.string.logs_filter_warnings, { it == "WARN" || it == "ERROR" }),
+    Errors(Res.string.logs_filter_errors, { it == "ERROR" }),
+}
+
+/**
+ * The in-app Logs viewer: a live tail of the logging facade's ring buffer — editor, analysis, indexing,
+ * build, and crash activity — so a user can see *what actually went wrong* when a feature "does nothing".
+ * Newest first; filter by severity or text; tap a record with an exception to expand its stack trace; copy
+ * the whole view or share it as a file ([FileActions.share]). Opened from the More menu.
+ */
+@Composable
+fun LogsScreen(
+    backend: IdeBackend,
+    fileActions: FileActions,
+    modifier: Modifier = Modifier,
+    /** Open filtered to this source (a plugin id), as the Plugins screen does. Null shows everything. */
+    initialSource: String? = null,
+    /** Docked as a bottom tool window: the header ends with the hide button. Null in the phone's sheet. */
+    onHide: (() -> Unit)? = null,
+) {
+    val state = rememberLogsScreenState(backend)
+    // Selected rather than filtered-on-open: until that plugin has actually logged something its id is not
+    // among `sources`, and `activeSource` ignores a selection that matches nothing, so the view shows
+    // everything and narrows by itself once the first record arrives.
+    LaunchedEffect(initialSource) { if (initialSource != null) state.selectSource(initialSource) }
+    val clipboard = LocalClipboardManager.current
+    val shown = state.shown
+
+    // A log record is machine output read column by column: time, level, source, tag, message, then a
+    // stack trace whose indentation carries the frame depth. An RTL locale mirrors that into an order no
+    // stack trace is written in, and the peek-the-timestamp drag below parks its gutter off the left edge
+    // in raw pixels, so the viewer stays LTR while the rest of the app mirrors.
+    LtrContent {
+        Column(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)) {
+            // Header: title + actions
+            Row(
+                Modifier.fillMaxWidth().padding(start = 14.dp, end = 8.dp, top = 12.dp, bottom = 4.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(4.dp),
+            ) {
+                Icon(CaIcons.logs, null, Modifier.size(18.dp), tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(stringResource(Res.string.logs_title), color = MaterialTheme.colorScheme.onSurface, style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.SemiBold)
+                Text("${shown.size}", color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.padding(start = 4.dp))
+                Box(Modifier.weight(1f))
+                HeaderAction(if (state.paused) CaIcons.play else CaIcons.stop, if (state.paused) stringResource(Res.string.logs_resume) else stringResource(Res.string.logs_pause), state.paused) { state.togglePaused() }
+                HeaderAction(CaIcons.refresh, stringResource(Res.string.refresh)) { state.refresh() }
+                HeaderAction(CaIcons.copy, stringResource(Res.string.logs_copy_all)) {
+                    clipboard.setText(AnnotatedString(clipForClipboard(shown.joinToString("\n\n") { renderForCopy(it) })))
+                }
+                if (fileActions.canShare) {
+                    HeaderAction(CaIcons.share, stringResource(Res.string.share)) { state.export(fileActions::share) }
+                }
+                ToolWindowPaneButtons()
+                if (onHide != null) HideToolWindowButton(onHide)
+            }
+
+            // Search field
+            Row(
+                Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 8.dp)
+                    .background(MaterialTheme.colorScheme.surfaceContainerHigh, RoundedCornerShape(Ca.radius.control))
+                    .border(1.dp, MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Ca.radius.control))
+                    .padding(horizontal = 12.dp, vertical = 9.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Icon(CaIcons.search, null, Modifier.size(16.dp), tint = MaterialTheme.colorScheme.primary)
+                Box(Modifier.weight(1f)) {
+                    if (state.query.isEmpty()) Text(stringResource(Res.string.logs_filter_hint), color = MaterialTheme.colorScheme.outline, style = MaterialTheme.typography.bodyLarge)
+                    BasicTextField(
+                        value = state.query,
+                        onValueChange = state::updateQuery,
+                        singleLine = true,
+                        textStyle = MaterialTheme.typography.bodyLarge.copy(color = MaterialTheme.colorScheme.onSurface),
+                        cursorBrush = SolidColor(MaterialTheme.colorScheme.primary),
+                        modifier = Modifier.fillMaxWidth(),
+                    )
+                }
+            }
+
+            // Severity filter chips
+            Row(Modifier.fillMaxWidth().padding(horizontal = 14.dp, vertical = 2.dp), horizontalArrangement = Arrangement.spacedBy(6.dp)) {
+                LogFilter.entries.forEach { f -> FilterChip(stringResource(f.labelRes), f == state.filter) { state.selectFilter(f) } }
+            }
+
+            // Per-plugin filter chips — only shown once some record carries a source (a plugin logged something).
+            if (state.sources.isNotEmpty()) {
+                Row(
+                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()).padding(horizontal = 14.dp, vertical = 2.dp),
+                    horizontalArrangement = Arrangement.spacedBy(6.dp),
+                ) {
+                    FilterChip(stringResource(Res.string.logs_filter_all_plugins), state.activeSource == null) { state.selectSource(null) }
+                    state.sources.forEach { s ->
+                        FilterChip(s, state.activeSource == s) { state.selectSource(if (state.activeSource == s) null else s) }
+                    }
+                }
+            }
+
+            Box(Modifier.fillMaxWidth().height(1.dp).background(MaterialTheme.colorScheme.outlineVariant))
+
+            // Records
+            if (shown.isEmpty()) {
+                Box(Modifier.weight(1f).fillMaxWidth(), contentAlignment = Alignment.Center) {
+                    Text(
+                        if (state.all.isEmpty()) stringResource(Res.string.logs_empty) else stringResource(Res.string.logs_no_match),
+                        color = MaterialTheme.colorScheme.outline,
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            } else {
+                PeekTimestampReveal(TimeSlotWidth, Modifier.weight(1f).fillMaxWidth()) { reveal, slotPx ->
+                    LazyColumn(Modifier.fillMaxSize().padding(horizontal = 8.dp)) {
+                        itemsIndexed(
+                            shown,
+                            key = { index, it -> "$index:${it.timestampMs}:${it.tag}:${it.message.hashCode()}" },
+                        ) { _, it -> LogRow(it, reveal, slotPx) }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/** Width reserved for the peek-on-drag timestamp gutter (mobile); sized for the `codeSmall` time label. */
+private val TimeSlotWidth = 96.dp
+
+@Composable
+private fun LogRow(entry: UiLogEntry, reveal: (() -> Float)?, slotPx: Float) {
+    var expanded by remember(entry) { mutableStateOf(false) }
+    val color = levelColor(entry.level)
+    val hasTrace = entry.stackTrace != null
+    Box(Modifier.fillMaxWidth()) {
+        Column(
+            Modifier.fillMaxWidth()
+                .padding(vertical = 2.dp)
+                .let { if (hasTrace) it.clickable { expanded = !expanded } else it }
+                .padding(horizontal = 6.dp, vertical = 5.dp)
+                .let { if (reveal != null) it.graphicsLayer { translationX = reveal() } else it },
+        ) {
+            Row(verticalAlignment = Alignment.Top, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                // Desktop shows the timestamp inline; on mobile it's the peek overlay below instead.
+                if (reveal == null) Text(entry.timeLabel, color = MaterialTheme.colorScheme.outline, style = Ide.type.codeSmall)
+                LevelBadge(entry.level, color)
+                Column(Modifier.weight(1f)) {
+                    Text(entry.message, color = MaterialTheme.colorScheme.onSurface, style = Ide.type.codeSmall)
+                    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(4.dp)) {
+                        entry.source?.let { SourceBadge(it) }
+                        Text(
+                            entry.tag,
+                            color = MaterialTheme.colorScheme.outline,
+                            style = MaterialTheme.typography.labelSmall,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis,
+                        )
+                    }
+                }
+                if (hasTrace) {
+                    Icon(
+                        if (expanded) CaIcons.chevronDown else CaIcons.chevronRight,
+                        null,
+                        Modifier.size(14.dp).padding(top = 2.dp),
+                        tint = MaterialTheme.colorScheme.outline,
+                    )
+                }
+            }
+            if (expanded && entry.stackTrace != null) {
+                Text(
+                    entry.stackTrace!!,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    style = Ide.type.codeSmall,
+                    modifier = Modifier.fillMaxWidth().padding(top = 6.dp, start = 4.dp)
+                        .background(MaterialTheme.colorScheme.surfaceContainerHigh, RoundedCornerShape(Ca.radius.sm)).padding(8.dp),
+                )
+            }
+        }
+        // Mobile: the timestamp parked off the left edge (top/start matched to the row's first line above),
+        // sliding in as the row body is dragged right.
+        if (reveal != null && entry.timeLabel.isNotEmpty()) {
+            Text(
+                entry.timeLabel,
+                color = MaterialTheme.colorScheme.outline,
+                style = Ide.type.codeSmall,
+                maxLines = 1,
+                modifier = Modifier.align(Alignment.TopStart)
+                    .padding(top = 7.dp, start = 6.dp)
+                    .graphicsLayer {
+                        val r = reveal()
+                        translationX = r - slotPx
+                        // Parked one slot left of the row, a label wider than the slot showed its last digits
+                        // in the margin at rest (a stray "4" beside every row). Hidden until a drag brings it in.
+                        alpha = (r / slotPx).coerceIn(0f, 1f)
+                    },
+            )
+        }
+    }
+}
+
+/** A small pill naming the plugin that emitted a record, so plugin output is visually distinct from IDE logs. */
+@Composable
+private fun SourceBadge(source: String) {
+    Box(
+        Modifier.background(MaterialTheme.colorScheme.primaryContainer, RoundedCornerShape(Ca.radius.sm)).padding(horizontal = 5.dp, vertical = 1.dp),
+    ) {
+        Text(source, color = MaterialTheme.colorScheme.primary, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Medium, maxLines = 1)
+    }
+}
+
+@Composable
+private fun LevelBadge(level: String, color: Color) {
+    Box(
+        Modifier.background(color.copy(alpha = 0.16f), RoundedCornerShape(Ca.radius.sm)).padding(horizontal = 5.dp, vertical = 1.dp),
+    ) {
+        Text(level, color = color, style = MaterialTheme.typography.labelSmall, fontWeight = FontWeight.Bold)
+    }
+}
+
+@Composable
+private fun HeaderAction(icon: androidx.compose.ui.graphics.vector.ImageVector, label: String, active: Boolean = false, onClick: () -> Unit) {
+    val interaction = remember { MutableInteractionSource() }
+    Box(
+        Modifier.size(32.dp)
+            .background(if (active) MaterialTheme.colorScheme.primaryContainer else Color.Transparent, RoundedCornerShape(Ca.radius.sm))
+            .clickable(interaction, indication = null, onClick = onClick),
+        contentAlignment = Alignment.Center,
+    ) {
+        Icon(icon, label, Modifier.size(17.dp), tint = if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant)
+    }
+}
+
+@Composable
+private fun FilterChip(label: String, selected: Boolean, onClick: () -> Unit) {
+    Box(
+        Modifier
+            .background(if (selected) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceContainerHigh, RoundedCornerShape(Ca.radius.pill))
+            .border(1.dp, if (selected) Color.Transparent else MaterialTheme.colorScheme.outlineVariant, RoundedCornerShape(Ca.radius.pill))
+            .clickable(MutableInteractionSource(), indication = null, onClick = onClick)
+            .padding(horizontal = 12.dp, vertical = 5.dp),
+    ) {
+        Text(
+            label,
+            color = if (selected) MaterialTheme.colorScheme.onPrimary else MaterialTheme.colorScheme.onSurfaceVariant,
+            style = MaterialTheme.typography.bodySmall,
+            fontWeight = FontWeight.Medium,
+        )
+    }
+}
+
+@Composable
+private fun levelColor(level: String): Color = when (level) {
+    "ERROR" -> MaterialTheme.colorScheme.error
+    "WARN" -> Ide.colors.warning
+    "INFO" -> Ide.colors.info
+    else -> MaterialTheme.colorScheme.outline
+}
+
+private fun renderForCopy(e: UiLogEntry): String = buildString {
+    val origin = e.source?.let { "$it/" } ?: ""
+    append("${e.timeLabel} [${e.level}] $origin${e.tag} (${e.thread}): ${e.message}")
+    e.stackTrace?.let { append('\n').append(it) }
+}

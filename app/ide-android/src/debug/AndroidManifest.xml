@@ -5,7 +5,7 @@
 <manifest xmlns:android="http://schemas.android.com/apk/res/android">
     <application>
         <activity
-            android:name="dev.ide.android.spike.SpikeComposeActivity"
+            android:name="com.shd.codestudio.android.spike.SpikeComposeActivity"
             android:exported="true" />
     </application>
 </manifest>

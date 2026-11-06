@@ -39,7 +39,7 @@
     <string name="chat_usage_cached">tersimpan</string>
     <string name="chat_antigravity_warning">Eksperimental. Menggunakan akun Google melalui endpoint Antigravity, yang melanggar Persyaratan Layanan Google dan pernah menyebabkan akun diblokir. Tempel token refresh atau akses OAuth (opsional sebagai token|projectId).</string>
     <string name="chat_antigravity_signin">Masuk dengan Google</string>
-    <string name="chat_antigravity_waiting">Menunggu browser — setujui akses, lalu kembali ke CodeAssist</string>
+    <string name="chat_antigravity_waiting">Menunggu browser — setujui akses, lalu kembali ke Code Studio</string>
     <string name="chat_cancel">Batal</string>
     <string name="chat_attach">Lampirkan</string>
     <string name="chat_attach_image">Gambar</string>
@@ -111,7 +111,7 @@
     <string name="chat_models_all">Semua model</string>
     <string name="chat_models_none">Tidak ada model yang cocok.</string>
     <string name="chat_models_favorite">Favorit</string>
-    <string name="free_ai_pitch">Claude gratis untuk pengguna CodeAssist, tanpa kunci API. Masuk untuk mendapat poin bonus, plus poin gratis setiap hari.</string>
+    <string name="free_ai_pitch">Claude gratis untuk pengguna Code Studio, tanpa kunci API. Masuk untuk mendapat poin bonus, plus poin gratis setiap hari.</string>
     <string name="free_ai_sign_in_github">Masuk dengan GitHub</string>
     <string name="free_ai_sign_in_google">Masuk dengan Google</string>
     <string name="free_ai_signing_in">Selesaikan proses masuk di browser, lalu kembali ke sini.</string>
@@ -123,7 +123,7 @@
     <string name="free_ai_ad_loading">Memuat iklan…</string>
     <string name="free_ai_ad_failed">Belum ada iklan yang tersedia. Coba lagi nanti.</string>
     <string name="free_ai_ad_pending">Terima kasih! Poin Anda akan segera muncul.</string>
-    <string name="free_ai_paused">CodeAssist Free AI dijeda sampai akhir bulan. Anda tetap bisa memakai kunci API sendiri.</string>
+    <string name="free_ai_paused">Code Studio Free AI dijeda sampai akhir bulan. Anda tetap bisa memakai kunci API sendiri.</string>
     <string name="free_ai_cost_hint">1 poin = US$0,001 pemakaian AI. Satu langkah agen di Claude Haiku 5.5 kira-kira 1 poin.</string>
     <string name="free_ai_strip_points">%1$d poin AI</string>
     <string name="free_ai_strip_sign_in">Masuk untuk AI gratis</string>
@@ -150,11 +150,11 @@
     <string name="free_ai_usage_ago_m">%1$d mnt lalu</string>
     <string name="free_ai_usage_ago_h">%1$d jam lalu</string>
     <string name="free_ai_usage_ago_d">%1$d hari lalu</string>
-    <string name="free_ai_card_title">CodeAssist Free AI</string>
+    <string name="free_ai_card_title">Code Studio Free AI</string>
     <string name="free_ai_card_pitch">Claude tanpa kunci API. Bayar dengan poin: gratis setiap hari, lebih banyak dengan menonton iklan.</string>
     <string name="free_ai_in_use">Dipakai</string>
     <string name="free_ai_section_byok">Pakai kunci API sendiri</string>
-    <string name="free_ai_use_this">Pakai CodeAssist Free AI</string>
+    <string name="free_ai_use_this">Pakai Code Studio Free AI</string>
     <string name="chat_status_thinking">Berpikir…</string>
     <string name="chat_status_writing">Menulis…</string>
     <string name="chat_status_running">Menjalankan %1$s</string>
@@ -231,7 +231,7 @@
     <string name="aihome_pick_none">Tidak ada proyek yang cocok</string>
     <string name="aihome_kind_android">Aplikasi Android</string>
     <string name="aihome_kind_project">Proyek</string>
-    <string name="aihome_title">CodeAssist AI</string>
+    <string name="aihome_title">Code Studio AI</string>
     <string name="aihome_greeting">Halo</string>
     <string name="aihome_greeting_name">Halo, %1$s</string>
     <string name="aihome_headline_project">Apa yang ingin kita lakukan dengan %1$s?</string>

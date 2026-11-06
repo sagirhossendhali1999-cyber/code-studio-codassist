@@ -1,5 +1,5 @@
 # ============================================================================
-# EXPERIMENTAL R8 keep rules for the CodeAssist app's own (non-shipping)
+# EXPERIMENTAL R8 keep rules for the Code Studio app's own (non-shipping)
 # `minified` build type. See the `minified` block in build.gradle.kts.
 #
 # The app HOSTS a full on-device toolchain: the Kotlin K2 compiler, the IntelliJ
@@ -33,7 +33,7 @@
 -keep class kotlin.Metadata { *; }
 
 # --- The app's own engine + plugins (EP registry / plugin loader use FQNs) --
--keep class dev.ide.** { *; }
+-keep class com.shd.codestudio.** { *; }
 
 # --- Hardening: reflection-sensitive libraries R8 stripped in the first pass.
 #     Each is reached by a name/reflection/service mechanism R8 can't trace, so

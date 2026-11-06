@@ -1,1 +1,0 @@
-Android IDE: code in Kotlin and Java, preview Compose, build APKs. No PC needed.

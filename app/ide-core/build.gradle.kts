@@ -106,7 +106,7 @@ tasks.register<JavaExec>("exportLearnCatalog") {
     group = "learn"
     description = "Export the bundled Learn catalog to JSON for publishing."
     classpath = sourceSets["main"].runtimeClasspath
-    mainClass.set("dev.ide.core.backend.LearnCatalogExport")
+    mainClass.set("com.shd.codestudio.core.backend.LearnCatalogExport")
     val out = providers.gradleProperty("learn.out").orElse(layout.buildDirectory.file("learn/catalog.json").map { it.asFile.path })
     args(out.get())
 }

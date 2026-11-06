@@ -2,14 +2,14 @@
 <resources>
     <string name="projects">Projects</string>
     <string name="a_new_build_system">A new build system</string>
-    <string name="a_new_build_system_content"><![CDATA[CodeAssist has been rebuilt with a new on-device build system. It uses its own project configuration, so projects from a previous version aren't compatible and won't open automatically.
+    <string name="a_new_build_system_content"><![CDATA[Code Studio has been rebuilt with a new on-device build system. It uses its own project configuration, so projects from a previous version aren't compatible and won't open automatically.
 
 Back up your projects to a .zip now, your source files stay safe, and you can re-add them to a new project.]]></string>
     <string name="preparing_backup">Preparing backup…</string>
     <string name="backup_projects">Back up projects</string>
     <string name="got_it">Got it</string>
-    <string name="help_improve_codeassist">Help improve CodeAssist</string>
-    <string name="help_improve_codeassist_content"><![CDATA[Share anonymous usage and performance data so we can see what's slow, what's failing, and which features people rely on, and fix the right things.
+    <string name="help_improve_codestudio">Help improve Code Studio</string>
+    <string name="help_improve_codestudio_content"><![CDATA[Share anonymous usage and performance data so we can see what's slow, what's failing, and which features people rely on, and fix the right things.
 
 We collect: your app version and device model, how long builds, indexing, code completion, and previews take, build success/failure, scrubbed crash reports, how often each feature is used (for example, how many times the layout preview or Find Usages was opened), and when ads are shown or closed and changes to your ad settings.
 
@@ -46,7 +46,7 @@ We never collect your code, file or project names, what you type, or anything th
     <string name="your_files_content">Projects live in app storage you can open from any file manager, drop in icons, layouts, or assets, or edit from a PC. No special permissions, nothing hidden.</string>
     <string name="jetpack_compose">Jetpack Compose</string>
     <string name="jetpack_compose_title">Rebuilt on Jetpack Compose.</string>
-    <string name="jetpack_compose_content">A faster, smoother CodeAssist, native Compose throughout, with live @Preview.</string>
+    <string name="jetpack_compose_content">A faster, smoother Code Studio, native Compose throughout, with live @Preview.</string>
     <string name="create_your_first_project">Create your first project</string>
     <string name="open_a_project">Open a project or start a new one.</string>
     <string name="new_project">New Project</string>
@@ -58,11 +58,11 @@ We never collect your code, file or project names, what you type, or anything th
     <string name="import_by">by %1$s</string>
     <string name="import_section_contents">Contents</string>
     <string name="import_more">+%1$d more</string>
-    <string name="import_incompatible">This package needs a newer version of CodeAssist to import.</string>
+    <string name="import_incompatible">This package needs a newer version of Code Studio to import.</string>
     <string name="import_deps_bundled">Dependencies included</string>
     <string name="import_failed">Couldn't import the project package.</string>
     <string name="import_unrecognized_title">Can't import this file</string>
-    <string name="import_unrecognized">CodeAssist doesn't recognize this file. Choose a .caproj project package or a .zip of a project to import.</string>
+    <string name="import_unrecognized">Code Studio doesn't recognize this file. Choose a .caproj project package or a .zip of a project to import.</string>
     <string name="import_as_title">Import as</string>
     <string name="import_as_hint">Project name</string>
     <string name="import_destination">Lands in %1$s</string>
@@ -72,27 +72,27 @@ We never collect your code, file or project names, what you type, or anything th
     <string name="import_gradle_title">Import project</string>
     <string name="clone_repository_title">Clone from Git</string>
     <string name="clone_repository_subtitle">Copy a repository from GitHub or any Git server into a new project.</string>
-    <string name="import_gradle_subtitle">Open a CodeAssist project folder, or an existing Gradle build</string>
+    <string name="import_gradle_subtitle">Open a Code Studio project folder, or an existing Gradle build</string>
     <string name="import_gradle_busy">Importing Gradle project…</string>
-    <string name="import_gradle_failed">That folder isn't a CodeAssist project or a Gradle build.</string>
+    <string name="import_gradle_failed">That folder isn't a Code Studio project or a Gradle build.</string>
     <!-- Import-time choice: keep Gradle (compatibility) vs convert to the native module system -->
     <string name="import_source_title">Import project</string>
     <string name="import_source_message">Where is the project?</string>
     <string name="import_source_folder">Project folder</string>
-    <string name="import_source_folder_desc">A CodeAssist project, or an existing Gradle build</string>
+    <string name="import_source_folder_desc">A Code Studio project, or an existing Gradle build</string>
     <string name="import_source_package">Project file</string>
-    <string name="import_source_package_desc">A .zip of a project or Gradle build, or a .caproj shared from CodeAssist</string>
-    <string name="import_archive_codeassist">CodeAssist project</string>
+    <string name="import_source_package_desc">A .zip of a project or Gradle build, or a .caproj shared from Code Studio</string>
+    <string name="import_archive_codestudio">Code Studio project</string>
     <string name="import_archive_gradle">Gradle build</string>
     <string name="import_archive_choose_message">This zip holds several projects. Which one do you want to import?</string>
     <string name="import_archive_choose_title">Choose a project</string>
-    <string name="import_archive_empty">No CodeAssist project or Gradle build was found in that zip.</string>
+    <string name="import_archive_empty">No Code Studio project or Gradle build was found in that zip.</string>
     <string name="import_gradle_mode_title">Import Gradle project</string>
-    <string name="import_gradle_mode_message">How should CodeAssist open this project?</string>
+    <string name="import_gradle_mode_message">How should Code Studio open this project?</string>
     <string name="import_gradle_mode_compat">Compatibility mode</string>
     <string name="import_gradle_mode_compat_desc">Keep the Gradle files and re-sync from them. You can convert later.</string>
-    <string name="import_gradle_mode_convert">Convert to CodeAssist</string>
-    <string name="import_gradle_mode_convert_desc">Switch to CodeAssist's module system. Gradle files are moved to a backup folder.</string>
+    <string name="import_gradle_mode_convert">Convert to Code Studio</string>
+    <string name="import_gradle_mode_convert_desc">Switch to Code Studio's module system. Gradle files are moved to a backup folder.</string>
     <plurals name="caproj_files">
         <item quantity="one">%1$d file</item>
         <item quantity="other">%1$d files</item>
@@ -129,8 +129,8 @@ We never collect your code, file or project names, what you type, or anything th
     <string name="export_screenshot_unreadable">Can't preview this image</string>
     <string name="export_intro_gradle">Write this project out as a Gradle build, so you can open it in Android Studio or build it with gradle.</string>
     <string name="export_format_title">Format</string>
-    <string name="export_format_package">CodeAssist package</string>
-    <string name="export_format_package_desc">A .caproj file anyone with CodeAssist can import, exactly as it is here.</string>
+    <string name="export_format_package">Code Studio package</string>
+    <string name="export_format_package_desc">A .caproj file anyone with Code Studio can import, exactly as it is here.</string>
     <string name="export_format_gradle">Gradle project</string>
     <string name="export_format_gradle_desc">A .zip holding your sources plus generated Gradle build files, for Android Studio or a gradle build.</string>
     <string name="export_gradle_title">What gets generated</string>
@@ -146,7 +146,7 @@ We never collect your code, file or project names, what you type, or anything th
     <string name="share_type_java_lib">Java library</string>
     <string name="join_the_community">Join the community</string>
     <string name="join_the_community_content">Chat, get help, and share what you build on Discord.</string>
-    <string name="support_title">Support CodeAssist</string>
+    <string name="support_title">Support Code Studio</string>
     <string name="support_content">Built in my free time and kept free for everyone. If it helps you, a sponsor or a star means a lot.</string>
     <string name="support_chip_free">100% free</string>
     <string name="support_chip_open_source">Open source</string>
@@ -177,7 +177,7 @@ We never collect your code, file or project names, what you type, or anything th
     <string name="project_kind_gradle">Gradle</string>
     <!-- A folder no project format recognized, listed so it can still be opened. -->
     <string name="project_kind_files">Files</string>
-    <string name="project_kind_codeassist">CodeAssist</string>
+    <string name="project_kind_codestudio">Code Studio</string>
     <!-- Short forms for the compact project row, where "4 modules · Android · Opened 2 hours ago"
          does not fit and the "Opened" is carried by the context. -->
     <string name="project_age_just_now">just now</string>
@@ -223,8 +223,8 @@ We never collect your code, file or project names, what you type, or anything th
     <string name="beta_notice">You're on the %1$s</string>
     <string name="beta_notice_content">Some features may be incomplete or change. We'd love your feedback, tell us what's missing or broken.</string>
     <string name="submit_suggestion">Submit suggestions</string>
-    <string name="your_codeassist_files">Your CodeAssist files</string>
-    <string name="your_codeassist_files_content">Open this folder in any file manager to browse your projects (including any from older versions, under "Projects"), add icons or assets, or edit from a PC.</string>
+    <string name="your_codestudio_files">Your Code Studio files</string>
+    <string name="your_codestudio_files_content">Open this folder in any file manager to browse your projects (including any from older versions, under "Projects"), add icons or assets, or edit from a PC.</string>
     <string name="open_in_the_file_manager">Open in file manager</string>
     <string name="choose_start_point">Choose a starting point.</string>
     <string name="templates_search">Search templates</string>
@@ -588,12 +588,12 @@ We never collect your code, file or project names, what you type, or anything th
     <string name="gradle_sync_needed">The build files changed since the last sync. Re-sync to update the project.</string>
     <string name="gradle_syncing">Syncing from Gradle…</string>
     <string name="gradle_convert">Convert</string>
-    <string name="gradle_convert_title">Convert to a CodeAssist project?</string>
-    <string name="gradle_convert_body">The Gradle build files move to a backup folder and CodeAssist's own module system takes over. Re-syncing from Gradle won't be available afterward. You can undo this.</string>
+    <string name="gradle_convert_title">Convert to a Code Studio project?</string>
+    <string name="gradle_convert_body">The Gradle build files move to a backup folder and Code Studio's own module system takes over. Re-syncing from Gradle won't be available afterward. You can undo this.</string>
     <string name="gradle_convert_notes_intro">The importer read these best-effort — they won't be re-checked after converting:</string>
     <string name="gradle_convert_action">Convert</string>
     <string name="gradle_convert_working">Converting…</string>
-    <string name="gradle_converted">Converted to a CodeAssist project.</string>
+    <string name="gradle_converted">Converted to a Code Studio project.</string>
     <string name="gradle_convert_failed">Couldn't convert this project.</string>
     <string name="gradle_convert_undo">Undo</string>
     <string name="gradle_convert_done">Done</string>
@@ -629,7 +629,7 @@ We never collect your code, file or project names, what you type, or anything th
     <string name="structure_no_file">Open a file to see its structure</string>
     <string name="comingsoon_footnote">Coming soon</string>
     <string name="edscreen_project_root">project root</string>
-    <!-- NOTE: CodeAssistApp.kt reuses settings_title (must exist — expect from settings batch); dep flagged -->
+    <!-- NOTE: Code StudioApp.kt reuses settings_title (must exist — expect from settings batch); dep flagged -->
 
     <!-- home/store/learn/search/logs/palette — reuses projects, join_the_community -->
     <string name="home_store">Explore</string>
@@ -678,7 +678,7 @@ We never collect your code, file or project names, what you type, or anything th
     <string name="home_open_in_files">Open storage in Files</string>
     <string name="home_backup">Back up projects</string>
     <string name="home_star_github">Star on GitHub</string>
-    <string name="home_sponsor">Sponsor CodeAssist</string>
+    <string name="home_sponsor">Sponsor Code Studio</string>
     <string name="home_feedback">Send feedback</string>
     <string name="home_legacy_recovery">Projects from an older version can be recovered.</string>
     <string name="store_title">Explore</string>
@@ -698,7 +698,7 @@ We never collect your code, file or project names, what you type, or anything th
     <string name="store_update_conflict_title">You've changed this project</string>
     <string name="store_update_conflict_body">Updating it in place would overwrite your changes to:</string>
     <string name="store_update_conflict_more">and %1$d more</string>
-    <string name="store_update_conflict_unknown">This project was installed before CodeAssist kept track of changes, so it can't tell your edits apart from the original.</string>
+    <string name="store_update_conflict_unknown">This project was installed before Code Studio kept track of changes, so it can't tell your edits apart from the original.</string>
     <string name="store_update_conflict_keep">Installing the new version as a separate project leaves your copy exactly as it is.</string>
     <string name="store_update_as_copy">Install as a new copy</string>
     <string name="home_update_review">Review</string>
@@ -816,7 +816,7 @@ We never collect your code, file or project names, what you type, or anything th
     <string name="submit_field_changelog">What changed</string>
     <string name="submit_required_version">Give the version as three numbers, like 1.2.0.</string>
     <string name="submit_required_screenshot">Add at least one screenshot. It is what people look at before they install anything.</string>
-    <string name="submit_screenshots_unavailable">A new listing needs at least one screenshot, and images cannot be picked here. Send it from CodeAssist on Android or desktop.</string>
+    <string name="submit_screenshots_unavailable">A new listing needs at least one screenshot, and images cannot be picked here. Send it from Code Studio on Android or desktop.</string>
     <string name="submit_mine_title">Your submissions</string>
     <string name="submit_withdraw">Withdraw</string>
     <string name="submit_unavailable">Publishing isn't available in this build.</string>
@@ -932,7 +932,7 @@ We never collect your code, file or project names, what you type, or anything th
     <string name="reviews_helpful_count">Helpful (%1$d)</string>
     <string name="reviews_count">%1$d reviews</string>
     <string name="reviews_count_one">1 review</string>
-    <string name="reviews_reader">A CodeAssist user</string>
+    <string name="reviews_reader">A Code Studio user</string>
     <string name="reviews_reply">Publisher replied</string>
     <string name="reviews_on_version">on v%1$s</string>
     <string name="reviews_delete">Delete</string>
@@ -1164,10 +1164,10 @@ We never collect your code, file or project names, what you type, or anything th
     <string name="unsaved_close_dont_ask_hint">You can change this in Settings ▸ Editor.</string>
     <!-- Build notifications: the first-build permission prompt + its in-process fallback, and the Settings re-request -->
     <string name="build_notif_title">Show build notifications?</string>
-    <string name="build_notif_message">CodeAssist can run builds and your program in a separate, isolated process and show a progress notification while they run. It keeps Android from stopping the build when you switch away, and lets you follow progress. Allow notifications to turn this on.</string>
+    <string name="build_notif_message">Code Studio can run builds and your program in a separate, isolated process and show a progress notification while they run. It keeps Android from stopping the build when you switch away, and lets you follow progress. Allow notifications to turn this on.</string>
     <string name="build_notif_not_now">Not now</string>
     <string name="build_notif_inprocess_title">Builds will run in the app</string>
-    <string name="build_notif_inprocess_message">Without notification permission, builds run inside CodeAssist instead of a separate process, and you won't see build progress notifications. You can turn notifications on anytime in Settings, under Build Runtime.</string>
+    <string name="build_notif_inprocess_message">Without notification permission, builds run inside Code Studio instead of a separate process, and you won't see build progress notifications. You can turn notifications on anytime in Settings, under Build Runtime.</string>
     <string name="build_notif_enabled">Build notifications enabled</string>
     <string name="preview_live">Live</string>
     <string name="preview_paused">Paused</string>
@@ -1346,7 +1346,7 @@ We never collect your code, file or project names, what you type, or anything th
     <string name="perm_allow_always">Always allow in this project</string>
     <string name="perm_deny">Deny</string>
 
-    <!-- settings (SettingsScreen/SettingsControls/SettingsHubScreen) — provides settings_title reused by CodeAssistApp -->
+    <!-- settings (SettingsScreen/SettingsControls/SettingsHubScreen) — provides settings_title reused by Code StudioApp -->
     <string name="settings_title">Settings</string>
     <string name="settings_group_editor">Appearance &amp; Editor</string>
     <string name="settings_group_code">Code Intelligence</string>
@@ -1438,7 +1438,7 @@ We never collect your code, file or project names, what you type, or anything th
     <string name="plugins_requires">Requires %1$s</string>
     <string name="plugins_tab_builtin">Built-in</string>
     <string name="plugins_tab_installed">Installed</string>
-    <string name="plugins_installed_empty">Nothing installed yet. A CodeAssist plugin you install from your app store appears here.</string>
+    <string name="plugins_installed_empty">Nothing installed yet. A Code Studio plugin you install from your app store appears here.</string>
     <string name="plugins_failed">Did not load: %1$s</string>
     <string name="plugins_tab_get">Get plugins</string>
     <string name="plugins_search">Search plugins</string>
@@ -1448,12 +1448,12 @@ We never collect your code, file or project names, what you type, or anything th
     <string name="plugins_status_review">Needs review</string>
     <string name="plugins_status_failed">Didn’t load</string>
     <string name="plugins_not_running">Not running yet. Review what it can do before allowing it.</string>
-    <string name="plugins_by_codeassist">By CodeAssist</string>
-    <string name="plugins_signed_like_ide">Signed by CodeAssist</string>
+    <string name="plugins_by_codestudio">By Code Studio</string>
+    <string name="plugins_signed_like_ide">Signed by Code Studio</string>
     <string name="plugins_open_details">Details for %1$s</string>
     <string name="plugins_detail_enabled">Enabled</string>
-    <string name="plugins_detail_enabled_hint">Takes effect when CodeAssist restarts.</string>
-    <string name="plugins_detail_builtin">Ships inside CodeAssist.</string>
+    <string name="plugins_detail_enabled_hint">Takes effect when Code Studio restarts.</string>
+    <string name="plugins_detail_builtin">Ships inside Code Studio.</string>
     <string name="plugins_detail_adds">What it adds</string>
     <string name="plugins_detail_adds_none">It declares nothing it adds.</string>
     <string name="plugins_detail_details">Details</string>
@@ -1462,7 +1462,7 @@ We never collect your code, file or project names, what you type, or anything th
     <string name="plugins_detail_app_version">App version</string>
     <string name="plugins_detail_package">Package</string>
     <string name="plugins_detail_api">Plugin API</string>
-    <string name="plugins_detail_min_host">Needs CodeAssist</string>
+    <string name="plugins_detail_min_host">Needs Code Studio</string>
     <string name="plugins_detail_min_host_value">%1$s or newer</string>
     <string name="plugins_detail_depends">Depends on</string>
     <string name="plugins_detail_installed">Installed</string>
@@ -1476,11 +1476,11 @@ We never collect your code, file or project names, what you type, or anything th
     <string name="plugins_detail_open_app">About and licenses</string>
     <string name="plugins_detail_problem">It did not load</string>
     <string name="plugins_detail_copied">Copied</string>
-    <string name="plugins_get_intro">Plugins add languages and tools to CodeAssist. Each one is an app of its own: it downloads in your browser, Android asks you to install it, and it then appears under Installed for you to allow.</string>
+    <string name="plugins_get_intro">Plugins add languages and tools to Code Studio. Each one is an app of its own: it downloads in your browser, Android asks you to install it, and it then appears under Installed for you to allow.</string>
     <string name="plugins_get_download">Download</string>
     <string name="plugins_get_update">Update to %1$s</string>
     <string name="plugins_get_installed">Installed</string>
-    <string name="plugins_get_needs_host">Needs CodeAssist %1$s or newer</string>
+    <string name="plugins_get_needs_host">Needs Code Studio %1$s or newer</string>
     <string name="plugins_get_release_notes">Release notes</string>
     <string name="plugins_get_offline">Offline: showing the list from your last visit.</string>
     <string name="plugins_get_retry">Try again</string>
@@ -1488,7 +1488,7 @@ We never collect your code, file or project names, what you type, or anything th
     <string name="plugins_get_loading">Loading plugins…</string>
     <string name="plugins_get_installed_version">Installed: %1$s</string>
     <string name="home_get_plugins">Get plugins</string>
-    <string name="home_get_plugins_content">Add C/C++, Dart, Flutter and more to CodeAssist.</string>
+    <string name="home_get_plugins_content">Add C/C++, Dart, Flutter and more to Code Studio.</string>
     <string name="plugin_cap_group_editor">In the editor</string>
     <string name="plugin_cap_group_ui">Screens and commands</string>
     <string name="plugin_cap_group_languages">Languages</string>
@@ -1498,7 +1498,7 @@ We never collect your code, file or project names, what you type, or anything th
     <string name="plugin_cap_sensitive">Sensitive</string>
     <string name="plugin_consent_subtitle">Version %1$s</string>
     <string name="plugin_consent_full_access">Runs with full access</string>
-    <string name="plugin_consent_publisher_ide">Published by CodeAssist: signed with the same certificate as this app.</string>
+    <string name="plugin_consent_publisher_ide">Published by Code Studio: signed with the same certificate as this app.</string>
 
     <!-- keystore (KeystoreManagerScreen) -->
     <string name="keystore_manager_title">Keystore Manager</string>
@@ -2078,7 +2078,7 @@ We never collect your code, file or project names, what you type, or anything th
     <string name="learn_checkpoint_retry">Worth another look. Go back over the track, then take the checkpoint again.</string>
     <string name="learn_done">Done</string>
     <string name="learn_check">Check</string>
-    <string name="learn_tour_title">Learn CodeAssist in a few minutes</string>
+    <string name="learn_tour_title">Learn Code Studio in a few minutes</string>
     <string name="learn_tour_body">Short hands-on lessons right in the editor: quick fixes, adding libraries, running your code and Git. Each step checks that you did it.</string>
     <string name="learn_tour_start">Start the tour</string>
     <string name="learn_tour_later">Not now</string>
@@ -2379,7 +2379,7 @@ We never collect your code, file or project names, what you type, or anything th
     <string name="store_status_submitted">In review · usually 2 business days</string>
     <string name="store_step_listing_body">Title, a short description, category and screenshots — captured from your editor inside the app.</string>
     <string name="store_step_listing_title">Fill in the listing</string>
-    <string name="store_step_pick_body">Choose any local project. CodeAssist reads its name, language, JDK and Gradle setup for you — nothing to write by hand.</string>
+    <string name="store_step_pick_body">Choose any local project. Code Studio reads its name, language, JDK and Gradle setup for you — nothing to write by hand.</string>
     <string name="store_step_pick_title">Pick a project from Home</string>
     <string name="store_step_submit_body">We build it on a clean machine and a human checks licensing and the README. Usually two business days.</string>
     <string name="store_step_submit_title">Submit for review</string>
@@ -2554,7 +2554,7 @@ We never collect your code, file or project names, what you type, or anything th
     <!-- Plugin consent dialog -->
     <string name="plugin_consent_title">Allow %1$s to run?</string>
     <string name="plugin_consent_declares">It says it will:</string>
-    <string name="plugin_consent_warning">A plugin runs inside CodeAssist, with the same access to your projects and account as the IDE itself. It is not sandboxed, and the list above is not enforced. Allow it only if you trust whoever published it.</string>
+    <string name="plugin_consent_warning">A plugin runs inside Code Studio, with the same access to your projects and account as the IDE itself. It is not sandboxed, and the list above is not enforced. Allow it only if you trust whoever published it.</string>
     <string name="plugin_consent_deny">Don't allow</string>
     <string name="plugin_consent_publisher_unknown">The publisher could not be identified: this package has no readable signing certificate.</string>
     <string name="plugin_consent_signed_by">Signed by %1$s. An update from the same publisher reuses this certificate.</string>
@@ -2676,7 +2676,7 @@ We never collect your code, file or project names, what you type, or anything th
     <string name="challenge_legend_reference">reference</string>
     <string name="you_delete_account">Delete account</string>
     <string name="you_delete_account_title">Delete your account?</string>
-    <string name="you_delete_account_body">This permanently deletes your CodeAssist account and everything stored with it: your profile, published projects, reviews, likes, follows, challenge results, and AI points. Projects on this device are not affected. This can't be undone.</string>
+    <string name="you_delete_account_body">This permanently deletes your Code Studio account and everything stored with it: your profile, published projects, reviews, likes, follows, challenge results, and AI points. Projects on this device are not affected. This can't be undone.</string>
     <string name="you_delete_account_deleting">Deleting…</string>
     <string name="settings_language_servers">Language Servers</string>
     <string name="settings_language_servers_subtitle">Errors, completion and navigation from servers you have installed</string>

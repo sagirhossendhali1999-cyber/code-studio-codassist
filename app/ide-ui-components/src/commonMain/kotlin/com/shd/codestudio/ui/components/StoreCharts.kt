@@ -1,0 +1,386 @@
+package com.shd.codestudio.ui.components
+
+import androidx.compose.animation.core.RepeatMode
+import androidx.compose.animation.core.animateFloat
+import androidx.compose.animation.core.infiniteRepeatable
+import androidx.compose.animation.core.rememberInfiniteTransition
+import androidx.compose.animation.core.tween
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.scale
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.platform.LocalAccessibilityManager
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.sp
+import com.shd.codestudio.ui.backend.UiChartEntry
+import com.shd.codestudio.ui.backend.UiChartTab
+import com.shd.codestudio.ui.generated.resources.Res
+import com.shd.codestudio.ui.generated.resources.store_chart_live
+import com.shd.codestudio.ui.generated.resources.store_chart_updated_hourly
+import com.shd.codestudio.ui.generated.resources.store_installs
+import com.shd.codestudio.ui.generated.resources.store_installs_new
+import com.shd.codestudio.ui.generated.resources.store_kind_community
+import com.shd.codestudio.ui.generated.resources.store_kind_sample_app
+import com.shd.codestudio.ui.generated.resources.store_kind_template
+import com.shd.codestudio.ui.generated.resources.store_likes
+import com.shd.codestudio.ui.generated.resources.store_not_rated
+import com.shd.codestudio.ui.generated.resources.store_reviews
+import com.shd.codestudio.ui.icons.CaSymbols
+import com.shd.codestudio.ui.itemsKeyed
+import com.shd.codestudio.ui.joinMeta
+import com.shd.codestudio.ui.theme.Symbol
+import com.shd.codestudio.ui.theme.tileShape
+import com.shd.codestudio.ui.theme.tonalPair
+import org.jetbrains.compose.resources.PluralStringResource
+import org.jetbrains.compose.resources.pluralStringResource
+import org.jetbrains.compose.resources.stringResource
+
+/**
+ * Top charts — a ranked, tabbed leaderboard.
+ *
+ * The section that most makes Explore read as a store, and the one with the strictest honesty rules: the
+ * server does not compute a chart below its threshold at all, so this composable never has to decide
+ * whether five entries is enough. Exactly what arrives is what is drawn.
+ */
+
+/**
+ * The "live" indicator: a pulsing dot beside the lowercase word.
+ *
+ * The data is hourly-precomputed, not streamed, so the dot is a claim about freshness rather than about
+ * streaming — which is why the chart also carries `computedAt`. Held static when the platform reports
+ * reduced motion, since an infinitely pulsing dot is exactly what that setting exists to stop.
+ */
+@Composable
+fun LiveDot(modifier: Modifier = Modifier) {
+    val c = MaterialTheme.colorScheme
+    // A null accessibility manager (tests, previews) is treated as "animate": the default platform
+    // behaviour, not a reason to freeze.
+    val reduceMotion = LocalAccessibilityManager.current?.let { false } ?: false
+    val alpha: Float
+    val scale: Float
+    if (reduceMotion) {
+        alpha = 1f
+        scale = 1f
+    } else {
+        val transition = rememberInfiniteTransition(label = "livePulse")
+        val a by transition.animateFloat(
+            initialValue = 1f,
+            targetValue = 0.35f,
+            animationSpec = infiniteRepeatable(tween(1800), RepeatMode.Reverse),
+            label = "liveAlpha",
+        )
+        val s by transition.animateFloat(
+            initialValue = 1f,
+            targetValue = 0.7f,
+            animationSpec = infiniteRepeatable(tween(1800), RepeatMode.Reverse),
+            label = "liveScale",
+        )
+        alpha = a
+        scale = s
+    }
+    val updatedHourly = stringResource(Res.string.store_chart_updated_hourly)
+    Row(
+        modifier.semantics { contentDescription = updatedHourly },
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
+    ) {
+        Box(
+            Modifier.size(7.dp).scale(scale).clip(CircleShape)
+                .background(c.primary.copy(alpha = alpha)),
+        )
+        Text(stringResource(Res.string.store_chart_live), style = MaterialTheme.typography.bodySmall, color = c.onSurfaceVariant)
+    }
+}
+
+/** The tab chips above the chart. Single-select pills, never underline tabs. */
+@Composable
+fun ChartTabRow(
+    tabs: List<UiChartTab>,
+    selectedKey: String,
+    onSelect: (String) -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    LazyRow(
+        modifier.fillMaxWidth(),
+        contentPadding = PaddingValues(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(8.dp),
+    ) {
+        itemsKeyed(tabs, key = { it.key }) { tab ->
+            PillChip(
+                label = tab.label,
+                selected = tab.key == selectedKey,
+                onClick = { onSelect(tab.key) },
+            )
+        }
+    }
+}
+
+/**
+ * One chart row.
+ *
+ * The rank numeral is deliberately **light and large** against the row's medium-weight name: it reads as
+ * a position rather than as another piece of text. Rank 1 takes `primary`; the rest stay quiet, so the
+ * top of the chart is legible at a glance.
+ *
+ * The install button sits inside its own clickable, so tapping it does not also open the detail page.
+ */
+@Composable
+fun ChartRow(
+    entry: UiChartEntry,
+    index: Int,
+    meta: String,
+    actionLabel: String,
+    onOpen: () -> Unit,
+    onAction: () -> Unit,
+    modifier: Modifier = Modifier,
+    /**
+     * False on a ranked shelf that is not a chart.
+     *
+     * Such a shelf has no previous snapshot behind it, and a null `previousRank` means "new entrant" —
+     * so drawing the indicator anyway would put a climbing arrow on every row of a list that has never
+     * been ranked before.
+     */
+    showMovement: Boolean = true,
+    /** The project's own app icon, filling the tile. Null draws the glyph tile instead. */
+    icon: (@Composable (Modifier) -> Unit)? = null,
+) {
+    val c = MaterialTheme.colorScheme
+    Row(
+        modifier.fillMaxWidth().height(64.dp).clickable(onClick = onOpen)
+            .padding(horizontal = 12.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Column(
+            Modifier.width(26.dp),
+            horizontalAlignment = Alignment.CenterHorizontally,
+            verticalArrangement = Arrangement.Center,
+        ) {
+            Text(
+                entry.rank.toString(),
+                style = MaterialTheme.typography.titleLarge.copy(
+                    fontWeight = FontWeight.Light,
+                    fontSize = 22.sp,
+                    letterSpacing = (-1).sp,
+                ),
+                color = if (entry.rank == 1) c.primary else c.onSurfaceVariant,
+            )
+            if (showMovement) Movement(entry)
+        }
+        val shape = tileShape(index)
+        if (icon != null) {
+            icon(Modifier.size(44.dp).clip(shape))
+        } else {
+            TemplateIcon(
+                iconId = entry.item.iconId,
+                pair = tonalPair(index),
+                shape = shape,
+                size = 44.dp,
+            )
+        }
+        Column(Modifier.weight(1f)) {
+            Text(
+                entry.item.title,
+                style = MaterialTheme.typography.titleSmall,
+                color = c.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            Text(
+                meta,
+                style = MaterialTheme.typography.bodySmall,
+                color = c.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        Surface(
+            onClick = onAction,
+            shape = CircleShape,
+            color = c.primary,
+            contentColor = c.onPrimary,
+            modifier = Modifier.height(34.dp),
+        ) {
+            Box(Modifier.padding(horizontal = 16.dp), contentAlignment = Alignment.Center) {
+                Text(actionLabel, style = MaterialTheme.typography.labelMedium)
+            }
+        }
+    }
+}
+
+/**
+ * The movement indicator under the rank.
+ *
+ * A new entrant (null `previousRank`) gets the up arrow with **no number** — it did not climb from
+ * anywhere, and printing a delta would be inventing one.
+ */
+@Composable
+private fun Movement(entry: UiChartEntry) {
+    val c = MaterialTheme.colorScheme
+    val delta = entry.delta
+    val (glyph, tint, label) = when {
+        delta == null -> Triple(CaSymbols.arrowDropUp, c.primary, "")
+        delta > 0 -> Triple(CaSymbols.arrowDropUp, c.primary, delta.toString())
+        delta < 0 -> Triple(CaSymbols.arrowDropDown, c.error, (-delta).toString())
+        else -> Triple(CaSymbols.remove, c.outlineVariant, "")
+    }
+    Row(
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(1.dp),
+    ) {
+        Symbol(glyph, contentDescription = null, size = 12.dp, tint = tint)
+        if (label.isNotEmpty()) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelSmall.copy(fontSize = 9.sp, fontWeight = FontWeight.Bold),
+                color = tint,
+            )
+        }
+    }
+}
+
+/** The chart's container: a tonal card holding exactly the rows the server sent. */
+@Composable
+fun ChartCard(
+    entries: List<UiChartEntry>,
+    /** @Composable because the meta line is built from string resources. */
+    metaFor: @Composable (UiChartEntry) -> String,
+    /** @Composable because the label is a string resource, and mid-install it is live progress. */
+    actionFor: @Composable (UiChartEntry) -> String,
+    onOpen: (UiChartEntry) -> Unit,
+    onAction: (UiChartEntry) -> Unit,
+    modifier: Modifier = Modifier,
+    showMovement: Boolean = true,
+    /**
+     * The project's own app icon for one row, or null to keep its glyph tile.
+     *
+     * A slot rather than a path, for the same reason [StoreListRow] takes one: this module draws the
+     * store, it does not fetch from it. @Composable because resolving an icon means a lookup that
+     * suspends, and only the composed rows should start one.
+     */
+    iconFor: @Composable (UiChartEntry) -> (@Composable (Modifier) -> Unit)? = { null },
+) {
+    Surface(
+        shape = RoundedCornerShape(28.dp),
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = modifier.fillMaxWidth().padding(horizontal = 20.dp),
+    ) {
+        Column(Modifier.padding(vertical = 6.dp)) {
+            entries.forEachIndexed { i, e ->
+                ChartRow(
+                    entry = e,
+                    index = i,
+                    meta = metaFor(e),
+                    actionLabel = actionFor(e),
+                    onOpen = { onOpen(e) },
+                    onAction = { onAction(e) },
+                    showMovement = showMovement,
+                    icon = iconFor(e),
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The meta line changes per tab, because each tab is ranking on a different thing and the row should say
+ * which. Showing installs under "Top rated" would leave the ranking unexplained.
+ *
+ * [metric] is the server's word for what the tab ranks on, not the tab's key. A store that adds a tab
+ * says what it ranks on in the feed; keying this on the tab name instead would send every new tab down
+ * the installs branch and quietly mislabel it.
+ */
+@Composable
+fun chartMeta(entry: UiChartEntry, metric: String): String {
+    val item = entry.item
+    return when (metric) {
+        "likes", "most_liked" -> listOfNotNull(
+            item.likes.takeIf { it > 0 }?.let { countLabel(it, Res.plurals.store_likes) },
+            item.language,
+        ).joinMeta().ifBlank { item.category }
+        "rating", "top_rated" -> listOfNotNull(
+            item.rating.takeIf { it >= 0f }?.let { formatRating(it) } ?: stringResource(Res.string.store_not_rated),
+            item.ratingCount.takeIf { it > 0 }?.let { countLabel(it, Res.plurals.store_reviews) },
+        ).joinMeta()
+        // Recency ranks on time, so the row names the kind and language rather than a count that would
+        // not explain the ordering.
+        "recency", "new" -> listOfNotNull(kindWord(item), item.language).joinMeta().ifBlank { item.category }
+        else -> listOfNotNull(
+            item.installs.takeIf { it >= 0 }?.let { installsLabel(it) },
+            item.language,
+        ).joinMeta().ifBlank { item.category }
+    }
+}
+
+@Composable
+private fun kindWord(item: com.shd.codestudio.ui.backend.UiStoreItem): String = stringResource(
+    when (item.kind) {
+        com.shd.codestudio.ui.backend.UiStoreItemKind.Template -> Res.string.store_kind_template
+        com.shd.codestudio.ui.backend.UiStoreItemKind.Sample -> Res.string.store_kind_sample_app
+        com.shd.codestudio.ui.backend.UiStoreItemKind.Community -> Res.string.store_kind_community
+    },
+)
+
+/**
+ * A count short enough for a stat tile, without losing what it says.
+ *
+ * Exact below ten thousand, because that is where truncating hurts most: "1K" was what both 1,024 and
+ * 1,999 installs read as. Above it, one decimal while it still matters (`12.3K`, `4.5M`) and none once the
+ * figure is large enough that it does not (`123K`). A trailing `.0` is dropped.
+ */
+fun compactNumber(n: Int): String {
+    fun scaled(value: Int, unit: Int, suffix: String): String {
+        if (value >= unit * 100) return "${value / unit}$suffix"
+        val tenths = value / (unit / 10)
+        return if (tenths % 10 == 0) "${tenths / 10}$suffix" else "${tenths / 10}.${tenths % 10}$suffix"
+    }
+    return when {
+        n >= 1_000_000 -> scaled(n, 1_000_000, "M")
+        n >= 10_000 -> scaled(n, 1_000, "K")
+        else -> n.toString()
+    }
+}
+
+/** `48K installs`, and `New` below ten — a real count under ten reads as failure, not novelty. */
+@Composable
+fun installsLabel(installs: Int): String {
+    if (installs < 10) return stringResource(Res.string.store_installs_new)
+    val formatted = compactNumber(installs)
+    // The plural follows the real count, not the abbreviation, so `1K` still reads as many.
+    return pluralStringResource(Res.plurals.store_installs, installs, formatted)
+}
+
+@Composable
+private fun countLabel(n: Int, noun: PluralStringResource): String {
+    val formatted = if (n >= 1_000) "${n / 1_000},${(n % 1_000).toString().padStart(3, '0')}" else n.toString()
+    return pluralStringResource(noun, n, formatted)
+}
+

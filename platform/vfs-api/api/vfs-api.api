@@ -1,78 +1,78 @@
-# The compiled surface of io.github.tyron12233:vfs-api, pinned at SPI 3.0.0.
+# The compiled surface of io.github.sagirhossendhali1999-cyber:vfs-api, pinned at SPI 3.0.0.
 # A plugin links against these by name and descriptor; see :spi-compat.
 # Regenerate with: ./gradlew :spi-compat:test -Dspi.updateBaselines=true
-dev/ide/vfs/FileChanged
+com/shd/codestudio/vfs/FileChanged
 	kind class
 	super java/lang/Object
-	implements dev/ide/vfs/VfsEvent
-	ctor (Ldev/ide/vfs/VirtualFile;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
-	method component1()Ldev/ide/vfs/VirtualFile;
+	implements com/shd/codestudio/vfs/VfsEvent
+	ctor (Lcom/shd/codestudio/vfs/VirtualFile;Ljava/lang/String;Ljava/lang/String;Lkotlin/jvm/internal/DefaultConstructorMarker;)V
+	method component1()Lcom/shd/codestudio/vfs/VirtualFile;
 	method component2-Q9wPEHw()Ljava/lang/String;
 	method component3-Q9wPEHw()Ljava/lang/String;
-	method copy-jIeX82E(Ldev/ide/vfs/VirtualFile;Ljava/lang/String;Ljava/lang/String;)Ldev/ide/vfs/FileChanged;
+	method copy-jIeX82E(Lcom/shd/codestudio/vfs/VirtualFile;Ljava/lang/String;Ljava/lang/String;)Lcom/shd/codestudio/vfs/FileChanged;
 	method equals(Ljava/lang/Object;)Z
-	method getFile()Ldev/ide/vfs/VirtualFile;
+	method getFile()Lcom/shd/codestudio/vfs/VirtualFile;
 	method getNewHash-Q9wPEHw()Ljava/lang/String;
 	method getOldHash-Q9wPEHw()Ljava/lang/String;
 	method hashCode()I
-	method static copy-jIeX82E$default(Ldev/ide/vfs/FileChanged;Ldev/ide/vfs/VirtualFile;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ldev/ide/vfs/FileChanged;
+	method static copy-jIeX82E$default(Lcom/shd/codestudio/vfs/FileChanged;Lcom/shd/codestudio/vfs/VirtualFile;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/shd/codestudio/vfs/FileChanged;
 	method toString()Ljava/lang/String;
-dev/ide/vfs/FileCreated
+com/shd/codestudio/vfs/FileCreated
 	kind class
 	super java/lang/Object
-	implements dev/ide/vfs/VfsEvent
-	ctor (Ldev/ide/vfs/VirtualFile;)V
-	method component1()Ldev/ide/vfs/VirtualFile;
-	method copy(Ldev/ide/vfs/VirtualFile;)Ldev/ide/vfs/FileCreated;
+	implements com/shd/codestudio/vfs/VfsEvent
+	ctor (Lcom/shd/codestudio/vfs/VirtualFile;)V
+	method component1()Lcom/shd/codestudio/vfs/VirtualFile;
+	method copy(Lcom/shd/codestudio/vfs/VirtualFile;)Lcom/shd/codestudio/vfs/FileCreated;
 	method equals(Ljava/lang/Object;)Z
-	method getFile()Ldev/ide/vfs/VirtualFile;
+	method getFile()Lcom/shd/codestudio/vfs/VirtualFile;
 	method hashCode()I
-	method static copy$default(Ldev/ide/vfs/FileCreated;Ldev/ide/vfs/VirtualFile;ILjava/lang/Object;)Ldev/ide/vfs/FileCreated;
+	method static copy$default(Lcom/shd/codestudio/vfs/FileCreated;Lcom/shd/codestudio/vfs/VirtualFile;ILjava/lang/Object;)Lcom/shd/codestudio/vfs/FileCreated;
 	method toString()Ljava/lang/String;
-dev/ide/vfs/FileDeleted
+com/shd/codestudio/vfs/FileDeleted
 	kind class
 	super java/lang/Object
-	implements dev/ide/vfs/VfsEvent
-	ctor (Ldev/ide/vfs/VirtualFile;)V
-	method component1()Ldev/ide/vfs/VirtualFile;
-	method copy(Ldev/ide/vfs/VirtualFile;)Ldev/ide/vfs/FileDeleted;
+	implements com/shd/codestudio/vfs/VfsEvent
+	ctor (Lcom/shd/codestudio/vfs/VirtualFile;)V
+	method component1()Lcom/shd/codestudio/vfs/VirtualFile;
+	method copy(Lcom/shd/codestudio/vfs/VirtualFile;)Lcom/shd/codestudio/vfs/FileDeleted;
 	method equals(Ljava/lang/Object;)Z
-	method getFile()Ldev/ide/vfs/VirtualFile;
+	method getFile()Lcom/shd/codestudio/vfs/VirtualFile;
 	method hashCode()I
-	method static copy$default(Ldev/ide/vfs/FileDeleted;Ldev/ide/vfs/VirtualFile;ILjava/lang/Object;)Ldev/ide/vfs/FileDeleted;
+	method static copy$default(Lcom/shd/codestudio/vfs/FileDeleted;Lcom/shd/codestudio/vfs/VirtualFile;ILjava/lang/Object;)Lcom/shd/codestudio/vfs/FileDeleted;
 	method toString()Ljava/lang/String;
-dev/ide/vfs/FileMoved
+com/shd/codestudio/vfs/FileMoved
 	kind class
 	super java/lang/Object
-	implements dev/ide/vfs/VfsEvent
-	ctor (Ldev/ide/vfs/VirtualFile;Ljava/lang/String;Ljava/lang/String;)V
-	method component1()Ldev/ide/vfs/VirtualFile;
+	implements com/shd/codestudio/vfs/VfsEvent
+	ctor (Lcom/shd/codestudio/vfs/VirtualFile;Ljava/lang/String;Ljava/lang/String;)V
+	method component1()Lcom/shd/codestudio/vfs/VirtualFile;
 	method component2()Ljava/lang/String;
 	method component3()Ljava/lang/String;
-	method copy(Ldev/ide/vfs/VirtualFile;Ljava/lang/String;Ljava/lang/String;)Ldev/ide/vfs/FileMoved;
+	method copy(Lcom/shd/codestudio/vfs/VirtualFile;Ljava/lang/String;Ljava/lang/String;)Lcom/shd/codestudio/vfs/FileMoved;
 	method equals(Ljava/lang/Object;)Z
-	method getFile()Ldev/ide/vfs/VirtualFile;
+	method getFile()Lcom/shd/codestudio/vfs/VirtualFile;
 	method getFrom()Ljava/lang/String;
 	method getTo()Ljava/lang/String;
 	method hashCode()I
-	method static copy$default(Ldev/ide/vfs/FileMoved;Ldev/ide/vfs/VirtualFile;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Ldev/ide/vfs/FileMoved;
+	method static copy$default(Lcom/shd/codestudio/vfs/FileMoved;Lcom/shd/codestudio/vfs/VirtualFile;Ljava/lang/String;Ljava/lang/String;ILjava/lang/Object;)Lcom/shd/codestudio/vfs/FileMoved;
 	method toString()Ljava/lang/String;
-dev/ide/vfs/FileWatch
+com/shd/codestudio/vfs/FileWatch
 	kind interface
-	implements dev/ide/platform/Disposable
-dev/ide/vfs/VfsEvent
+	implements com/shd/codestudio/platform/Disposable
+com/shd/codestudio/vfs/VfsEvent
 	kind interface
-	method abstract getFile()Ldev/ide/vfs/VirtualFile;
-dev/ide/vfs/VfsListener
+	method abstract getFile()Lcom/shd/codestudio/vfs/VirtualFile;
+com/shd/codestudio/vfs/VfsListener
 	kind interface
 	method abstract onEvents(Ljava/util/List;)V
-dev/ide/vfs/VfsTopics
+com/shd/codestudio/vfs/VfsTopics
 	kind class
 	super java/lang/Object
-	field static INSTANCE Ldev/ide/vfs/VfsTopics;
-	method getCHANGES()Ldev/ide/platform/Topic;
-dev/ide/vfs/VirtualFileSystem
+	field static INSTANCE Lcom/shd/codestudio/vfs/VfsTopics;
+	method getCHANGES()Lcom/shd/codestudio/platform/Topic;
+com/shd/codestudio/vfs/VirtualFileSystem
 	kind interface
-	method abstract findByPath(Ljava/lang/String;)Ldev/ide/vfs/VirtualFile;
-	method abstract root()Ldev/ide/vfs/VirtualFile;
-	method abstract watch(Ldev/ide/vfs/VirtualFile;)Ldev/ide/vfs/FileWatch;
+	method abstract findByPath(Ljava/lang/String;)Lcom/shd/codestudio/vfs/VirtualFile;
+	method abstract root()Lcom/shd/codestudio/vfs/VirtualFile;
+	method abstract watch(Lcom/shd/codestudio/vfs/VirtualFile;)Lcom/shd/codestudio/vfs/FileWatch;

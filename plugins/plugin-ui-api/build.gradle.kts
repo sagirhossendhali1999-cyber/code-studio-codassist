@@ -6,7 +6,7 @@ plugins {
     alias(libs.plugins.kotlin.compose)
     `java-library`
     // Published for plugin authors to compile against; see the convention plugin for the coordinate.
-    id("dev.ide.spi-publish")
+    id("com.shd.codestudio.spi-publish")
 }
 
 // plugin-ui-api: the UI half of the plugin SPI, i.e. what a plugin shipped as its own app implements to
@@ -23,7 +23,7 @@ plugins {
 // an Android plugin would otherwise resolve a desktop artifact. A plugin declares the Compose it compiles
 // against itself (the template does this), and the host provides it at runtime.
 dependencies {
-    // `ServiceKey`, for `UiContext.service`. This is the one CodeAssist module this artifact depends on, and
+    // `ServiceKey`, for `UiContext.service`. This is the one Code Studio module this artifact depends on, and
     // it is deliberate: a plugin's UI facet resolves the plugin's OWN service, and the key it resolves by has
     // to be the same type the engine facet registered with. Declaring a second key type here instead would
     // mean a plugin holding two keys for one service. `platform-core` is published, is already on every

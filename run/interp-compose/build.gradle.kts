@@ -24,7 +24,7 @@ kotlin {
     // compileSdk 36 / minSdk 24 — match :ide-ui (the AndroidX/Compose runtime floor). No compileSdkMinor
     // here; only the app module pins the minor.
     android {
-        namespace = "dev.ide.interp.compose"
+        namespace = "com.shd.codestudio.interp.compose"
         compileSdk = 36
         minSdk = 24
         compilerOptions {

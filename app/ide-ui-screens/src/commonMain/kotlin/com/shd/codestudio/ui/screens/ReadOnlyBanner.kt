@@ -1,0 +1,92 @@
+package com.shd.codestudio.ui.screens
+
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.unit.dp
+import com.shd.codestudio.ui.IdeUiState
+import com.shd.codestudio.ui.OpenFile
+import com.shd.codestudio.ui.editor.core.isLarge
+import com.shd.codestudio.ui.generated.resources.Res
+import com.shd.codestudio.ui.generated.resources.editor_large_file_notice
+import com.shd.codestudio.ui.generated.resources.editor_stale_keep
+import com.shd.codestudio.ui.generated.resources.editor_stale_notice
+import com.shd.codestudio.ui.generated.resources.editor_stale_reload
+import com.shd.codestudio.ui.generated.resources.library_decompile_java
+import com.shd.codestudio.ui.generated.resources.library_readonly_decompiled
+import com.shd.codestudio.ui.generated.resources.library_readonly_source
+import com.shd.codestudio.ui.theme.Ca
+import org.jetbrains.compose.resources.stringResource
+
+/**
+ * The read-only notice for a LIBRARY tab (a `library://…` decompiled or attached-source view), or null for a
+ * normal editable file.
+ *
+ * A notice rather than a banner of its own: it is one sentence, and it used to be one of ten bars competing
+ * for the top of the screen. Not dismissible, because it describes the file currently on screen, so hiding
+ * it would leave the reader typing into something that will not save.
+ */
+@Composable
+internal fun readOnlyNotice(state: IdeUiState, active: OpenFile): EditorNotice? {
+    val kind = active.libraryKind ?: return null
+    val label = if (kind == "source") stringResource(Res.string.library_readonly_source)
+    else stringResource(Res.string.library_readonly_decompiled)
+    val decompile = stringResource(Res.string.library_decompile_java)
+    return EditorNotice(
+        id = "readonly",
+        level = NoticeLevel.Info,
+        summary = label,
+        actionLabel = decompile.takeIf { kind != "decompiled_java" },
+        onAction = { state.openLibrary(active.path, forceJava = true) }.takeIf { kind != "decompiled_java" },
+    )
+}
+
+/**
+ * The large-file notice: past [isLarge] the editor suppresses the memory-heavy code intelligence (analysis,
+ * semantic colouring, folds, inlays, completion, outline) so a big file stays within the heap on a low-RAM
+ * device. Syntax highlighting and editing are unaffected. Null for a normal-sized file.
+ */
+@Composable
+internal fun largeFileNotice(active: OpenFile): EditorNotice? {
+    // Derived so the caller's scope observes only the flag: reading the document itself here would recompose
+    // the whole editor chrome on every keystroke.
+    val session = active.session
+    val large by remember(session) { derivedStateOf { session.doc.isLarge() } }
+    if (!large) return null
+    return EditorNotice(
+        id = "largefile",
+        level = NoticeLevel.Info,
+        summary = stringResource(Res.string.editor_large_file_notice),
+    )
+}
+
+/**
+ * The file under an edited tab changed on disk (copied over from outside, or written by a tool), so the buffer
+ * and the file have parted ways and only the user can say which one wins. Reload takes the file as one undoable
+ * edit, so undo brings their edits back; Keep mine saves the buffer over the file. Not dismissible: a Run saves
+ * edited tabs, so leaving it unanswered is choosing Keep mine without knowing it.
+ */
+@Composable
+internal fun staleOnDiskNotice(state: IdeUiState, active: OpenFile): EditorNotice? {
+    if (!active.staleOnDisk || !active.modified) return null
+    return EditorNotice(
+        id = "stale",
+        level = NoticeLevel.Warning,
+        summary = stringResource(Res.string.editor_stale_notice),
+        actionLabel = stringResource(Res.string.editor_stale_reload),
+        onAction = { state.reloadFromDisk(active) },
+        secondaryLabel = stringResource(Res.string.editor_stale_keep),
+        onSecondary = { state.save(active) },
+    )
+}

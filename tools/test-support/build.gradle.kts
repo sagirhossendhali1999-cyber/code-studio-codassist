@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
 }
 
-// Shared test-only support library (package `dev.ide.testkit`). It provides the cross-module test
+// Shared test-only support library (package `com.shd.codestudio.testkit`). It provides the cross-module test
 // infrastructure that every module used to re-implement: temp-dir lifecycles, source seeding, VirtualFile
 // and DocumentSnapshot stubs, classpath/jar locators + an ASM jar builder, CompilationContext builders, a
 // fake IndexService, workspace bootstrap helpers, a suspend-to-sync bridge, and completion assertions.

@@ -17,7 +17,7 @@ kotlin {
     }
 
     android {
-        namespace = "dev.ide.ui.editor"
+        namespace = "com.shd.codestudio.ui.editor"
         compileSdk = 36
         minSdk = 24
         compilerOptions { jvmTarget.set(JvmTarget.JVM_17) }

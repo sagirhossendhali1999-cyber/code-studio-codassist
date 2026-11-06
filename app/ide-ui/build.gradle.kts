@@ -2,7 +2,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
 // The app shell: the navigation graph, the overlay stack, the root composable, and the application state
 // object that wires them to a host. It is what a launcher calls -- :ide-desktop and :ide-android each build
-// an `IdeBackend` and hand it to `CodeAssistApp` -- and it is the only UI module that knows what all the
+// an `IdeBackend` and hand it to `Code StudioApp` -- and it is the only UI module that knows what all the
 // screens are.
 //
 // Everything it renders lives below it, one module per layer: :ide-ui-core (theme, platform, editor model,
@@ -26,7 +26,7 @@ kotlin {
     // AndroidX/Compose runtime the hosts pull in. (The KMP `android {}` block has no compileSdkMinor; the
     // app module — which does — pins the minor.)
     android {
-        namespace = "dev.ide.ui"
+        namespace = "com.shd.codestudio.ui"
         compileSdk = 36
         minSdk = 24
         compilerOptions {
@@ -35,13 +35,13 @@ kotlin {
     }
 
     // iOS. The shell is the navigation graph and the overlay stack over `IdeBackend`; an iOS host builds
-    // its own backend and calls `CodeAssistApp`, exactly as :ide-desktop and :ide-android do.
+    // its own backend and calls `Code StudioApp`, exactly as :ide-desktop and :ide-android do.
     iosSimulatorArm64()
     iosArm64()
 
     sourceSets {
         commonMain.dependencies {
-            // `api` throughout: :ide-core renders `CodeAssistApp` and builds the state it takes, so the
+            // `api` throughout: :ide-core renders `Code StudioApp` and builds the state it takes, so the
             // types from every layer below reach it through this module.
             api(project(":ide-ui-api"))
             api(project(":ide-ui-resources"))

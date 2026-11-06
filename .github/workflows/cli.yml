@@ -9,11 +9,11 @@ on:
   workflow_dispatch:
 
 # Build the headless launcher (:build-cli) and prove it end to end: scaffold a project from a template and
-# assemble a signed APK out of it, on a stock runner, with CodeAssist's own build system. That smoke test is
-# the contract the `codeassist-build` action depends on — if it goes red, the action is broken for everyone.
+# assemble a signed APK out of it, on a stock runner, with Code Studio's own build system. That smoke test is
+# the contract the `codestudio-build` action depends on — if it goes red, the action is broken for everyone.
 #
-# On a published release the distribution is attached to it as `codeassist-cli.zip`, which is the asset the
-# action downloads (`.../releases/download/<tag>/codeassist-cli.zip`, or `/releases/latest/download/...`).
+# On a published release the distribution is attached to it as `codestudio-cli.zip`, which is the asset the
+# action downloads (`.../releases/download/<tag>/codestudio-cli.zip`, or `/releases/latest/download/...`).
 env:
   # Match ci.yml: the framework's pinned JDK.
   JAVA_VERSION: "25"
@@ -71,10 +71,10 @@ jobs:
       - name: Smoke test — scaffold and assemble an APK
         run: |
           set -euo pipefail
-          bin=app/build-cli/build/install/codeassist/bin/codeassist
+          bin=app/build-cli/build/install/codestudio/bin/codestudio
           "$bin" --version
           "$bin" templates
-          "$bin" create --project "$RUNNER_TEMP/smoke" --template android-app --name SmokeApp --package dev.ide.smoke
+          "$bin" create --project "$RUNNER_TEMP/smoke" --template android-app --name SmokeApp --package com.shd.codestudio.smoke
           "$bin" assemble --project "$RUNNER_TEMP/smoke" --report "$RUNNER_TEMP/smoke-report.json"
           apk="$RUNNER_TEMP/smoke/app/build/outputs/apk/debug/app-debug.apk"
           test -f "$apk" || { echo "::error::the smoke build reported success but produced no APK"; exit 1; }
@@ -85,7 +85,7 @@ jobs:
       - name: Smoke test — a broken build fails with an annotation
         run: |
           set -uo pipefail
-          bin=app/build-cli/build/install/codeassist/bin/codeassist
+          bin=app/build-cli/build/install/codestudio/bin/codestudio
           # Scoped to src/: build/ holds a MainActivity.class and .dex of the same stem.
           src=$(find "$RUNNER_TEMP/smoke/app/src" -name 'MainActivity.*' | head -1)
           case "$src" in
@@ -100,14 +100,14 @@ jobs:
       - name: Package the distribution
         run: |
           cd app/build-cli/build/install
-          zip -qr "$GITHUB_WORKSPACE/codeassist-cli.zip" codeassist
-          ls -lh "$GITHUB_WORKSPACE/codeassist-cli.zip"
+          zip -qr "$GITHUB_WORKSPACE/codestudio-cli.zip" codestudio
+          ls -lh "$GITHUB_WORKSPACE/codestudio-cli.zip"
 
       - name: Upload the distribution
         uses: actions/upload-artifact@v4
         with:
-          name: codeassist-cli
-          path: codeassist-cli.zip
+          name: codestudio-cli
+          path: codestudio-cli.zip
           if-no-files-found: error
           retention-days: 30
 
@@ -116,4 +116,4 @@ jobs:
         if: github.event_name == 'release'
         env:
           GH_TOKEN: ${{ github.token }}
-        run: gh release upload "${{ github.event.release.tag_name }}" codeassist-cli.zip --clobber
+        run: gh release upload "${{ github.event.release.tag_name }}" codestudio-cli.zip --clobber

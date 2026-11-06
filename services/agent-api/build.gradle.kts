@@ -2,7 +2,7 @@ plugins {
     kotlin("jvm")
     `java-library`
     // Published for plugin authors to compile against; see the convention plugin for the coordinate.
-    id("dev.ide.spi-publish")
+    id("com.shd.codestudio.spi-publish")
 }
 
 // agent-api — provider-neutral SPI for the in-IDE coding agent (see docs/agentic-coding.md).

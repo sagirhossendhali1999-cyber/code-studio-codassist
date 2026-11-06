@@ -14,16 +14,16 @@
             <action android:name="android.intent.action.MAIN" />
             <category android:name="android.intent.category.LAUNCHER" />
         </intent>
-        <!-- Installed plugin apps: the marker activity a CodeAssist plugin declares. Package visibility on
+        <!-- Installed plugin apps: the marker activity a Code Studio plugin declares. Package visibility on
              API 30+ hides packages this app has no declared interest in, so without this the plugin apps the
              user installed would not be enumerable. -->
         <intent>
-            <action android:name="dev.ide.codeassist.action.PLUGIN" />
+            <action android:name="com.shd.codestudio.codestudio.action.PLUGIN" />
         </intent>
     </queries>
 
     <!-- The android "Run" builds a debug APK and installs it via PackageInstaller; the OS shows its own
-         install-confirmation. The user must also grant "install unknown apps" to CodeAssist (we deep-link
+         install-confirmation. The user must also grant "install unknown apps" to Code Studio (we deep-link
          to that Settings screen when it isn't granted yet). -->
     <uses-permission android:name="android.permission.REQUEST_INSTALL_PACKAGES" />
 
@@ -77,7 +77,7 @@
             <!-- MAIN/LAUNCHER lives on the two activity-aliases below, not here: the launcher icon is chosen
                  by which alias is enabled (Settings > Appearance > App icon). Everything else (open-with,
                  share, the OAuth and store links, explicit starts by class) still targets this activity. -->
-            <!-- "Open with CodeAssist": another app hands us a single file to import into the project. -->
+            <!-- "Open with Code Studio": another app hands us a single file to import into the project. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -86,7 +86,7 @@
                 <data android:mimeType="application/json" />
                 <data android:mimeType="application/xml" />
             </intent-filter>
-            <!-- "Share to CodeAssist": receive a shared file from another app. -->
+            <!-- "Share to Code Studio": receive a shared file from another app. -->
             <intent-filter>
                 <action android:name="android.intent.action.SEND" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -95,10 +95,10 @@
                 <data android:mimeType="application/json" />
                 <data android:mimeType="application/xml" />
             </intent-filter>
-            <!-- Import a shared CodeAssist project package (.caproj) via "Open with". Best-effort: matches
+            <!-- Import a shared Code Studio project package (.caproj) via "Open with". Best-effort: matches
                  the application/x-caproj MIME and file:// paths by extension; content:// URIs don't expose an
                  extension, so those are imported via the in-app Import button instead. Deliberately only VIEW
-                 (open-with), NOT SEND — a SEND filter would list CodeAssist in its own .caproj share sheet. -->
+                 (open-with), NOT SEND — a SEND filter would list Code Studio in its own .caproj share sheet. -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -126,7 +126,7 @@
             </intent-filter>
             <!-- The Projects Store's OAuth redirect. The provider sends the user to Supabase, which
                  redirects here with the session in the fragment. The scheme is also declared in
-                 dev.ide.store.StoreAuth and allow-listed on the Supabase project; all three must agree.
+                 com.shd.codestudio.store.StoreAuth and allow-listed on the Supabase project; all three must agree.
                  MainActivity recognises this link and hands it to the account service rather than
                  treating it as a file to open. -->
             <intent-filter>
@@ -136,13 +136,13 @@
 
                 <data
                         android:host="auth-callback"
-                        android:scheme="codeassist" />
+                        android:scheme="codestudio" />
             </intent-filter>
-            <!-- A link into the Projects Store: `codeassist://store` for the store itself, and
-                 `codeassist://store/{item id}` for one item's page. The moderation page uses it to jump
+            <!-- A link into the Projects Store: `codestudio://store` for the store itself, and
+                 `codestudio://store/{item id}` for one item's page. The moderation page uses it to jump
                  from a submission into the app on the same phone. Same scheme as the sign-in redirect and
                  a different host, which is how MainActivity tells the two apart; both are declared in
-                 dev.ide.store (StoreAuth / StoreLink). -->
+                 com.shd.codestudio.store (StoreAuth / StoreLink). -->
             <intent-filter>
                 <action android:name="android.intent.action.VIEW" />
                 <category android:name="android.intent.category.DEFAULT" />
@@ -150,10 +150,10 @@
 
                 <data
                         android:host="store"
-                        android:scheme="codeassist" />
+                        android:scheme="codestudio" />
             </intent-filter>
-            <!-- `codeassist://agent`: the "Back to CodeAssist" button on the page the browser shows after
-                 "Sign in with OpenRouter" (dev.ide.core.agent.OpenRouterSignIn.RETURN_LINK). It carries no data;
+            <!-- `codestudio://agent`: the "Back to Code Studio" button on the page the browser shows after
+                 "Sign in with OpenRouter" (com.shd.codestudio.core.agent.OpenRouterSignIn.RETURN_LINK). It carries no data;
                  the key has already reached the app over the loopback redirect. MainActivity only brings the
                  app forward for it. -->
             <intent-filter>
@@ -163,7 +163,7 @@
 
                 <data
                         android:host="agent"
-                        android:scheme="codeassist" />
+                        android:scheme="codestudio" />
             </intent-filter>
         </activity>
 
@@ -213,7 +213,7 @@
              in-app notification center stays the record of what the user was shown. Dormant in a checkout
              without google-services.json: FirebaseApp never initializes and nothing is delivered. -->
         <service
-                android:name=".CodeAssistMessagingService"
+                android:name=".Code StudioMessagingService"
                 android:exported="false">
             <intent-filter>
                 <action android:name="com.google.firebase.MESSAGING_EVENT" />
@@ -272,7 +272,7 @@
                 android:name=".applog.AppLogSinkService"
                 android:exported="true">
             <intent-filter>
-                <action android:name="dev.ide.applog.SINK" />
+                <action android:name="com.shd.codestudio.applog.SINK" />
             </intent-filter>
         </service>
 

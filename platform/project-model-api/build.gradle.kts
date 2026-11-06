@@ -11,10 +11,10 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     // Published for plugin authors to compile against. The multiplatform convention rather than
-    // `dev.ide.spi-publish`: that one applies `java-library`, which a multiplatform module cannot, and a
+    // `com.shd.codestudio.spi-publish`: that one applies `java-library`, which a multiplatform module cannot, and a
     // module published as several components needs a javadoc placeholder per publication rather than one
     // shared jar. Same coordinate, same POM, same BOM entry (`PluginBomTest` matches either opt-in).
-    id("dev.ide.spi-publish-mpp")
+    id("com.shd.codestudio.spi-publish-mpp")
 }
 
 kotlin {

@@ -1,7 +1,7 @@
-# The compiled surface of io.github.tyron12233:interp-api, pinned at SPI 3.0.0.
+# The compiled surface of io.github.sagirhossendhali1999-cyber:interp-api, pinned at SPI 3.0.0.
 # A plugin links against these by name and descriptor; see :spi-compat.
 # Regenerate with: ./gradlew :spi-compat:test -Dspi.updateBaselines=true
-dev/ide/interp/api/BytecodeConfig
+com/shd/codestudio/interp/api/BytecodeConfig
 	kind class
 	super java/lang/Object
 	ctor (Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/lang/ClassLoader;J)V
@@ -11,104 +11,104 @@ dev/ide/interp/api/BytecodeConfig
 	method getInterpretPrefixes()Ljava/util/List;
 	method getLibraryLoader()Ljava/lang/ClassLoader;
 	method getThreadStackSize()J
-dev/ide/interp/api/BytecodeSession
+com/shd/codestudio/interp/api/BytecodeSession
 	kind interface
-	implements dev/ide/interp/api/InterpretSession
+	implements com/shd/codestudio/interp/api/InterpretSession
 	method abstract callStatic(Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;)Ljava/lang/Object;
-	method abstract construct(Ljava/lang/String;Ljava/util/List;Ljava/lang/String;)Ldev/ide/interp/api/InterpretedObject;
+	method abstract construct(Ljava/lang/String;Ljava/util/List;Ljava/lang/String;)Lcom/shd/codestudio/interp/api/InterpretedObject;
 	method abstract readStatic(Ljava/lang/String;Ljava/lang/String;)Ljava/lang/Object;
 	method abstract requestCancel()V
-	method static callStatic$default(Ldev/ide/interp/api/BytecodeSession;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;ILjava/lang/Object;)Ljava/lang/Object;
-	method static construct$default(Ldev/ide/interp/api/BytecodeSession;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;ILjava/lang/Object;)Ldev/ide/interp/api/InterpretedObject;
-dev/ide/interp/api/BytecodeSession$DefaultImpls
+	method static callStatic$default(Lcom/shd/codestudio/interp/api/BytecodeSession;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;ILjava/lang/Object;)Ljava/lang/Object;
+	method static construct$default(Lcom/shd/codestudio/interp/api/BytecodeSession;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;ILjava/lang/Object;)Lcom/shd/codestudio/interp/api/InterpretedObject;
+com/shd/codestudio/interp/api/BytecodeSession$DefaultImpls
 	kind class
 	super java/lang/Object
-	method static callStatic$default(Ldev/ide/interp/api/BytecodeSession;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;ILjava/lang/Object;)Ljava/lang/Object;
-	method static construct$default(Ldev/ide/interp/api/BytecodeSession;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;ILjava/lang/Object;)Ldev/ide/interp/api/InterpretedObject;
-dev/ide/interp/api/CodeInterpreter
+	method static callStatic$default(Lcom/shd/codestudio/interp/api/BytecodeSession;Ljava/lang/String;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;ILjava/lang/Object;)Ljava/lang/Object;
+	method static construct$default(Lcom/shd/codestudio/interp/api/BytecodeSession;Ljava/lang/String;Ljava/util/List;Ljava/lang/String;ILjava/lang/Object;)Lcom/shd/codestudio/interp/api/InterpretedObject;
+com/shd/codestudio/interp/api/CodeInterpreter
 	kind interface
-	method abstract lower(Ldev/ide/interp/api/LowerRequest;)Ldev/ide/interp/api/LowerResult;
-	method abstract openBytecode(Ldev/ide/interp/api/BytecodeConfig;)Ldev/ide/interp/api/BytecodeSession;
-	method abstract openSource(Ldev/ide/interp/api/LoweredProgram;Ldev/ide/interp/api/InterpretConfig;)Ldev/ide/interp/api/SourceSession;
-	method static openSource$default(Ldev/ide/interp/api/CodeInterpreter;Ldev/ide/interp/api/LoweredProgram;Ldev/ide/interp/api/InterpretConfig;ILjava/lang/Object;)Ldev/ide/interp/api/SourceSession;
-dev/ide/interp/api/CodeInterpreter$DefaultImpls
+	method abstract lower(Lcom/shd/codestudio/interp/api/LowerRequest;)Lcom/shd/codestudio/interp/api/LowerResult;
+	method abstract openBytecode(Lcom/shd/codestudio/interp/api/BytecodeConfig;)Lcom/shd/codestudio/interp/api/BytecodeSession;
+	method abstract openSource(Lcom/shd/codestudio/interp/api/LoweredProgram;Lcom/shd/codestudio/interp/api/InterpretConfig;)Lcom/shd/codestudio/interp/api/SourceSession;
+	method static openSource$default(Lcom/shd/codestudio/interp/api/CodeInterpreter;Lcom/shd/codestudio/interp/api/LoweredProgram;Lcom/shd/codestudio/interp/api/InterpretConfig;ILjava/lang/Object;)Lcom/shd/codestudio/interp/api/SourceSession;
+com/shd/codestudio/interp/api/CodeInterpreter$DefaultImpls
 	kind class
 	super java/lang/Object
-	method static openSource$default(Ldev/ide/interp/api/CodeInterpreter;Ldev/ide/interp/api/LoweredProgram;Ldev/ide/interp/api/InterpretConfig;ILjava/lang/Object;)Ldev/ide/interp/api/SourceSession;
-dev/ide/interp/api/CodeInterpreterKt
+	method static openSource$default(Lcom/shd/codestudio/interp/api/CodeInterpreter;Lcom/shd/codestudio/interp/api/LoweredProgram;Lcom/shd/codestudio/interp/api/InterpretConfig;ILjava/lang/Object;)Lcom/shd/codestudio/interp/api/SourceSession;
+com/shd/codestudio/interp/api/CodeInterpreterKt
 	kind class
 	super java/lang/Object
-	method static getCODE_INTERPRETER()Ldev/ide/platform/ServiceKey;
-dev/ide/interp/api/HookDecision
+	method static getCODE_INTERPRETER()Lcom/shd/codestudio/platform/ServiceKey;
+com/shd/codestudio/interp/api/HookDecision
 	kind class
 	super java/lang/Object
 	ctor (Lkotlin/jvm/internal/DefaultConstructorMarker;)V
-dev/ide/interp/api/HookDecision$Deny
+com/shd/codestudio/interp/api/HookDecision$Deny
 	kind class
-	super dev/ide/interp/api/HookDecision
+	super com/shd/codestudio/interp/api/HookDecision
 	ctor (Ljava/lang/String;)V
 	method getReason()Ljava/lang/String;
-dev/ide/interp/api/HookDecision$Proceed
+com/shd/codestudio/interp/api/HookDecision$Proceed
 	kind class
-	super dev/ide/interp/api/HookDecision
-	field static INSTANCE Ldev/ide/interp/api/HookDecision$Proceed;
-dev/ide/interp/api/HookDecision$Replace
+	super com/shd/codestudio/interp/api/HookDecision
+	field static INSTANCE Lcom/shd/codestudio/interp/api/HookDecision$Proceed;
+com/shd/codestudio/interp/api/HookDecision$Replace
 	kind class
-	super dev/ide/interp/api/HookDecision
+	super com/shd/codestudio/interp/api/HookDecision
 	ctor (Ljava/lang/Object;)V
 	method getValue()Ljava/lang/Object;
-dev/ide/interp/api/InterpretConfig
+com/shd/codestudio/interp/api/InterpretConfig
 	kind class
 	super java/lang/Object
 	ctor ()V
-	ctor (Ljava/lang/ClassLoader;Ljava/util/Set;ZZLdev/ide/interp/api/InterpretHooks;)V
-	ctor (Ljava/lang/ClassLoader;Ljava/util/Set;ZZLdev/ide/interp/api/InterpretHooks;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-	method getHooks()Ldev/ide/interp/api/InterpretHooks;
+	ctor (Ljava/lang/ClassLoader;Ljava/util/Set;ZZLcom/shd/codestudio/interp/api/InterpretHooks;)V
+	ctor (Ljava/lang/ClassLoader;Ljava/util/Set;ZZLcom/shd/codestudio/interp/api/InterpretHooks;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	method getHooks()Lcom/shd/codestudio/interp/api/InterpretHooks;
 	method getLibraryLoader()Ljava/lang/ClassLoader;
 	method getSandbox()Ljava/util/Set;
 	method getStrictSandbox()Z
 	method getTolerateGaps()Z
-dev/ide/interp/api/InterpretException
+com/shd/codestudio/interp/api/InterpretException
 	kind class
 	super java/lang/RuntimeException
 	ctor (Ljava/lang/String;Ljava/lang/Throwable;)V
 	ctor (Ljava/lang/String;Ljava/lang/Throwable;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
-dev/ide/interp/api/InterpretHooks
+com/shd/codestudio/interp/api/InterpretHooks
 	kind interface
-	method beforeCall(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Ljava/util/List;)Ldev/ide/interp/api/HookDecision;
+	method beforeCall(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Ljava/util/List;)Lcom/shd/codestudio/interp/api/HookDecision;
 	method beforeClassInit(Ljava/lang/String;)Z
-	method beforePropertyRead(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)Ldev/ide/interp/api/HookDecision;
-	method beforePropertyWrite(Ljava/lang/String;Ljava/lang/Object;)Ldev/ide/interp/api/HookDecision;
-dev/ide/interp/api/InterpretHooks$DefaultImpls
+	method beforePropertyRead(Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)Lcom/shd/codestudio/interp/api/HookDecision;
+	method beforePropertyWrite(Ljava/lang/String;Ljava/lang/Object;)Lcom/shd/codestudio/interp/api/HookDecision;
+com/shd/codestudio/interp/api/InterpretHooks$DefaultImpls
 	kind class
 	super java/lang/Object
-	method static beforeCall(Ldev/ide/interp/api/InterpretHooks;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Ljava/util/List;)Ldev/ide/interp/api/HookDecision;
-	method static beforeClassInit(Ldev/ide/interp/api/InterpretHooks;Ljava/lang/String;)Z
-	method static beforePropertyRead(Ldev/ide/interp/api/InterpretHooks;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)Ldev/ide/interp/api/HookDecision;
-	method static beforePropertyWrite(Ldev/ide/interp/api/InterpretHooks;Ljava/lang/String;Ljava/lang/Object;)Ldev/ide/interp/api/HookDecision;
-dev/ide/interp/api/InterpretProblem
+	method static beforeCall(Lcom/shd/codestudio/interp/api/InterpretHooks;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;Ljava/util/List;)Lcom/shd/codestudio/interp/api/HookDecision;
+	method static beforeClassInit(Lcom/shd/codestudio/interp/api/InterpretHooks;Ljava/lang/String;)Z
+	method static beforePropertyRead(Lcom/shd/codestudio/interp/api/InterpretHooks;Ljava/lang/String;Ljava/lang/String;Ljava/lang/Object;)Lcom/shd/codestudio/interp/api/HookDecision;
+	method static beforePropertyWrite(Lcom/shd/codestudio/interp/api/InterpretHooks;Ljava/lang/String;Ljava/lang/Object;)Lcom/shd/codestudio/interp/api/HookDecision;
+com/shd/codestudio/interp/api/InterpretProblem
 	kind class
 	super java/lang/Object
-	ctor (Ldev/ide/interp/api/InterpretProblem$Severity;Ljava/lang/String;Ljava/lang/String;)V
-	ctor (Ldev/ide/interp/api/InterpretProblem$Severity;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
+	ctor (Lcom/shd/codestudio/interp/api/InterpretProblem$Severity;Ljava/lang/String;Ljava/lang/String;)V
+	ctor (Lcom/shd/codestudio/interp/api/InterpretProblem$Severity;Ljava/lang/String;Ljava/lang/String;ILkotlin/jvm/internal/DefaultConstructorMarker;)V
 	method getDetail()Ljava/lang/String;
 	method getMessage()Ljava/lang/String;
-	method getSeverity()Ldev/ide/interp/api/InterpretProblem$Severity;
+	method getSeverity()Lcom/shd/codestudio/interp/api/InterpretProblem$Severity;
 	method toString()Ljava/lang/String;
-dev/ide/interp/api/InterpretProblem$Severity
+com/shd/codestudio/interp/api/InterpretProblem$Severity
 	kind enum
 	super java/lang/Enum
-	field static ERROR Ldev/ide/interp/api/InterpretProblem$Severity;
-	field static WARNING Ldev/ide/interp/api/InterpretProblem$Severity;
+	field static ERROR Lcom/shd/codestudio/interp/api/InterpretProblem$Severity;
+	field static WARNING Lcom/shd/codestudio/interp/api/InterpretProblem$Severity;
 	method static getEntries()Lkotlin/enums/EnumEntries;
-	method static valueOf(Ljava/lang/String;)Ldev/ide/interp/api/InterpretProblem$Severity;
-	method static values()[Ldev/ide/interp/api/InterpretProblem$Severity;
-dev/ide/interp/api/InterpretSession
+	method static valueOf(Ljava/lang/String;)Lcom/shd/codestudio/interp/api/InterpretProblem$Severity;
+	method static values()[Lcom/shd/codestudio/interp/api/InterpretProblem$Severity;
+com/shd/codestudio/interp/api/InterpretSession
 	kind interface
-	implements dev/ide/platform/Disposable
+	implements com/shd/codestudio/platform/Disposable
 	method abstract clearProblems()V
 	method abstract getProblems()Ljava/util/List;
-dev/ide/interp/api/InterpretedObject
+com/shd/codestudio/interp/api/InterpretedObject
 	kind interface
 	method abstract call(Ljava/lang/String;Ljava/util/List;)Ljava/lang/Object;
 	method abstract get(Ljava/lang/String;)Ljava/lang/Object;
@@ -116,12 +116,12 @@ dev/ide/interp/api/InterpretedObject
 	method abstract getTypeFqn()Ljava/lang/String;
 	method abstract proxy(Ljava/lang/Class;)Ljava/lang/Object;
 	method abstract set(Ljava/lang/String;Ljava/lang/Object;)V
-	method static call$default(Ldev/ide/interp/api/InterpretedObject;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Ljava/lang/Object;
-dev/ide/interp/api/InterpretedObject$DefaultImpls
+	method static call$default(Lcom/shd/codestudio/interp/api/InterpretedObject;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Ljava/lang/Object;
+com/shd/codestudio/interp/api/InterpretedObject$DefaultImpls
 	kind class
 	super java/lang/Object
-	method static call$default(Ldev/ide/interp/api/InterpretedObject;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Ljava/lang/Object;
-dev/ide/interp/api/LowerRequest
+	method static call$default(Lcom/shd/codestudio/interp/api/InterpretedObject;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Ljava/lang/Object;
+com/shd/codestudio/interp/api/LowerRequest
 	kind class
 	super java/lang/Object
 	ctor (Ljava/nio/file/Path;Ljava/lang/String;Ljava/lang/String;IZ)V
@@ -131,49 +131,49 @@ dev/ide/interp/api/LowerRequest
 	method getFile()Ljava/nio/file/Path;
 	method getStrict()Z
 	method getText()Ljava/lang/String;
-dev/ide/interp/api/LowerResult
+com/shd/codestudio/interp/api/LowerResult
 	kind interface
-dev/ide/interp/api/LowerResult$Failed
+com/shd/codestudio/interp/api/LowerResult$Failed
 	kind class
 	super java/lang/Object
-	implements dev/ide/interp/api/LowerResult
+	implements com/shd/codestudio/interp/api/LowerResult
 	ctor (Ljava/util/List;)V
 	method getProblems()Ljava/util/List;
-dev/ide/interp/api/LowerResult$Lowered
+com/shd/codestudio/interp/api/LowerResult$Lowered
 	kind class
 	super java/lang/Object
-	implements dev/ide/interp/api/LowerResult
-	ctor (Ldev/ide/interp/api/LoweredProgram;)V
-	method getProgram()Ldev/ide/interp/api/LoweredProgram;
-dev/ide/interp/api/LowerResult$NotReady
+	implements com/shd/codestudio/interp/api/LowerResult
+	ctor (Lcom/shd/codestudio/interp/api/LoweredProgram;)V
+	method getProgram()Lcom/shd/codestudio/interp/api/LoweredProgram;
+com/shd/codestudio/interp/api/LowerResult$NotReady
 	kind class
 	super java/lang/Object
-	implements dev/ide/interp/api/LowerResult
+	implements com/shd/codestudio/interp/api/LowerResult
 	ctor (Ljava/lang/String;)V
 	method getMessage()Ljava/lang/String;
-dev/ide/interp/api/LoweredProgram
+com/shd/codestudio/interp/api/LoweredProgram
 	kind interface
 	method abstract getEntry()Ljava/lang/String;
 	method abstract getProblems()Ljava/util/List;
 	method abstract getTypes()Ljava/util/List;
-dev/ide/interp/api/SandboxCategories
+com/shd/codestudio/interp/api/SandboxCategories
 	kind class
 	super java/lang/Object
 	field static ANDROID_SYSTEM Ljava/lang/String;
 	field static FILE_IO Ljava/lang/String;
-	field static INSTANCE Ldev/ide/interp/api/SandboxCategories;
+	field static INSTANCE Lcom/shd/codestudio/interp/api/SandboxCategories;
 	field static NETWORK Ljava/lang/String;
 	field static PROCESS_CONTROL Ljava/lang/String;
 	method getALL()Ljava/util/Set;
-dev/ide/interp/api/SourceSession
+com/shd/codestudio/interp/api/SourceSession
 	kind interface
-	implements dev/ide/interp/api/InterpretSession
+	implements com/shd/codestudio/interp/api/InterpretSession
 	method abstract call(Ljava/lang/String;Ljava/util/List;)Ljava/lang/Object;
-	method abstract instantiate(Ljava/lang/String;Ljava/util/List;)Ldev/ide/interp/api/InterpretedObject;
-	method static call$default(Ldev/ide/interp/api/SourceSession;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Ljava/lang/Object;
-	method static instantiate$default(Ldev/ide/interp/api/SourceSession;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Ldev/ide/interp/api/InterpretedObject;
-dev/ide/interp/api/SourceSession$DefaultImpls
+	method abstract instantiate(Ljava/lang/String;Ljava/util/List;)Lcom/shd/codestudio/interp/api/InterpretedObject;
+	method static call$default(Lcom/shd/codestudio/interp/api/SourceSession;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Ljava/lang/Object;
+	method static instantiate$default(Lcom/shd/codestudio/interp/api/SourceSession;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lcom/shd/codestudio/interp/api/InterpretedObject;
+com/shd/codestudio/interp/api/SourceSession$DefaultImpls
 	kind class
 	super java/lang/Object
-	method static call$default(Ldev/ide/interp/api/SourceSession;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Ljava/lang/Object;
-	method static instantiate$default(Ldev/ide/interp/api/SourceSession;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Ldev/ide/interp/api/InterpretedObject;
+	method static call$default(Lcom/shd/codestudio/interp/api/SourceSession;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Ljava/lang/Object;
+	method static instantiate$default(Lcom/shd/codestudio/interp/api/SourceSession;Ljava/lang/String;Ljava/util/List;ILjava/lang/Object;)Lcom/shd/codestudio/interp/api/InterpretedObject;

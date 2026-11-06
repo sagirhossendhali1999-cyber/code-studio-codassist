@@ -4,7 +4,7 @@ version = 2
 type = "java-lib"
 name = "ide-ui-resources"
 languageLevel = "JAVA_17"
-output = "build/codeassist/classes"
+output = "build/codestudio/classes"
 
 [sourceSets.composeResources]
 scope = "IMPLEMENTATION"
@@ -16,6 +16,6 @@ api = ["org.jetbrains.compose.components:components-resources:1.11.1"]
 implementation = ["org.jetbrains.compose.runtime:runtime:1.11.1", "kotlin-stdlib"]
 
 [composeResources]
-package = "dev.ide.ui.generated.resources"
+package = "com.shd.codestudio.ui.generated.resources"
 public = true
 roots = ["src/commonMain/composeResources"]

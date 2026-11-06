@@ -6,21 +6,21 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 // Extracted from :platform-core, :vfs-api and :language-api, packages unchanged, because a symbol model
 // that cannot be NAMED from common code cannot be BUILT from common code. `:lang-kotlin-index` is compiler-
 // free and would otherwise port to iOS unchanged, except that its `KotlinSymbol` implements
-// `dev.ide.lang.resolve.Symbol`, whose `declaration()` returns a `DomNode` and whose origin holds a
+// `com.shd.codestudio.lang.resolve.Symbol`, whose `declaration()` returns a `DomNode` and whose origin holds a
 // `VirtualFile`. Those three types, plus the `ContentHash` a file hashes to, are the whole closure.
 //
 // What stayed behind is what actually needs a JVM: the message bus is typed by `java.lang.Class`, and the
 // file system, watches and event stream hang off it. Nothing here does.
 //
-// Its three former homes `api`-depend on it, so every existing `import dev.ide.lang.resolve.TypeRef` and
-// `import dev.ide.vfs.VirtualFile` resolves exactly as before and no consumer changes.
+// Its three former homes `api`-depend on it, so every existing `import com.shd.codestudio.lang.resolve.TypeRef` and
+// `import com.shd.codestudio.vfs.VirtualFile` resolves exactly as before and no consumer changes.
 plugins {
     alias(libs.plugins.kotlin.multiplatform)
     // Published for plugin authors to compile against. The multiplatform convention rather than
-    // `dev.ide.spi-publish`: that one applies `java-library`, which a multiplatform module cannot, and a
+    // `com.shd.codestudio.spi-publish`: that one applies `java-library`, which a multiplatform module cannot, and a
     // module published as several components needs a javadoc placeholder per publication rather than one
     // shared jar. Same coordinate, same POM, same BOM entry (`PluginBomTest` matches either opt-in).
-    id("dev.ide.spi-publish-mpp")
+    id("com.shd.codestudio.spi-publish-mpp")
 }
 
 kotlin {

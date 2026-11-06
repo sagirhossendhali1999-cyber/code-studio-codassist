@@ -39,7 +39,7 @@
     <string name="chat_usage_cached">em cache</string>
     <string name="chat_antigravity_warning">Experimental. Usa uma conta Google pelo endpoint do Antigravity, o que viola os Termos de Serviço do Google e já resultou em banimento de contas. Cole um token de atualização ou de acesso OAuth (opcionalmente como token|projectId).</string>
     <string name="chat_antigravity_signin">Entrar com o Google</string>
-    <string name="chat_antigravity_waiting">Aguardando o navegador — autorize o acesso e volte ao CodeAssist</string>
+    <string name="chat_antigravity_waiting">Aguardando o navegador — autorize o acesso e volte ao Code Studio</string>
     <string name="chat_cancel">Cancelar</string>
     <string name="chat_attach">Anexar</string>
     <string name="chat_attach_image">Imagem</string>
@@ -115,7 +115,7 @@
     <string name="chat_models_all">Todos os modelos</string>
     <string name="chat_models_none">Nenhum modelo corresponde.</string>
     <string name="chat_models_favorite">Favoritar</string>
-    <string name="free_ai_pitch">Claude grátis para usuários do CodeAssist, sem chave de API. Entre para ganhar pontos de bônus e pontos grátis todos os dias.</string>
+    <string name="free_ai_pitch">Claude grátis para usuários do Code Studio, sem chave de API. Entre para ganhar pontos de bônus e pontos grátis todos os dias.</string>
     <string name="free_ai_sign_in_github">Entrar com GitHub</string>
     <string name="free_ai_sign_in_google">Entrar com Google</string>
     <string name="free_ai_signing_in">Conclua o login no navegador e volte aqui.</string>
@@ -127,7 +127,7 @@
     <string name="free_ai_ad_loading">Carregando anúncio…</string>
     <string name="free_ai_ad_failed">Nenhum anúncio disponível agora. Tente mais tarde.</string>
     <string name="free_ai_ad_pending">Obrigado! Seus pontos vão aparecer em instantes.</string>
-    <string name="free_ai_paused">O CodeAssist Free AI está pausado pelo resto do mês. Você ainda pode usar sua própria chave de API.</string>
+    <string name="free_ai_paused">O Code Studio Free AI está pausado pelo resto do mês. Você ainda pode usar sua própria chave de API.</string>
     <string name="free_ai_cost_hint">1 ponto = US$ 0,001 de uso de IA. Um passo do agente no Claude Haiku 5.5 custa cerca de 1 ponto.</string>
     <string name="free_ai_strip_points">%1$d pontos de IA</string>
     <string name="free_ai_strip_sign_in">Entre para usar IA grátis</string>
@@ -154,11 +154,11 @@
     <string name="free_ai_usage_ago_m">há %1$d min</string>
     <string name="free_ai_usage_ago_h">há %1$d h</string>
     <string name="free_ai_usage_ago_d">há %1$d d</string>
-    <string name="free_ai_card_title">CodeAssist Free AI</string>
+    <string name="free_ai_card_title">Code Studio Free AI</string>
     <string name="free_ai_card_pitch">Claude sem chave de API. Pague com pontos: grátis todo dia e mais ao assistir a um anúncio.</string>
     <string name="free_ai_in_use">Em uso</string>
     <string name="free_ai_section_byok">Usar sua própria chave de API</string>
-    <string name="free_ai_use_this">Usar o CodeAssist Free AI</string>
+    <string name="free_ai_use_this">Usar o Code Studio Free AI</string>
     <string name="chat_status_thinking">Pensando…</string>
     <string name="chat_status_writing">Escrevendo…</string>
     <string name="chat_status_running">Executando %1$s</string>
@@ -237,7 +237,7 @@
     <string name="aihome_pick_none">Nenhum projeto encontrado</string>
     <string name="aihome_kind_android">App Android</string>
     <string name="aihome_kind_project">Projeto</string>
-    <string name="aihome_title">CodeAssist IA</string>
+    <string name="aihome_title">Code Studio IA</string>
     <string name="aihome_greeting">Olá</string>
     <string name="aihome_greeting_name">Olá, %1$s</string>
     <string name="aihome_headline_project">O que vamos fazer com %1$s?</string>

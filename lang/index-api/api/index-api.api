@@ -1,41 +1,41 @@
-# The compiled surface of io.github.tyron12233:index-api, pinned at SPI 3.0.0.
+# The compiled surface of io.github.sagirhossendhali1999-cyber:index-api, pinned at SPI 3.0.0.
 # A plugin links against these by name and descriptor; see :spi-compat.
 # Regenerate with: ./gradlew :spi-compat:test -Dspi.updateBaselines=true
-dev/ide/index/IndexEvent
+com/shd/codestudio/index/IndexEvent
 	kind interface
-dev/ide/index/IndexEvent$Finished
+com/shd/codestudio/index/IndexEvent$Finished
 	kind class
 	super java/lang/Object
-	implements dev/ide/index/IndexEvent
-	ctor (Ldev/ide/index/IndexStatus;)V
-	method component1()Ldev/ide/index/IndexStatus;
-	method copy(Ldev/ide/index/IndexStatus;)Ldev/ide/index/IndexEvent$Finished;
+	implements com/shd/codestudio/index/IndexEvent
+	ctor (Lcom/shd/codestudio/index/IndexStatus;)V
+	method component1()Lcom/shd/codestudio/index/IndexStatus;
+	method copy(Lcom/shd/codestudio/index/IndexStatus;)Lcom/shd/codestudio/index/IndexEvent$Finished;
 	method equals(Ljava/lang/Object;)Z
-	method getStatus()Ldev/ide/index/IndexStatus;
+	method getStatus()Lcom/shd/codestudio/index/IndexStatus;
 	method hashCode()I
-	method static copy$default(Ldev/ide/index/IndexEvent$Finished;Ldev/ide/index/IndexStatus;ILjava/lang/Object;)Ldev/ide/index/IndexEvent$Finished;
+	method static copy$default(Lcom/shd/codestudio/index/IndexEvent$Finished;Lcom/shd/codestudio/index/IndexStatus;ILjava/lang/Object;)Lcom/shd/codestudio/index/IndexEvent$Finished;
 	method toString()Ljava/lang/String;
-dev/ide/index/IndexEvent$Started
+com/shd/codestudio/index/IndexEvent$Started
 	kind class
 	super java/lang/Object
-	implements dev/ide/index/IndexEvent
-	field static INSTANCE Ldev/ide/index/IndexEvent$Started;
+	implements com/shd/codestudio/index/IndexEvent
+	field static INSTANCE Lcom/shd/codestudio/index/IndexEvent$Started;
 	method equals(Ljava/lang/Object;)Z
 	method hashCode()I
 	method toString()Ljava/lang/String;
-dev/ide/index/IndexEventListener
+com/shd/codestudio/index/IndexEventListener
 	kind interface
-	method abstract onIndexEvent(Ldev/ide/index/IndexEvent;)V
-dev/ide/index/IndexHelpersJvmKt
+	method abstract onIndexEvent(Lcom/shd/codestudio/index/IndexEvent;)V
+com/shd/codestudio/index/IndexHelpersJvmKt
 	kind class
 	super java/lang/Object
 	method static normalizedJarKey(Ljava/lang/String;)Ljava/lang/String;
 	method static normalizedJarKey(Ljava/nio/file/Path;)Ljava/lang/String;
-dev/ide/index/IndexKt
+com/shd/codestudio/index/IndexKt
 	kind class
 	super java/lang/Object
-	method static getINDEX_EP()Ldev/ide/platform/ExtensionPoint;
-dev/ide/index/IndexScope
+	method static getINDEX_EP()Lcom/shd/codestudio/platform/ExtensionPoint;
+com/shd/codestudio/index/IndexScope
 	kind class
 	super java/lang/Object
 	ctor ()V
@@ -48,7 +48,7 @@ dev/ide/index/IndexScope
 	method component5()Ljava/util/List;
 	method component6()Ljava/util/List;
 	method component7()Ljava/util/Map;
-	method copy(Ljava/util/List;Ljava/util/List;Ljava/nio/file/Path;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/Map;)Ldev/ide/index/IndexScope;
+	method copy(Ljava/util/List;Ljava/util/List;Ljava/nio/file/Path;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/Map;)Lcom/shd/codestudio/index/IndexScope;
 	method equals(Ljava/lang/Object;)Z
 	method getJdkHome()Ljava/nio/file/Path;
 	method getLibraryJars()Ljava/util/List;
@@ -58,38 +58,38 @@ dev/ide/index/IndexScope
 	method getSourceRoots()Ljava/util/List;
 	method getStableJarIds()Ljava/util/Map;
 	method hashCode()I
-	method static copy$default(Ldev/ide/index/IndexScope;Ljava/util/List;Ljava/util/List;Ljava/nio/file/Path;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/Map;ILjava/lang/Object;)Ldev/ide/index/IndexScope;
+	method static copy$default(Lcom/shd/codestudio/index/IndexScope;Ljava/util/List;Ljava/util/List;Ljava/nio/file/Path;Ljava/util/List;Ljava/util/List;Ljava/util/List;Ljava/util/Map;ILjava/lang/Object;)Lcom/shd/codestudio/index/IndexScope;
 	method toString()Ljava/lang/String;
-dev/ide/index/IndexService
+com/shd/codestudio/index/IndexService
 	kind interface
-	implements dev/ide/index/IndexQueries
-	method abstract ensureUpToDate(Ldev/ide/index/IndexScope;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-	method abstract observeStatus(Lkotlin/jvm/functions/Function1;)Ldev/ide/platform/Disposable;
+	implements com/shd/codestudio/index/IndexQueries
+	method abstract ensureUpToDate(Lcom/shd/codestudio/index/IndexScope;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+	method abstract observeStatus(Lkotlin/jvm/functions/Function1;)Lcom/shd/codestudio/platform/Disposable;
 	method abstract reindexSource(Ljava/nio/file/Path;Ljava/lang/String;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
 	method invalidate(Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-dev/ide/index/IndexService$DefaultImpls
+com/shd/codestudio/index/IndexService$DefaultImpls
 	kind class
 	super java/lang/Object
-	method static filePath(Ldev/ide/index/IndexService;I)Ljava/lang/String;
-	method static invalidate(Ldev/ide/index/IndexService;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
-dev/ide/index/IndexTopics
+	method static filePath(Lcom/shd/codestudio/index/IndexService;I)Ljava/lang/String;
+	method static invalidate(Lcom/shd/codestudio/index/IndexService;Lkotlin/coroutines/Continuation;)Ljava/lang/Object;
+com/shd/codestudio/index/IndexTopics
 	kind class
 	super java/lang/Object
-	field static INSTANCE Ldev/ide/index/IndexTopics;
-	method getINDEXING()Ldev/ide/platform/Topic;
-dev/ide/index/SymbolSearch
+	field static INSTANCE Lcom/shd/codestudio/index/IndexTopics;
+	method getINDEXING()Lcom/shd/codestudio/platform/Topic;
+com/shd/codestudio/index/SymbolSearch
 	kind interface
 	method abstract searchMembers(Ljava/lang/String;I)Ljava/util/List;
 	method abstract searchSymbols(Ljava/lang/String;I)Ljava/util/List;
 	method abstract symbolFilePath(I)Ljava/lang/String;
-	method static searchMembers$default(Ldev/ide/index/SymbolSearch;Ljava/lang/String;IILjava/lang/Object;)Ljava/util/List;
-	method static searchSymbols$default(Ldev/ide/index/SymbolSearch;Ljava/lang/String;IILjava/lang/Object;)Ljava/util/List;
-dev/ide/index/SymbolSearch$DefaultImpls
+	method static searchMembers$default(Lcom/shd/codestudio/index/SymbolSearch;Ljava/lang/String;IILjava/lang/Object;)Ljava/util/List;
+	method static searchSymbols$default(Lcom/shd/codestudio/index/SymbolSearch;Ljava/lang/String;IILjava/lang/Object;)Ljava/util/List;
+com/shd/codestudio/index/SymbolSearch$DefaultImpls
 	kind class
 	super java/lang/Object
-	method static searchMembers$default(Ldev/ide/index/SymbolSearch;Ljava/lang/String;IILjava/lang/Object;)Ljava/util/List;
-	method static searchSymbols$default(Ldev/ide/index/SymbolSearch;Ljava/lang/String;IILjava/lang/Object;)Ljava/util/List;
-dev/ide/index/SymbolSearchKt
+	method static searchMembers$default(Lcom/shd/codestudio/index/SymbolSearch;Ljava/lang/String;IILjava/lang/Object;)Ljava/util/List;
+	method static searchSymbols$default(Lcom/shd/codestudio/index/SymbolSearch;Ljava/lang/String;IILjava/lang/Object;)Ljava/util/List;
+com/shd/codestudio/index/SymbolSearchKt
 	kind class
 	super java/lang/Object
-	method static getSYMBOL_SEARCH()Ldev/ide/platform/ServiceKey;
+	method static getSYMBOL_SEARCH()Lcom/shd/codestudio/platform/ServiceKey;

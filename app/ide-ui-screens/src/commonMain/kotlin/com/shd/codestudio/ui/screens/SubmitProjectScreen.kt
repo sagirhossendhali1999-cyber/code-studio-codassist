@@ -1,0 +1,851 @@
+package com.shd.codestudio.ui.screens
+
+import androidx.compose.foundation.horizontalScroll
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.FilledTonalButton
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateListOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.unit.dp
+import com.shd.codestudio.ui.backend.IdeBackend
+import com.shd.codestudio.ui.backend.ProjectInfo
+import com.shd.codestudio.ui.backend.UiPackagedProject
+import com.shd.codestudio.ui.backend.UiPublishedItem
+import com.shd.codestudio.ui.backend.UiSubmissionDraft
+import com.shd.codestudio.ui.components.Eyebrow
+import com.shd.codestudio.ui.components.LinearProgressIndicator
+import com.shd.codestudio.ui.components.PillChip
+import com.shd.codestudio.ui.components.PrimaryActionButton
+import com.shd.codestudio.ui.editor.preview.ProjectIconRaster
+import com.shd.codestudio.ui.generated.resources.Res
+import com.shd.codestudio.ui.generated.resources.submit_add_screenshot
+import com.shd.codestudio.ui.generated.resources.submit_category_current
+import com.shd.codestudio.ui.generated.resources.submit_category_loading
+import com.shd.codestudio.ui.generated.resources.submit_category_retry
+import com.shd.codestudio.ui.generated.resources.submit_category_unavailable
+import com.shd.codestudio.ui.generated.resources.submit_checks_english
+import com.shd.codestudio.ui.generated.resources.submit_checks_icon
+import com.shd.codestudio.ui.generated.resources.submit_checks_own
+import com.shd.codestudio.ui.generated.resources.submit_checks_screenshots
+import com.shd.codestudio.ui.generated.resources.submit_checks_summary
+import com.shd.codestudio.ui.generated.resources.submit_checks_title
+import com.shd.codestudio.ui.generated.resources.submit_confirm_body
+import com.shd.codestudio.ui.generated.resources.submit_confirm_fix
+import com.shd.codestudio.ui.generated.resources.submit_confirm_send
+import com.shd.codestudio.ui.generated.resources.submit_confirm_title
+import com.shd.codestudio.ui.generated.resources.submit_excluded_none
+import com.shd.codestudio.ui.generated.resources.submit_excluded_title
+import com.shd.codestudio.ui.generated.resources.submit_excluded_why
+import com.shd.codestudio.ui.generated.resources.submit_field_category
+import com.shd.codestudio.ui.generated.resources.submit_field_changelog
+import com.shd.codestudio.ui.generated.resources.submit_field_description
+import com.shd.codestudio.ui.generated.resources.submit_field_summary
+import com.shd.codestudio.ui.generated.resources.submit_field_tags
+import com.shd.codestudio.ui.generated.resources.submit_field_title
+import com.shd.codestudio.ui.generated.resources.submit_field_version
+import com.shd.codestudio.ui.generated.resources.submit_included
+import com.shd.codestudio.ui.generated.resources.submit_markdown_hide
+import com.shd.codestudio.ui.generated.resources.submit_markdown_hint
+import com.shd.codestudio.ui.generated.resources.submit_markdown_preview
+import com.shd.codestudio.ui.generated.resources.submit_no_projects
+import com.shd.codestudio.ui.generated.resources.submit_packaging
+import com.shd.codestudio.ui.generated.resources.submit_pick_project
+import com.shd.codestudio.ui.generated.resources.submit_required
+import com.shd.codestudio.ui.generated.resources.submit_required_screenshot
+import com.shd.codestudio.ui.generated.resources.submit_required_version
+import com.shd.codestudio.ui.generated.resources.submit_review_note
+import com.shd.codestudio.ui.generated.resources.submit_screenshots
+import com.shd.codestudio.ui.generated.resources.submit_screenshots_desc
+import com.shd.codestudio.ui.generated.resources.submit_screenshots_kept
+import com.shd.codestudio.ui.generated.resources.submit_screenshots_offline
+import com.shd.codestudio.ui.generated.resources.submit_screenshots_unavailable
+import com.shd.codestudio.ui.generated.resources.submit_send
+import com.shd.codestudio.ui.generated.resources.submit_sending
+import com.shd.codestudio.ui.generated.resources.submit_target
+import com.shd.codestudio.ui.generated.resources.submit_target_new
+import com.shd.codestudio.ui.generated.resources.submit_target_update
+import com.shd.codestudio.ui.generated.resources.submit_title
+import com.shd.codestudio.ui.generated.resources.submit_update_live
+import com.shd.codestudio.ui.generated.resources.submit_update_note
+import com.shd.codestudio.ui.generated.resources.submit_update_unreviewed
+import com.shd.codestudio.ui.generated.resources.submit_warn_english
+import com.shd.codestudio.ui.generated.resources.submit_warn_spam
+import com.shd.codestudio.ui.generated.resources.submit_warn_summary
+import com.shd.codestudio.ui.icons.CaIcons
+import com.shd.codestudio.ui.icons.CaSymbols
+import com.shd.codestudio.ui.itemsKeyed
+import com.shd.codestudio.ui.platform.NotificationPermissionStatus
+import com.shd.codestudio.ui.platform.rememberNotificationPermissionController
+import com.shd.codestudio.ui.theme.Symbol
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.async
+import kotlinx.coroutines.awaitAll
+import kotlinx.coroutines.coroutineScope
+import kotlinx.coroutines.withContext
+import org.jetbrains.compose.resources.stringResource
+
+/**
+ * Publish a project to the store.
+ *
+ * Packaging comes before the form on purpose. The archive is about to be made public, so the first thing
+ * the screen shows is what is in it and what was dropped: the packager excludes keystores,
+ * `local.properties`, `.env` and `google-services.json`, and saying so is how the user can tell it
+ * happened rather than taking it on trust. The form is only reached once that is on screen.
+ */
+@Composable
+fun SubmitProjectScreen(
+    backend: IdeBackend,
+    onBack: () -> Unit,
+    onSubmitted: () -> Unit,
+    modifier: Modifier = Modifier,
+    /** Picks image files for the screenshots. Null hides the picker on a host that cannot. */
+    fileActions: com.shd.codestudio.ui.backend.FileActions? = null,
+    /**
+     * The project to publish, when the caller already knows it.
+     *
+     * Set when this was reached from Share, where a project was just chosen — asking again for something
+     * the user picked one screen ago is the kind of step that makes a flow feel like paperwork.
+     */
+    initialProject: ProjectInfo? = null,
+    /**
+     * The listing this submission updates, when the caller already decided.
+     *
+     * Set when the flow was reached from a rejected submission, where the listing to send a new version
+     * of is the one the user was just looking at. Applied once the account's listings load, because the
+     * version to suggest comes from them.
+     */
+    initialItemSlug: String? = null,
+) {
+    var chosen by remember(initialProject?.rootPath) { mutableStateOf(initialProject) }
+    var packaged by remember { mutableStateOf<UiPackagedProject?>(null) }
+    var packing by remember { mutableStateOf(false) }
+    var draft by remember { mutableStateOf(UiSubmissionDraft()) }
+    // The tags field keeps its own text. Deriving it from the parsed list instead ate the separator the
+    // moment it was typed ("a," parses to ["a"] and formats back to "a"), so a comma could never be
+    // entered at all and the field looked like it rejected them. Unkeyed, like `draft` itself: the two
+    // hold one answer in two shapes and must not outlive each other.
+    var tagsText by remember { mutableStateOf("") }
+    var categories by remember { mutableStateOf<List<Pair<String, String>>>(emptyList()) }
+    var categoriesLoading by remember { mutableStateOf(true) }
+    var categoryAttempt by remember { mutableStateOf(0) }
+    // The images people will actually judge the project by. Same picker the export flow uses.
+    val screenshots = remember(chosen?.rootPath) { mutableStateListOf<String>() }
+    // Keyed on the project: a different project's icon must not be left attached to this submission.
+    var icon by remember(chosen?.rootPath) { mutableStateOf<ByteArray?>(null) }
+    var sending by remember { mutableStateOf(false) }
+    var message by remember { mutableStateOf<String?>(null) }
+    // What went wrong with the SEND, shown next to the button that was pressed. It used to share [message],
+    // which is drawn at the top of the form: a publisher at the bottom tapping Submit saw nothing happen,
+    // because the reason was a screen and a half above them.
+    var formError by remember { mutableStateOf<String?>(null) }
+    // The review warnings still standing when Submit was pressed. Non-null shows the last-chance dialog.
+    var confirmIssues by remember { mutableStateOf<List<ListingIssue>?>(null) }
+    // Whether the description is being previewed rather than edited. Off by default: the field is where
+    // the work happens, and a preview that opened itself would push the rest of the form down a screen.
+    var previewDescription by remember { mutableStateOf(false) }
+    // The listings this account already publishes, so this submission can be sent as a new version of one
+    // instead of a second listing of the same project. Empty when signed out or nothing is published.
+    var published by remember { mutableStateOf<List<UiPublishedItem>>(emptyList()) }
+    // The project the target was chosen for, so choosing "a new listing" afterwards is not undone the next
+    // time this recomposes. The guess is a starting point, not a decision the screen keeps re-making.
+    var targetGuessedFor by remember { mutableStateOf<String?>(null) }
+    // The listing whose published screenshots have already been carried into the form, and whether any of
+    // them could not be fetched. An update that ships no screenshots keeps the ones on the listing, so a
+    // partial carry would quietly publish a shorter gallery: it is better to carry none and say so.
+    var shotsCarriedFor by remember(chosen?.rootPath) { mutableStateOf<String?>(null) }
+    var shotsUnreachable by remember(chosen?.rootPath) { mutableStateOf(false) }
+    // Resolved here rather than inside the click handler: a string resource needs composition.
+    val requiredText = stringResource(Res.string.submit_required)
+    val versionText = stringResource(Res.string.submit_required_version)
+    val screenshotText = stringResource(Res.string.submit_required_screenshot)
+
+    val projects = remember { runCatching { backend.projects.projects() }.getOrDefault(emptyList()) }
+    val notifications = rememberNotificationPermissionController()
+
+    /**
+     * Point the draft at [listing], carrying everything the listing already says.
+     *
+     * The listing's own text is prefilled rather than hidden. A new version CAN change it (the edit
+     * travels with the version and is applied when a moderator approves), and a form that showed none of
+     * it was a form that made the publisher retype the listing to correct one sentence.
+     *
+     * The suggested version steps past everything already sent for this listing, including a submission
+     * still in review: the store refuses a version code it has stored before.
+     */
+    val applyTarget: (UiPublishedItem) -> Unit = { listing ->
+        tagsText = listing.tags.joinToString(", ")
+        draft = draft.copy(
+            itemSlug = listing.slug,
+            title = listing.title,
+            summary = listing.summary,
+            description = listing.description,
+            category = listing.category,
+            tags = listing.tags,
+            version = listing.suggestedVersion,
+            // Set only here: the fields above came from the listing, so what is sent back is a change to
+            // it rather than a blank form overwriting what the store has.
+            listingEdits = true,
+        )
+    }
+
+    LaunchedEffect(Unit) {
+        published = runCatching { backend.store.myPublishedItems() }.getOrDefault(emptyList())
+        // The same thing the target chip does, done for the caller.
+        published.firstOrNull { it.slug == initialItemSlug }?.let(applyTarget)
+    }
+
+    // Which listing this project is already published as, guessed once per project.
+    //
+    // Defaulting to "a new listing" is the expensive default: publishing an update then means retyping the
+    // whole listing, and what it produces is a duplicate that has to be refused. The engine remembers the
+    // slug it published this project under; the title and the slug it would derive from it are the
+    // fallbacks for a project published from another device.
+    LaunchedEffect(chosen?.rootPath, published) {
+        val project = chosen ?: return@LaunchedEffect
+        if (published.isEmpty() || draft.itemSlug != null) return@LaunchedEffect
+        if (targetGuessedFor == project.rootPath) return@LaunchedEffect
+        targetGuessedFor = project.rootPath
+        val remembered = runCatching { backend.store.listingSlugForProject(project.rootPath) }.getOrNull()
+        val stem = slugStem(project.name)
+        val match = published.firstOrNull { it.slug == remembered }
+            ?: published.firstOrNull { it.title.equals(project.name, ignoreCase = true) }
+            ?: published.firstOrNull { it.slug == stem || it.slug.startsWith("$stem-") }
+        match?.let(applyTarget)
+    }
+
+    // The listing's published screenshots, carried into the picker as the files they are cached as.
+    //
+    // They are already on the listing, so an update that sends none keeps them. Showing them anyway is
+    // what makes "add one more" possible: approval replaces the whole gallery with whatever the version
+    // shipped, so a single added image would otherwise drop the other five.
+    LaunchedEffect(draft.itemSlug, published) {
+        val listing = published.firstOrNull { it.slug == draft.itemSlug } ?: return@LaunchedEffect
+        if (listing.screenshots.isEmpty() || shotsCarriedFor == listing.slug) return@LaunchedEffect
+        if (screenshots.isNotEmpty()) return@LaunchedEffect
+        // Concurrently: the form waits on all of them before it can show any, so fetching six one after
+        // another is six round trips the publisher sits through.
+        val files = coroutineScope {
+            listing.screenshots
+                .map { path -> async { runCatching { backend.store.screenshotFile(path) }.getOrNull() } }
+                .awaitAll()
+        }
+        shotsCarriedFor = listing.slug
+        if (files.any { it == null }) {
+            // Carrying some of them would publish a gallery with the rest missing. Sending none keeps the
+            // listing's own, which is the safe half of the choice.
+            shotsUnreachable = true
+        } else {
+            screenshots.clear()
+            screenshots += files.filterNotNull()
+        }
+    }
+
+    LaunchedEffect(categoryAttempt) {
+        categoriesLoading = true
+        categories = runCatching { backend.store.submitCategories() }.getOrDefault(emptyList())
+        categoriesLoading = false
+    }
+
+    // Packaging starts as soon as a project is chosen: it is local, and its result is what the rest of the
+    // screen is about.
+    LaunchedEffect(chosen?.rootPath) {
+        val root = chosen?.rootPath ?: return@LaunchedEffect
+        packing = true
+        message = null
+        packaged = runCatching { backend.store.packProject(root) }.getOrNull()
+        if (packaged == null) message = backend.store.packFailure(root)
+        packing = false
+        // The project's own name is the obvious starting title; the user can change it.
+        if (draft.title.isBlank()) draft = draft.copy(title = chosen?.name.orEmpty())
+    }
+
+    // The listing's icon, rendered from the project's own launcher icon. Here rather than in the engine
+    // because most Android projects declare theirs as XML (the templates ship a vector adaptive icon), and
+    // turning that into an image needs a canvas. Rendered when the project is chosen, not at submit time,
+    // so it is never something the upload waits behind.
+    LaunchedEffect(chosen?.rootPath) {
+        val root = chosen?.rootPath ?: return@LaunchedEffect
+        icon = runCatching {
+            val resolved = backend.projects.projectIcon(root) ?: return@runCatching null
+            withContext(Dispatchers.Default) {
+                ProjectIconRaster.toBytes(resolved) { path -> backend.projects.imageBytes(path) }
+            }
+        }.getOrNull()
+    }
+
+    Surface(Modifier.fillMaxSize(), color = MaterialTheme.colorScheme.background) {
+        Column(Modifier.fillMaxSize(), horizontalAlignment = Alignment.CenterHorizontally) {
+            DetailTopBar(title = stringResource(Res.string.submit_title), isSaved = false, onBack = onBack)
+            LazyColumn(Modifier.widthIn(max = 720.dp).fillMaxSize().padding(horizontal = 20.dp)) {
+                if (chosen == null) {
+                    item("pick") {
+                        Eyebrow(stringResource(Res.string.submit_pick_project))
+                        Spacer(Modifier.height(10.dp))
+                    }
+                    if (projects.isEmpty()) {
+                        item("none") { Body(stringResource(Res.string.submit_no_projects)) }
+                    }
+                    itemsKeyed(projects, key = { it.rootPath }) { project ->
+                        ProjectRow(project) { chosen = project }
+                    }
+                    return@LazyColumn
+                }
+
+                item("packaged") {
+                    Spacer(Modifier.height(6.dp))
+                    if (packing) {
+                        Body(stringResource(Res.string.submit_packaging))
+                        Spacer(Modifier.height(8.dp))
+                        LinearProgressIndicator(Modifier.fillMaxWidth())
+                    } else {
+                        packaged?.let { PackagedSummary(it) }
+                    }
+                    message?.let {
+                        Spacer(Modifier.height(10.dp))
+                        Text(it, style = MaterialTheme.typography.bodyMedium, color = MaterialTheme.colorScheme.error)
+                    }
+                }
+
+                if (packaged != null) {
+                    // Offered only when there is something to update. A first-time publisher sees the form
+                    // it always was.
+                    if (published.isNotEmpty()) {
+                        item("target") {
+                            Spacer(Modifier.height(22.dp))
+                            Eyebrow(stringResource(Res.string.submit_target))
+                            Spacer(Modifier.height(8.dp))
+                            FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                PillChip(
+                                    label = stringResource(Res.string.submit_target_new),
+                                    selected = draft.itemSlug == null,
+                                    onClick = {
+                                        // Back to a fresh listing: the version restarts and the title
+                                        // returns to the project's, since the item's was only borrowed.
+                                        // The summary and description stay: they were written about this
+                                        // project either way, and clearing them would be the third time
+                                        // this form asked for the same paragraph.
+                                        draft = draft.copy(
+                                            itemSlug = null,
+                                            title = chosen?.name.orEmpty(),
+                                            version = "1.0.0",
+                                            changelog = null,
+                                            listingEdits = false,
+                                        )
+                                    },
+                                )
+                                published.forEach { listing ->
+                                    PillChip(
+                                        label = stringResource(Res.string.submit_target_update, listing.title),
+                                        selected = draft.itemSlug == listing.slug,
+                                        onClick = { applyTarget(listing) },
+                                    )
+                                }
+                            }
+                            published.firstOrNull { it.slug == draft.itemSlug }?.let { listing ->
+                                Spacer(Modifier.height(8.dp))
+                                Body(
+                                    listing.publishedVersion
+                                        ?.let { stringResource(Res.string.submit_update_live, it) }
+                                        ?: stringResource(Res.string.submit_update_unreviewed),
+                                )
+                            }
+                        }
+                    }
+                    item("form") {
+                        Spacer(Modifier.height(22.dp))
+                        // The same fields either way. An update arrives with the listing's own words in
+                        // them and may change any of them: the edit travels with the version and is
+                        // applied when a moderator approves it, so correcting a description no longer
+                        // means publishing a second listing of the same project.
+                        val updating = published.firstOrNull { it.slug == draft.itemSlug }
+                        if (updating != null) {
+                            Body(stringResource(Res.string.submit_update_note))
+                            Spacer(Modifier.height(16.dp))
+                        }
+                        ReviewerChecklist()
+                        Spacer(Modifier.height(16.dp))
+                        Field(stringResource(Res.string.submit_field_title), draft.title) {
+                            draft = draft.copy(title = it)
+                        }
+                        Field(stringResource(Res.string.submit_field_summary), draft.summary) {
+                            draft = draft.copy(summary = it)
+                        }
+                        if (isWeakSummary(draft.title, draft.summary)) {
+                            ListingWarning(stringResource(Res.string.submit_warn_summary))
+                        }
+                        Field(
+                            stringResource(Res.string.submit_field_description),
+                            draft.description,
+                            lines = 4,
+                        ) { draft = draft.copy(description = it) }
+                        DescriptionMarkdown(
+                            text = draft.description,
+                            preview = previewDescription,
+                            onTogglePreview = { previewDescription = !previewDescription },
+                        )
+                        // Under the description rather than the title: the description is where most of the
+                        // words are, so it is where a listing in another language is written and fixed.
+                        val issues = listingIssues(draft.title, draft.summary, draft.description)
+                        if (ListingIssue.NotEnglish in issues) {
+                            ListingWarning(stringResource(Res.string.submit_warn_english))
+                        }
+                        if (ListingIssue.Spammy in issues) {
+                            ListingWarning(stringResource(Res.string.submit_warn_spam))
+                        }
+                        Field(stringResource(Res.string.submit_field_version), draft.version) {
+                            draft = draft.copy(version = it)
+                        }
+                        if (updating != null) {
+                            Field(
+                                stringResource(Res.string.submit_field_changelog),
+                                draft.changelog.orEmpty(),
+                                lines = 3,
+                            ) { draft = draft.copy(changelog = it) }
+                        }
+                        Field(stringResource(Res.string.submit_field_tags), tagsText) { raw ->
+                            tagsText = raw
+                            draft = draft.copy(tags = parseTags(raw))
+                        }
+                        // Hidden rather than disabled on a host that cannot pick files: there is nothing the
+                        // user could do to make it work.
+                        val picker = fileActions?.takeIf { it.canPickFile }
+                        // A listing needs at least one screenshot. An update that sends none keeps the ones the
+                        // listing has, so it only needs new ones when the listing has none yet.
+                        val needsScreenshot = screenshots.isEmpty() && updating?.screenshots.isNullOrEmpty()
+                        if (picker == null && needsScreenshot) {
+                            // Said rather than hidden: without it the send button refuses for a reason the
+                            // form never shows.
+                            Spacer(Modifier.height(18.dp))
+                            Eyebrow(stringResource(Res.string.submit_screenshots))
+                            Spacer(Modifier.height(4.dp))
+                            Body(stringResource(Res.string.submit_screenshots_unavailable))
+                        }
+                        if (picker != null) {
+                            Spacer(Modifier.height(18.dp))
+                            Eyebrow(stringResource(Res.string.submit_screenshots))
+                            Spacer(Modifier.height(4.dp))
+                            Body(
+                                when {
+                                    updating == null -> stringResource(Res.string.submit_screenshots_desc)
+                                    shotsUnreachable -> stringResource(Res.string.submit_screenshots_offline)
+                                    else -> stringResource(Res.string.submit_screenshots_kept)
+                                },
+                            )
+                            if (screenshots.isNotEmpty()) {
+                                Spacer(Modifier.height(8.dp))
+                                Row(
+                                    Modifier.fillMaxWidth().horizontalScroll(rememberScrollState()),
+                                    horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                ) {
+                                    screenshots.forEach { path ->
+                                        ScreenshotThumb(backend, path) { screenshots.remove(path) }
+                                    }
+                                }
+                            }
+                            Spacer(Modifier.height(8.dp))
+                            // A filled tonal button, the same affordance the export flow's picker uses. As a
+                            // bare TextButton this was a line of dull accent text in a form where every other
+                            // control has an outline or a fill, and it read as a disabled label: reported as
+                            // "the button is greyed out", on a build where it was enabled the whole time.
+                            FilledTonalButton(
+                                onClick = {
+                                    picker.pickFile(SCREENSHOT_EXTENSIONS) { path ->
+                                        // Re-checked on the way back in, not trusted from when the button was
+                                        // drawn: the callback lands after an arbitrary trip through the system
+                                        // picker. The same image twice would also make removing one ambiguous,
+                                        // since `remove` drops the first match.
+                                        if (path != null && path !in screenshots &&
+                                            screenshots.size < MAX_SUBMIT_SCREENSHOTS
+                                        ) {
+                                            screenshots += path
+                                        }
+                                    }
+                                },
+                                enabled = screenshots.size < MAX_SUBMIT_SCREENSHOTS,
+                            ) {
+                                Icon(CaIcons.image, null, Modifier.size(16.dp))
+                                Spacer(Modifier.size(8.dp))
+                                Text(stringResource(Res.string.submit_add_screenshot))
+                            }
+                        }
+                        // Asked for on an update too, since an update may now change it.
+                        Spacer(Modifier.height(14.dp))
+                        Eyebrow(stringResource(Res.string.submit_field_category))
+                        Spacer(Modifier.height(8.dp))
+                        when {
+                            categoriesLoading -> Body(stringResource(Res.string.submit_category_loading))
+                            // The slug is a foreign key, so the form cannot invent one. With no list there is
+                            // nothing valid to pick and a first submission is blocked either way, so it says so
+                            // and offers the retry rather than leaving a heading over empty space. An update
+                            // already carries the listing's category and is not blocked: it just cannot be
+                            // changed until the list loads.
+                            categories.isEmpty() && draft.category.isNotBlank() ->
+                                Body(stringResource(Res.string.submit_category_current, draft.category))
+                            categories.isEmpty() -> {
+                                Body(stringResource(Res.string.submit_category_unavailable))
+                                TextButton(onClick = { categoryAttempt++ }) {
+                                    Text(stringResource(Res.string.submit_category_retry))
+                                }
+                            }
+                            // The slug is what the backend stores, so the chip carries it and shows the title.
+                            // Flowed rather than split into fixed rows: the list is a table the backend owns
+                            // and can grow, and the titles are translated.
+                            else -> FlowRow(
+                                horizontalArrangement = Arrangement.spacedBy(8.dp),
+                                verticalArrangement = Arrangement.spacedBy(8.dp),
+                            ) {
+                                categories.forEach { (slug, title) ->
+                                    PillChip(
+                                        label = title,
+                                        selected = draft.category == slug,
+                                        onClick = { draft = draft.copy(category = slug) },
+                                    )
+                                }
+                            }
+                        }
+                        Spacer(Modifier.height(22.dp))
+                        Body(stringResource(Res.string.submit_review_note))
+                        Spacer(Modifier.height(16.dp))
+                        // The store's own check on the column, applied here so a malformed version is
+                        // answered in the form rather than by a rejected upload.
+                        val versionOk = VERSION_FORMAT.matches(draft.version.trim())
+                        val fieldsDone = draft.title.isNotBlank() && draft.summary.isNotBlank() &&
+                            draft.description.isNotBlank() && draft.category.isNotBlank()
+                        val complete = versionOk && fieldsDone && !needsScreenshot
+                        formError?.let {
+                            Text(
+                                it,
+                                style = MaterialTheme.typography.bodyMedium,
+                                color = MaterialTheme.colorScheme.error,
+                                modifier = Modifier.padding(bottom = 12.dp),
+                            )
+                        }
+                        PrimaryActionButton(
+                            label = if (sending) {
+                                stringResource(Res.string.submit_sending)
+                            } else {
+                                stringResource(Res.string.submit_send)
+                            },
+                            glyph = CaSymbols.upload,
+                            onClick = {
+                                if (!complete) {
+                                    formError = when {
+                                        !versionOk -> versionText
+                                        !fieldsDone -> requiredText
+                                        else -> screenshotText
+                                    }
+                                } else if (!sending) {
+                                    formError = null
+                                    // The warnings were on screen all along; this is the last chance to act on
+                                    // them, not a gate. A guess about the language must not refuse a listing.
+                                    val standing = listingIssues(draft.title, draft.summary, draft.description)
+                                    if (standing.isEmpty()) sending = true else confirmIssues = standing
+                                }
+                            },
+                            modifier = Modifier.fillMaxWidth(),
+                        )
+                        Spacer(Modifier.height(28.dp))
+                    }
+                }
+            }
+        }
+    }
+
+    confirmIssues?.let { issues ->
+        ReviewWarningsDialog(
+            issues = issues,
+            onFix = { confirmIssues = null },
+            onSendAnyway = {
+                confirmIssues = null
+                sending = true
+            },
+        )
+    }
+
+    // The upload itself, kept out of the click handler so leaving the button does not cancel it.
+    LaunchedEffect(sending) {
+        if (!sending) return@LaunchedEffect
+        val archive = packaged ?: return@LaunchedEffect
+        // The picker holds the screenshots in its own list so removing one does not rebuild the draft on
+        // every tap; they join it here, at the one point that matters.
+        val request = draft.copy(screenshotPaths = screenshots.toList(), iconBytes = icon)
+        val result = runCatching { backend.store.submit(request, archive) }.getOrNull()
+        sending = false
+        if (result?.success != true) {
+            formError = result?.message
+            return@LaunchedEffect
+        }
+        message = result.message
+        // The decision arrives days later, with the app closed, as a notification. Until now the only
+        // thing that ever asked for the permission was the first build, so a publisher who had never
+        // built could not be told the answer to the one question they were waiting on. Asked here
+        // because this is the moment it means something, and declined is an answer: the submission is
+        // already made and the You screen shows its state either way.
+        if (notifications.status() == NotificationPermissionStatus.DENIED) {
+            notifications.request {}
+        }
+        onSubmitted()
+    }
+}
+
+@Composable
+private fun PackagedSummary(packaged: UiPackagedProject) {
+    Column {
+        Text(
+            stringResource(Res.string.submit_included, packaged.fileCount, formatSize(packaged.totalBytes)),
+            style = MaterialTheme.typography.titleMedium,
+            color = MaterialTheme.colorScheme.onSurface,
+        )
+        Spacer(Modifier.height(14.dp))
+        Eyebrow(stringResource(Res.string.submit_excluded_title))
+        Spacer(Modifier.height(6.dp))
+        if (packaged.excluded.isEmpty()) {
+            Body(stringResource(Res.string.submit_excluded_none))
+        } else {
+            Body(stringResource(Res.string.submit_excluded_why))
+            Spacer(Modifier.height(6.dp))
+            packaged.excluded.forEach {
+                Text(
+                    it,
+                    style = MaterialTheme.typography.bodySmall,
+                    fontFamily = FontFamily.Monospace,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun ProjectRow(project: ProjectInfo, onClick: () -> Unit) {
+    Surface(
+        onClick = onClick,
+        shape = MaterialTheme.shapes.large,
+        color = MaterialTheme.colorScheme.surfaceContainerLow,
+        modifier = Modifier.fillMaxWidth().padding(vertical = 4.dp),
+    ) {
+        Column(Modifier.padding(16.dp)) {
+            Text(project.name, style = MaterialTheme.typography.titleMedium)
+            Text(
+                project.rootPath,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+/**
+ * What a moderator rejects for, said before the form instead of in a rejection days later. The order is
+ * the order these reasons are used: a listing in another language is the one sent back most.
+ */
+@Composable
+private fun ReviewerChecklist() {
+    val c = MaterialTheme.colorScheme
+    Surface(shape = RoundedCornerShape(20.dp), color = c.surfaceContainer, modifier = Modifier.fillMaxWidth()) {
+        Column(Modifier.padding(16.dp), verticalArrangement = Arrangement.spacedBy(8.dp)) {
+            Text(
+                stringResource(Res.string.submit_checks_title),
+                style = MaterialTheme.typography.titleSmall,
+                color = c.onSurface,
+            )
+            listOf(
+                Res.string.submit_checks_english,
+                Res.string.submit_checks_screenshots,
+                Res.string.submit_checks_summary,
+                Res.string.submit_checks_icon,
+                Res.string.submit_checks_own,
+            ).forEach { line ->
+                Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                    Symbol(CaSymbols.checkCircle, contentDescription = null, size = 18.dp, tint = c.primary)
+                    Text(stringResource(line), style = MaterialTheme.typography.bodyMedium, color = c.onSurfaceVariant)
+                }
+            }
+        }
+    }
+}
+
+/** A review warning under the field it is about: the reason a moderator would give, said while it can be fixed. */
+@Composable
+private fun ListingWarning(text: String) {
+    val c = MaterialTheme.colorScheme
+    Surface(
+        shape = RoundedCornerShape(14.dp),
+        color = c.tertiaryContainer,
+        contentColor = c.onTertiaryContainer,
+        modifier = Modifier.fillMaxWidth().padding(top = 4.dp, bottom = 8.dp),
+    ) {
+        Row(Modifier.padding(12.dp), horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Symbol(CaSymbols.warning, contentDescription = null, size = 18.dp, tint = c.onTertiaryContainer)
+            Text(text, style = MaterialTheme.typography.bodySmall)
+        }
+    }
+}
+
+/** The warnings still standing when Submit is pressed, with the way back to fix them first. */
+@Composable
+private fun ReviewWarningsDialog(issues: List<ListingIssue>, onFix: () -> Unit, onSendAnyway: () -> Unit) {
+    AlertDialog(
+        onDismissRequest = onFix,
+        icon = { Symbol(CaSymbols.warning, contentDescription = null, size = 24.dp) },
+        title = { Text(stringResource(Res.string.submit_confirm_title)) },
+        text = {
+            Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
+                Text(stringResource(Res.string.submit_confirm_body))
+                issues.forEach { issue ->
+                    Text(
+                        stringResource(
+                            when (issue) {
+                                ListingIssue.NotEnglish -> Res.string.submit_warn_english
+                                ListingIssue.WeakSummary -> Res.string.submit_warn_summary
+                                ListingIssue.Spammy -> Res.string.submit_warn_spam
+                            },
+                        ),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                }
+            }
+        },
+        // Fixing is the confirm action: it is what the dialog recommends.
+        confirmButton = { TextButton(onClick = onFix) { Text(stringResource(Res.string.submit_confirm_fix)) } },
+        dismissButton = {
+            TextButton(onClick = onSendAnyway) { Text(stringResource(Res.string.submit_confirm_send)) }
+        },
+    )
+}
+
+@Composable
+private fun Field(label: String, value: String, lines: Int = 1, onChange: (String) -> Unit) {
+    OutlinedTextField(
+        value = value,
+        onValueChange = onChange,
+        label = { Text(label) },
+        singleLine = lines == 1,
+        minLines = lines,
+        modifier = Modifier.fillMaxWidth().padding(vertical = 6.dp),
+    )
+}
+
+@Composable
+private fun Body(text: String, modifier: Modifier = Modifier) = Text(
+    text,
+    style = MaterialTheme.typography.bodyMedium,
+    color = MaterialTheme.colorScheme.onSurfaceVariant,
+    modifier = modifier,
+)
+
+/**
+ * The syntax note under the description, and the preview behind it.
+ *
+ * The description is stored and served as Markdown, which nothing in the form said, so descriptions were
+ * written as plain paragraphs. The note alone is a claim about what the store will do with the text; the
+ * preview renders it through [ListingProse], the composable the listing's About block uses, so the two
+ * cannot disagree. The toggle appears once something has been typed, since an empty preview shows nothing.
+ */
+@Composable
+private fun DescriptionMarkdown(text: String, preview: Boolean, onTogglePreview: () -> Unit) {
+    // Top-aligned: the note wraps to two lines on a phone, and a toggle centred against it floats.
+    Row(Modifier.fillMaxWidth(), verticalAlignment = Alignment.Top) {
+        Body(
+            stringResource(Res.string.submit_markdown_hint),
+            Modifier.weight(1f).padding(top = 10.dp),
+        )
+        if (text.isNotBlank()) {
+            TextButton(onClick = onTogglePreview) {
+                Text(
+                    stringResource(
+                        if (preview) Res.string.submit_markdown_hide else Res.string.submit_markdown_preview,
+                    ),
+                )
+            }
+        }
+    }
+    if (preview && text.isNotBlank()) {
+        Surface(
+            shape = MaterialTheme.shapes.large,
+            color = MaterialTheme.colorScheme.surfaceContainerLow,
+            modifier = Modifier.fillMaxWidth().padding(top = 6.dp),
+        ) {
+            ListingProse(
+                text,
+                Modifier.padding(16.dp),
+                style = MaterialTheme.typography.bodyMedium,
+                color = MaterialTheme.colorScheme.onSurface,
+            )
+        }
+    }
+}
+
+private fun formatSize(bytes: Long): String = when {
+    bytes >= 1024L * 1024 -> "${(bytes * 10 / (1024 * 1024)) / 10.0} MB"
+    bytes >= 1024 -> "${bytes / 1024} KB"
+    else -> "$bytes B"
+}
+
+/**
+ * Tags as typed: comma separated, trimmed, deduplicated and capped.
+ *
+ * The cap is `cardinality(tags) <= 10` on `store_items`. Applied here rather than left to the row because
+ * the archive is uploaded before the row is written: an eleventh tag would fail the submission after the
+ * upload had already happened.
+ */
+private fun parseTags(raw: String): List<String> =
+    raw.split(',').map { it.trim() }.filter { it.isNotEmpty() }.distinct().take(MAX_SUBMIT_TAGS)
+
+/**
+ * The slug the store would derive from [name], without the account suffix.
+ *
+ * Mirrors the engine's `slugFor`, which appends part of the publisher's uuid to keep two people's
+ * "Calculator" apart. The suffix is not knowable here, so this is used as a prefix test: it is the last
+ * fallback for recognising a project that was published from another device.
+ */
+private fun slugStem(name: String): String = name.lowercase()
+    .map { if (it.isLetterOrDigit()) it else '-' }
+    .joinToString("")
+    .split('-').filter { it.isNotBlank() }
+    .joinToString("-")
+    .take(40)
+    .trim('-')
+
+/** Matches the database CHECK and the submission service's own cap. */
+private const val MAX_SUBMIT_SCREENSHOTS = 6
+
+/** Matches `cardinality(tags) <= 10` on `store_items`. */
+private const val MAX_SUBMIT_TAGS = 10
+
+/** What the store accepts as a screenshot, and what narrows the host's picker to images. */
+private val SCREENSHOT_EXTENSIONS = listOf("png", "jpg", "jpeg", "webp")
+
+/** The store's own `version ~ '^[0-9]+.[0-9]+.[0-9]+$'` check, so the form refuses what the column would. */
+private val VERSION_FORMAT = Regex("^\\d+\\.\\d+\\.\\d+$")

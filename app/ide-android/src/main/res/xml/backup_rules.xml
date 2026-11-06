@@ -9,5 +9,5 @@
   in again is the only thing that can restore a session on new hardware.
 -->
 <full-backup-content>
-    <exclude domain="sharedpref" path="codeassist.store.auth.xml"/>
+    <exclude domain="sharedpref" path="codestudio.store.auth.xml"/>
 </full-backup-content>

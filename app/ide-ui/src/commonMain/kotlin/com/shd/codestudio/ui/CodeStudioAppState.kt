@@ -1,0 +1,1533 @@
+package com.shd.codestudio.ui
+
+import com.shd.codestudio.ui.backend.UiFeatures
+import androidx.compose.foundation.ScrollState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
+import androidx.compose.ui.graphics.Color
+import com.shd.codestudio.ui.ext.ScreenArgumentHandoff
+import com.shd.codestudio.ui.ext.ScreenBackRegistry
+import com.shd.codestudio.ui.ext.ScreenRegistry
+import com.shd.codestudio.ui.ads.AdController
+import com.shd.codestudio.ui.backend.UiArchiveProject
+import com.shd.codestudio.ui.backend.UiIconLayer
+import com.shd.codestudio.ui.screens.IconTab
+import com.shd.codestudio.ui.backend.UiProjectFolderKind
+import com.shd.codestudio.ui.backend.AdHost
+import com.shd.codestudio.ui.backend.FileActions
+import com.shd.codestudio.ui.backend.IdeBackend
+import com.shd.codestudio.ui.backend.ProjectInfo
+import com.shd.codestudio.ui.backend.UiAccent
+import com.shd.codestudio.ui.backend.UiImportPreview
+import com.shd.codestudio.ui.backend.UiInstallState
+import com.shd.codestudio.ui.backend.UiSettings
+import com.shd.codestudio.ui.theme.colors.ColorSchemeStore
+import com.shd.codestudio.ui.theme.colors.EditorColorScheme
+import com.shd.codestudio.ui.backend.UiStoreItem
+import com.shd.codestudio.ui.platform.ioDispatcher
+import com.shd.codestudio.ui.screens.ModulesTab
+import com.shd.codestudio.ui.screens.doImportGradle
+import com.shd.codestudio.ui.theme.CaAccent
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
+
+/** Preference key remembering the last author entered in the Export-project dialog (not per-project). */
+internal const val EXPORT_AUTHOR_PREF = "export.author"
+
+/** App preference holding the workspace root of the project on screen when the app was last used, so a process
+ *  kill (or a normal relaunch) resumes back into it instead of the picker. Blank = the picker was showing. */
+private const val LAST_PROJECT_PREF = "session.lastProject"
+
+/** A Learn push's route prefix (see learn_post_create): `learnThread:<thread id>`. */
+private const val LEARN_THREAD_ROUTE = "learnThread:"
+
+/** What "Ask for help" pre-fills the question form with. */
+data class AskPrefill(val code: String?, val errorText: String?)
+
+/** Whether [rootPath] is one of Learn's lesson workspaces (`<home>/learn-workspaces/<language>`). */
+internal fun isLearnWorkspace(rootPath: String): Boolean =
+    rootPath.replace('\\', '/').trimEnd('/').substringBeforeLast('/').endsWith("/learn-workspaces")
+
+/** App preference gating the resume-last-project behavior: the "Reopen last project on launch" toggle on the
+ *  Appearance settings page (`settings.<pageId>.<key>`). Unset/anything-but-"false" = on (the default). */
+private const val REOPEN_LAST_PROJECT_PREF = "settings.appearance.reopenLastProject"
+
+private const val MIGRATION_ACK_PREF = "migration.acknowledged"
+private const val LEGACY_RECOVERY_SEEN_PREF = "legacy.recovery.seen"
+private const val ONBOARDING_SEEN_PREF = "onboarding.seen"
+private const val LEARN_TOUR_OFFERED_PREF = "learn.tourOffered"
+
+/** Why the project-import flow stopped, rendered by the host as a localized notice. */
+sealed interface ImportError {
+    /** A picked (or handed-in) file was not a readable `.caproj` package. */
+    data object Unrecognized : ImportError
+
+    /** Importing a Gradle folder failed; [message] is the engine's reason, blank when it gave none. */
+    data class GradleFailed(val message: String) : ImportError
+
+    /** A `.zip` held no project; or, with a [message], it could not be unpacked. */
+    data class ArchiveFailed(val message: String = "") : ImportError
+}
+
+/**
+ * One entry on the back stack: a screen, and the arguments it was showing.
+ *
+ * The arguments have to travel with the entry because they live in single fields that the next screen
+ * overwrites (opening a second listing from a publisher's page replaces the first, and so does one
+ * contributed screen opening another), so returning to a screen means putting its own arguments back, not
+ * just its route.
+ */
+private class NavEntry(val screen: Screen, val restore: () -> Unit)
+
+/**
+ * How deep the back stack is allowed to get before the oldest entry is dropped.
+ *
+ * Nothing a user does by hand reaches this. It is there because a contributed screen decides its own
+ * navigation, and a plugin that opens a screen on every recomposition would otherwise grow the stack until
+ * the process died. Dropping from the bottom costs the run its oldest step and nothing else: the exit below
+ * it is the per-screen fallback, which is where Back was going anyway.
+ */
+private const val MAX_BACK_STACK = 32
+
+/**
+ * The app shell's state and the intents that change it: which screen is showing, where each sub-screen
+ * returns to, the first-launch sheets, and the project create/open/import/export flows.
+ *
+ * Held outside the composition (see [rememberCode StudioAppState]) so the root composable stays a pure
+ * rendering of [screen] plus the state below, and so this logic can be exercised in a plain unit test.
+ * State flows out as read-only properties; the UI calls the intent functions and never assigns.
+ *
+ * The bridges to backend state (the active project epoch, a starting console run, session resume) are
+ * started once in [init] and live in [scope], the caller's coroutine scope.
+ */
+@Stable
+class Code StudioAppState(
+    val backend: IdeBackend,
+    private val fileActions: FileActions,
+    private val scope: CoroutineScope,
+    adHost: AdHost = AdHost.None,
+) {
+    // ---- settings + theme ----
+
+    /** Persisted IDE settings driving the theme (and seeding the editor's live prefs). Re-read after the
+     *  Settings screen writes, so appearance changes take effect immediately. */
+    var settings: UiSettings by mutableStateOf(backend.settings.settings())
+        private set
+
+    /**
+     * The user's editor color schemes, kept on the app preference store.
+     *
+     * On [com.shd.codestudio.ui.backend.SettingsService.preference] rather than a service of its own because that is
+     * the one storage seam every host implements — including iOS, which answers nothing else on that
+     * interface — so schemes work the same on all three with no per-host code.
+     */
+    val colorSchemes: ColorSchemeStore =
+        ColorSchemeStore(backend.settings::preference, backend.settings::setPreference)
+
+    /** The scheme the editor renders with. Read by the theme; re-read whenever the scheme editor writes. */
+    var editorColorScheme: EditorColorScheme by mutableStateOf(colorSchemes.active())
+        private set
+
+    // ---- navigation ----
+
+    private var currentScreen: Screen by mutableStateOf(Screen.Projects)
+
+    /**
+     * The destination on screen.
+     *
+     * Assigning is how every intent below navigates; the setter is where the back stack is dropped, so
+     * leaving the stacked screens for anywhere else can never leave a stale entry behind to pop into later.
+     */
+    var screen: Screen
+        get() = currentScreen
+        private set(next) {
+            // The editor needs an open project. Every real way in (open, create, import, a lesson, the AI tab)
+            // marks one open first, so what arrives here without one is a stale Back target or a link from
+            // Home into a project that was closed: it goes Home instead. Closing only leaves the editor (the
+            // engine stays loaded, so the screen behind it would show the closed project and the session
+            // resume would record it again), and before any project is loaded the editor's backend throws.
+            val value = if (next == Screen.Editor && !projectOpen) Screen.Projects else next
+            // Home is where closing a project lands.
+            if (value == Screen.Projects) projectOpen = false
+            // Home's "Get plugins" entry lasts only while the user is on the Plugins screen (or a plugin page
+            // opened from it); leaving any other way must not make the hub's Plugins tool open on the Get tab
+            // and return Home later.
+            if (value != Screen.Plugins && value != Screen.PluginScreen) resetPluginsEntry()
+            // Entering a stacked run (the store's screens) from anywhere else: that is where its Back ends.
+            if (navigatesAsStack(value) && !navigatesAsStack(currentScreen)) stackBase = currentScreen
+            if (value != currentScreen && !navigatesAsStack(value)) backStack.clear()
+            // Leaving Settings altogether: the next visit starts at the top of its list.
+            if (isHubPane(currentScreen) && !isHubPane(value)) hubListScroll = ScrollState(0)
+            if (value != currentScreen) backend.diagnostics.countFeature(UiFeatures.screen(value.name))
+            navigatingBack = false
+            currentScreen = value
+        }
+
+    /**
+     * Where the phone Settings list is scrolled. Held here rather than in the list, which leaves composition
+     * while one of its pages is open: Back from a page then landed at the top of a list several screens long
+     * instead of on the row the user had opened.
+     */
+    var hubListScroll: ScrollState by mutableStateOf(ScrollState(0))
+        private set
+
+    /**
+     * The screens that open each other freely rather than in a fixed order: a listing links to its
+     * publisher, a publisher's page links back to listings, your own page links to both, and a contributed
+     * screen opens whichever other one its plugin decides. Back through that has to be a stack, not a
+     * per-screen parent.
+     */
+    private val backStack = mutableListOf<NavEntry>()
+
+    /** True while the last move was a Back, so the transition slides the way the user came in. */
+    var navigatingBack: Boolean by mutableStateOf(false)
+        private set
+
+    /** Which plugin-contributed screen [Screen.PluginScreen] is showing, and where Back returns to. */
+    var pluginScreenId: String? by mutableStateOf(null)
+        private set
+
+    /** What [pluginScreenId] was opened with ([ScreenContext.argument]); saved and restored with it on the stack. */
+    var pluginScreenArgument: Any? by mutableStateOf(null)
+        private set
+    private var pluginScreenReturn: Screen = Screen.Editor
+
+    /** The home screen's selected bottom-nav tab (project picker / store / learn). Lives here, not in the
+     *  per-project [IdeUiState], so it survives across the landing session and resets only on a full relaunch. */
+    var homeTab: HomeTab by mutableStateOf(HomeTab.Projects)
+        private set
+
+    /**
+     * Whether the user has a project open: set when one is opened, created or imported (or a lesson's workspace
+     * is), cleared when they leave it for Home or a lesson ends, or when the engine is unloaded. NOT `epoch > 0`:
+     * closing a project keeps its engine loaded behind the picker, so the epoch stays up after it is closed.
+     */
+    var projectOpen: Boolean by mutableStateOf(false)
+        private set
+
+    /**
+     * The screen a stacked run (the store's screens) was entered from, where Back goes once its stack is spent.
+     * Home's Explore tab for the usual entry; the editor for a store link or a tapped notification that arrived
+     * mid-edit, which used to drop the user on Home and so close their project without asking.
+     */
+    private var stackBase: Screen = Screen.Projects
+
+    /** Where the import preview's Cancel goes: Home, or the editor when a package was handed in mid-edit. */
+    private var importReturn: Screen = Screen.Projects
+
+    /**
+     * Session resume gives way to anything that got there first: a project opened by the user, a link or a
+     * tapped notification ([resumeSuperseded]); and while its own open is in flight ([resumePending]) the
+     * epoch bump it causes does not pull a user who has already moved on into the editor.
+     */
+    private var resumeSuperseded = false
+    private var resumePending = false
+
+    /** Where the Plugins screen's back goes, and the tab it opens on: the hub's Plugins tool, or Home's card. */
+    var pluginsReturn: Screen by mutableStateOf(Screen.Hub)
+        private set
+    var pluginsStartTab: com.shd.codestudio.ui.screens.PluginsTab? by mutableStateOf(null)
+        private set
+
+    /** Where the Settings and Tools hub returns on Back: the picker (opened with no project) or the editor. */
+    var hubReturn: Screen by mutableStateOf(Screen.Editor)
+        private set
+
+    /**
+     * Whether the window is wide enough that Settings shows as a sidebar beside its open destination
+     * (reported by the nav graph, which is what measures the window). Then the hub and its destinations are
+     * one surface, so Back from any of them leaves the hub instead of stepping to a "hub" that looks the same.
+     */
+    var hubTwoPane: Boolean by mutableStateOf(false)
+
+    /** Whether [s] is one of the hub's destinations shown in its pane while [hubTwoPane]. The Keystore Manager
+     *  only counts when entered from the hub, not from a module's Signing tab. */
+    fun isHubPane(s: Screen): Boolean = when (s) {
+        Screen.Hub, Screen.Settings, Screen.CodeStyle, Screen.ColorScheme, Screen.EditorSymbols,
+        Screen.SdkManager, Screen.Plugins, Screen.Storage -> true
+        Screen.KeystoreManager -> keystoreReturn == Screen.Hub
+        else -> false
+    }
+
+    /** Where the Keystore Manager returns on Back: the hub (its normal entry) or the module Signing tab (the
+     *  "manage keystores" cross-link from project signing). */
+    var keystoreReturn: Screen by mutableStateOf(Screen.Hub)
+        private set
+
+    /** Whether the Keystore Manager was reached from a project context (the editor's hub or a module's Signing
+     *  tab) rather than the picker's hub. Gates the "Assign to a build" row: assignment is per-project, so it is
+     *  hidden when no project is open (and must never navigate into one). NOT `epoch > 0`: that stays true after
+     *  a project is closed back to the picker, which is exactly when the row must not show. */
+    var keystoreInProject: Boolean by mutableStateOf(false)
+        private set
+
+    /** Whether Settings was opened over an open project (from the editor or one of its screens), not from Home:
+     *  the project-scoped pages, the live formatter preview and the keystore's signing row need one. */
+    val hubInProject: Boolean get() = projectOpen && hubReturn != Screen.Projects
+
+    /** Where the Icon Manager returns on Back: the editor, or a module's config when opened from there. */
+    var iconManagerReturn: Screen by mutableStateOf(Screen.Editor)
+        private set
+
+    /** A `res/` directory the Icon Manager should preselect, set when it was opened from a file-tree node. */
+    var iconManagerResDir: String? by mutableStateOf(null)
+        private set
+
+    /** The Icon Manager section the user was in, kept while they visit the studio; null opens the default. */
+    var iconManagerTab: IconTab? by mutableStateOf(null)
+
+    /** The layer the app-icon studio should open with as its foreground, when an icon was picked for it. */
+    var appIconSeed: UiIconLayer? by mutableStateOf(null)
+        private set
+
+    // ---- per-screen arguments ----
+
+    /** A template id to pre-select in the Create-Project flow when it is opened from a Store item (null = the
+     *  plain New-Project gallery). */
+    var createTemplateId: String? by mutableStateOf(null)
+        private set
+
+    /** The Learn destination being viewed (a track's lesson list / the step player), plus the player's start
+     *  step. Bumping [learnEpoch] on return re-reads progress so the Learn tab and track reflect finished work. */
+    var currentTrackId: String? by mutableStateOf(null)
+        private set
+
+    /** The learning path being viewed, and whether the open track was reached from it (so Back returns
+     *  to the path rather than the Learn tab). */
+    var currentPathId: String? by mutableStateOf(null)
+        private set
+
+    /** A lesson is running in the editor (its workspace is the open project, under the task banner). */
+    var lessonInEditor: Boolean by mutableStateOf(false)
+        private set
+
+    // ---- Learn community: what the discussion / thread / ask / solutions screens are showing ----
+    var communityLessonId: String? by mutableStateOf(null)
+        private set
+    /** The exercise a discussion or the solutions are scoped to; null for the whole lesson. */
+    var communityStepId: String? by mutableStateOf(null)
+        private set
+    var communityThreadId: String? by mutableStateOf(null)
+        private set
+    /** "Ask for help" carries the learner's code and what went wrong into the question form. */
+    var askPrefill: AskPrefill? by mutableStateOf(null)
+        private set
+    /** Where Back from the first community screen returns: the lesson, the player, the track, home. */
+    private var communityReturn: Screen = Screen.Projects
+
+    /** The workspace could not be opened this session: lessons fall back to the stand-alone player. */
+    var lessonEditorUnavailable: Boolean by mutableStateOf(false)
+        private set
+    private var trackOpenedFromPath = false
+    var currentLessonId: String? by mutableStateOf(null)
+        private set
+    var lessonInitialStep: Int by mutableStateOf(0)
+        private set
+    var learnEpoch: Int by mutableStateOf(0)
+        private set
+
+    /** The challenge day being solved or shown on the board. Empty means today. */
+    var challengeDate: String by mutableStateOf("")
+        private set
+
+    /** Bumped when a challenge is solved or the tab is refreshed, so the tab re-reads its three payloads. */
+    var challengeEpoch: Int by mutableStateOf(0)
+        private set
+
+    /** The store item shown on the full-screen detail page (set when a card is tapped in the Explore tab). */
+    var storeItem: UiStoreItem? by mutableStateOf(null)
+        private set
+
+    var configModule: String? by mutableStateOf(null)
+        private set
+    var modulesTab: ModulesTab by mutableStateOf(ModulesTab.Settings)
+        private set
+    var keystoreImportPath: String? by mutableStateOf(null)
+        private set
+
+    // ---- first-launch sheets ----
+
+    var showMigration: Boolean by mutableStateOf(backend.settings.preference(MIGRATION_ACK_PREF) != "true")
+        private set
+    var showLegacyRecovery: Boolean by mutableStateOf(backend.settings.preference(LEGACY_RECOVERY_SEEN_PREF) != "true")
+        private set
+    var showOnboarding: Boolean by mutableStateOf(backend.settings.preference(ONBOARDING_SEEN_PREF) != "true")
+        private set
+
+    /** Opt-in analytics: prompt only when collection is available and the user has not decided yet (null). The
+     *  re-toggle lives in the editor's More menu (a settings surface), not permanently on the project picker. */
+    var showAnalytics: Boolean by mutableStateOf(
+        // Also asks again someone who agreed to an older wording that didn't cover all that is collected now.
+        backend.diagnostics.analyticsAvailable() && backend.diagnostics.analyticsNeedsAsking()
+    )
+        private set
+
+    // ---- project sharing + import ----
+
+    /** Bumped after a project is deleted, or on a pull-to-refresh, so Home re-reads the on-disk list. */
+    var projectsRefresh: Int by mutableStateOf(0)
+        private set
+
+    /** Re-read the project list from disk (the Home screen's pull-to-refresh). */
+    fun refreshProjects() {
+        projectsRefresh++
+    }
+
+    /**
+     * The picker's project list, or null until it has been read once. Kept here rather than in Home's
+     * composition so returning to Home shows the last list at once while a fresh read runs.
+     */
+    var projectList: List<ProjectInfo>? by mutableStateOf(null)
+        private set
+
+    /**
+     * Read the project list off the main thread. Listing loads every project's model from disk
+     * (`workspace.json` plus each `module.toml`), so on slow storage with many projects it took long enough
+     * on the main thread, inside Home's composition, to show up as an ANR at `ProjectManager.list`.
+     */
+    suspend fun loadProjects() {
+        projectList = withContext(ioDispatcher) { backend.projects.projects() }
+    }
+
+    /** The project whose Export dialog is open, and the picked package being previewed for import (path plus
+     *  the read manifest/peek). Held here so they survive picker recompositions. */
+    var exportTarget: ProjectInfo? by mutableStateOf(null)
+        private set
+    var importArchivePath: String? by mutableStateOf(null)
+        private set
+    var importPreview: UiImportPreview? by mutableStateOf(null)
+        private set
+
+    /** Non-null while the import notice is up (a picked/opened file was not a readable `.caproj`, or a Gradle
+     *  folder import failed). */
+    var importError: ImportError? by mutableStateOf(null)
+        private set
+
+    /** True while a picked Gradle folder is being copied and imported (a blocking, non-cancellable operation). */
+    var importBusy: Boolean by mutableStateOf(false)
+        private set
+
+    /** The "which source?" chooser for Import project: a project folder, or a `.caproj` package. Shown only
+     *  when the host can service BOTH — with one available there is nothing to ask. */
+    var showImportSourceChoice: Boolean by mutableStateOf(false)
+        private set
+
+    /** The import-time "compatibility mode vs convert" chooser (shown after the folder pick request), and a
+     *  one-shot carried into the freshly-opened editor's state when Convert was chosen. */
+    var showImportModeChoice: Boolean by mutableStateOf(false)
+        private set
+
+    /** The projects found in an imported `.zip`, while the user picks one (only asked when there are several). */
+    var archiveChoices: List<UiArchiveProject>? by mutableStateOf(null)
+        private set
+    var pendingGradleConvert: Boolean by mutableStateOf(false)
+        private set
+
+    // ---- backend-derived state ----
+
+    /** The active project epoch: create/open bumps it, and per-project state is re-keyed on it. */
+    var epoch: Int by mutableStateOf(backend.projects.projectEpoch.value)
+        private set
+
+    /** The id of the interactive console session the last `run` task opened, or null for build-only tasks. */
+    private var runConsoleId: Int? by mutableStateOf(null)
+
+    /** True while the editor is in its wide layout, where a run's terminal docks in the bottom tool window rather
+     *  than replacing the editor with the full-screen Run screen. Reported by the editor screen. */
+    var runDocked: Boolean by mutableStateOf(false)
+
+    /** The home-screen Projects Store and bottom nav is unfinished and ships dark: it appears only when its
+     *  feature flag is on (or the `feature.projectsStore` preference overrides it). Off = the picker alone. */
+    val storeEnabled: Boolean =
+        backend.settings.preference("feature.projectsStore")?.toBooleanStrictOrNull() ?: FeatureFlags.PROJECTS_STORE
+
+    /** Ad gating and state, shared with every screen through `LocalAds`. */
+    val adController: AdController = AdController(backend, adHost)
+
+    /** Whether the system back gesture has somewhere in-app to go. False on the picker landing, where back
+     *  exits the app as usual. */
+    val canNavigateBack: Boolean
+        get() = screen != Screen.Projects || homeTab != HomeTab.Projects || showOnboarding || showMigration ||
+            showAnalytics
+
+    // Session resume across a process kill: the project that was on screen last run (captured up-front, before
+    // any bridge runs, so the tracking below cannot clear it before the resume reads it) and whether resume is
+    // enabled (default on). [lastPersistedProject] mirrors the last value written so tracking writes only on an
+    // actual picker to project change; it starts at the picker sentinel so the brief "picker to resumed project"
+    // startup window never rewrites (and so cannot clear) the on-disk preference.
+    private val resumeProject: String? =
+        backend.settings.preference(LAST_PROJECT_PREF)?.takeIf { it.isNotBlank() }
+    private val reopenLast: Boolean =
+        backend.settings.preference(REOPEN_LAST_PROJECT_PREF)?.toBooleanStrictOrNull() != false
+    private var lastPersistedProject: String = ""
+
+    init {
+        // A successful create/open advances the epoch: land in the editor on the new project.
+        scope.launch {
+            backend.projects.projectEpoch.collect {
+                epoch = it
+                // A newly loaded project is an open one (even one the AI tab opened behind Home); no engine at
+                // all is no project.
+                projectOpen = it > 0
+                // Any other project opened while a lesson was up ends the lesson: the banner belongs to the
+                // lesson's workspace only.
+                if (lessonInEditor && !isLearnWorkspace(backend.project.rootPath)) lessonInEditor = false
+                // The AI tab opens and creates projects in the background and keeps the user in the chat; the
+                // tab's own buttons take them into the editor.
+                // A resume that finished after the user moved on (a store link at launch, say) leaves them there.
+                val resumedLate = resumePending && screen != Screen.Projects
+                if (it > 0) resumePending = false
+                if (it > 0 && !resumedLate && !(screen == Screen.Projects && homeTab == HomeTab.Ai)) enterEditor()
+            }
+        }
+        // Starting a console run (a `run` task) opens a fresh interactive session: keyed on its id, jump to the
+        // full-screen Run terminal, unless the wide editor docks it in its bottom pane. Build/assemble tasks leave
+        // the console null and stay in the build console.
+        scope.launch { backend.build.runConsole.collect { runConsoleId = it?.id } }
+        scope.launch {
+            snapshotFlow { runConsoleId to epoch }.distinctUntilChanged().collect { (id, _) ->
+                if (id != null && screen == Screen.Editor && !runDocked) screen = Screen.Run
+            }
+        }
+        // Resume the last project on a cold launch: reopen whatever project was on screen when the app was last
+        // used, so a background kill (or a normal relaunch) comes back into the editor instead of the picker.
+        // One-shot; opening bumps the epoch, which lands in the editor above and reopens the saved tabs. A
+        // deleted/missing project just falls through to the picker.
+        scope.launch {
+            val last = resumeProject
+            if (!reopenLast || last == null) return@launch
+            if (backend.projects.projectEpoch.value > 0) return@launch // already in a project
+            val exists = withContext(ioDispatcher) { backend.projects.projects().any { it.rootPath == last } }
+            // A link, a tapped notification or the user got somewhere first: that wins over resuming.
+            if (!exists || resumeSuperseded || screen != Screen.Projects) return@launch
+            resumePending = true
+            if (!backend.projects.openProject(last)) resumePending = false
+        }
+        // Track which project (if any) the user has open, for the resume above. Entering the editor (or its Run
+        // screen, which only an open project has) records the project; the picker, where closing a project
+        // lands, clears it; every other screen leaves it as it was. Closing keeps the engine loaded (epoch > 0),
+        // so recording on "any screen but the picker" re-recorded a CLOSED project the moment the user went on
+        // to New Project, Settings or the Store, and the next launch reopened it. Compares against the
+        // in-memory mirror so it writes only on a real change, never per navigation.
+        scope.launch {
+            snapshotFlow { screen to epoch }.distinctUntilChanged().collect { (current, projectEpoch) ->
+                val target = when {
+                    // A lesson's workspace is not a project to come back to: a relaunch would land in it with
+                    // no lesson around it.
+                    lessonInEditor -> return@collect
+                    current == Screen.Projects -> ""
+                    (current == Screen.Editor || current == Screen.Run) && projectEpoch > 0 -> backend.project.rootPath
+                    else -> return@collect
+                }
+                if (target != lastPersistedProject) {
+                    lastPersistedProject = target
+                    backend.settings.setPreference(LAST_PROJECT_PREF, target)
+                }
+            }
+        }
+    }
+
+    // ---- settings intents ----
+
+    /** Re-read the persisted settings after the Settings screen (or a quick toggle) wrote them. */
+    fun reloadSettings() {
+        settings = backend.settings.settings()
+    }
+
+    /** Re-read the active color scheme after the scheme editor saved or switched one. */
+    fun reloadColorScheme() {
+        editorColorScheme = colorSchemes.active()
+    }
+
+    /** Make [scheme] the active one, persisting both it (when it is the user's) and the choice. */
+    fun applyColorScheme(scheme: EditorColorScheme) {
+        if (!scheme.builtIn) colorSchemes.save(scheme)
+        colorSchemes.setActiveId(scheme.id)
+        editorColorScheme = scheme
+    }
+
+    /** Quick theme toggle: flip to the opposite of what is shown ([currentlyDark]), stepping out of "system"
+     *  if that was active. */
+    fun toggleTheme(currentlyDark: Boolean) {
+        backend.settings.setSetting("appearance", "themeMode", if (currentlyDark) "light" else "dark")
+        reloadSettings()
+    }
+
+    // ---- navigation intents ----
+
+    /** The editor's close-project confirmation is up. Back on the editor raises it rather than leaving at once,
+     *  the same as the top bar's back arrow; the editor draws it and clears it. */
+    var confirmCloseProject by mutableStateOf(false)
+
+    /**
+     * Into the editor on the project that is loaded, as an intent: an open, create or import that just loaded
+     * it, or the AI tab's buttons for the one it opened. Marks it open, which a plain [navigateTo] does not (a
+     * Back target or a link from Home must not reopen a project the user closed). Inert with nothing loaded.
+     */
+    fun enterEditor() {
+        if (backend.projects.projectEpoch.value > 0) projectOpen = true
+        screen = Screen.Editor
+    }
+
+    /** Go to [target] with no extra state to carry (the plain forward/back moves between screens). */
+    fun navigateTo(target: Screen) {
+        screen = target
+    }
+
+    fun selectHomeTab(tab: HomeTab) {
+        homeTab = tab
+    }
+
+    /**
+     * Open a plugin-contributed screen ([ScreenRegistry]) and remember where to return to. A plugin panel
+     * navigates here for a detail view that needs the whole window, and any action's `Navigate` effect
+     * resolves to the same route.
+     *
+     * One contributed screen opening another is a push, not a replacement: they all share this one route, so
+     * the id rides the stack with everything else and Back restores the screen that was showing rather than
+     * leaving the whole run at once. [pluginScreenReturn] is the bottom of that run, the screen the first
+     * one was opened from, which is where Back goes once the stack is spent.
+     *
+     * An id nothing has registered (a disabled plugin, a stale action) is ignored rather than navigated to:
+     * the destination would render nothing, and recovering from it in the route would have to re-enter
+     * navigation from inside a screen that is already animating away.
+     */
+    fun openPluginScreen(id: String) {
+        // Taken first, so a refused navigation cannot leave it pending for the next one.
+        val argument = ScreenArgumentHandoff.take()
+        if (ScreenRegistry.find(id) == null) return
+        if (screen != Screen.PluginScreen) pluginScreenReturn = screen
+        pushEntry()
+        pluginScreenId = id
+        pluginScreenArgument = argument
+        screen = Screen.PluginScreen
+    }
+
+    /** Home's "Get plugins" card: the Plugins screen on its download tab, back to Home. */
+    fun openGetPlugins() {
+        pluginsReturn = Screen.Projects
+        pluginsStartTab = com.shd.codestudio.ui.screens.PluginsTab.Get
+        // The hub's own return too: the Plugins screen is one of its panes, and every Back path that goes
+        // through the hub (the wide layout's, the phone's Plugins -> Hub -> back) must land on Home, not on an
+        // editor with no project open (which threw "No project is open").
+        hubReturn = Screen.Projects
+        screen = Screen.Plugins
+    }
+
+    /** Any other way into the Plugins screen (the hub): its usual tab, back to the hub. */
+    fun resetPluginsEntry() {
+        pluginsReturn = Screen.Hub
+        pluginsStartTab = null
+    }
+
+    /** Open Settings (the hub), remembering [from] as its Back destination. */
+    fun openHub(from: Screen) {
+        hubReturn = from
+        screen = Screen.Hub
+    }
+
+    /** The settings page [Screen.Settings] shows, by id. Null shows every page with its own navigation. */
+    var settingsPageId: String? by mutableStateOf(null)
+        private set
+
+    /** Open one settings page from the hub. */
+    fun openSettingsPage(id: String) {
+        settingsPageId = id
+        screen = Screen.Settings
+    }
+
+    /** Open settings page [id] straight from [from] (an editor notice, say): Back leads through the hub to [from]. */
+    fun openSettingsPageFrom(from: Screen, id: String) {
+        hubReturn = from
+        openSettingsPage(id)
+    }
+
+    /** Open the Keystore Manager, remembering its Back destination and whether it was reached with a project
+     *  open (which gates the per-project signing assignment row). */
+    fun openKeystoreManager(returnTo: Screen, inProject: Boolean) {
+        keystoreReturn = returnTo
+        keystoreInProject = inProject
+        screen = Screen.KeystoreManager
+    }
+
+    /** Open the hub's Keystore Manager entry: a project context only when the hub itself came from the editor. */
+    fun openKeystoreManagerFromHub() = openKeystoreManager(Screen.Hub, inProject = hubInProject)
+
+    /**
+     * Open the Icon Manager, remembering where Back goes. [resDir] preselects an import target, which is how
+     * the file tree's "New Image Asset" entry scopes the screen to the folder that was tapped.
+     */
+    fun openIconManager(returnTo: Screen = Screen.Editor, resDir: String? = null) {
+        iconManagerReturn = returnTo
+        iconManagerResDir = resDir
+        iconManagerTab = null
+        screen = Screen.IconManager
+    }
+
+    /**
+     * Open the app-icon studio, optionally seeded with the icon the user picked in the Icon Manager (in the
+     * style they picked it in). Back from the studio returns to the manager.
+     */
+    fun openAppIconStudio(seed: UiIconLayer? = null) {
+        appIconSeed = seed
+        screen = Screen.AppIconStudio
+    }
+
+    fun openKeystoreImport(path: String) {
+        keystoreImportPath = path
+        screen = Screen.KeystoreImport
+    }
+
+    /** The keystore manager's "assign to a build" jump: one android-app module goes straight to its Signing
+     *  tab, otherwise the module list opens on Signing. */
+    fun openSigningAssignment() {
+        openModuleConfig(backend.signing.signableModules().singleOrNull(), ModulesTab.Signing)
+    }
+
+    fun openModuleConfig(module: String?, tab: ModulesTab) {
+        configModule = module
+        modulesTab = tab
+        screen = Screen.ModuleConfig
+    }
+
+    // ---- project intents ----
+
+    fun openProject(project: ProjectInfo) {
+        resumeSuperseded = true
+        scope.launch { if (backend.projects.openProject(project.rootPath)) enterEditor() }
+    }
+
+    fun deleteProject(project: ProjectInfo) {
+        scope.launch {
+            backend.projects.deleteProject(project.rootPath)
+            projectsRefresh++
+        }
+    }
+
+    fun renameProject(project: ProjectInfo, name: String) {
+        scope.launch {
+            backend.projects.renameProject(project.rootPath, name)
+            projectsRefresh++
+        }
+    }
+
+    /** Open the Create-Project gallery, optionally pre-selecting [templateId] (a Store item's template). */
+    /**
+     * Install a store item, or route it to Create-Project when it is a bundled scaffold.
+     *
+     * An item with a `templateId` is already on the device, so creating it locally is both faster and works
+     * offline: it never downloads. Everything else goes through the real download/verify/unpack path.
+     *
+     * Progress and failures are reported through the engine's install-progress flow, which every shelf
+     * reads, so the download says so wherever the item appears rather than only where it was tapped. The
+     * install counter is bumped by the engine on success, never here: counting a button press would inflate
+     * the very numbers the trending chart ranks on.
+     */
+    fun installStoreItem(item: UiStoreItem) {
+        val template = item.templateId
+        if (template != null) {
+            createProject(template)
+            return
+        }
+        // Already on the device. The row's button says "Open" in this state, and it used to run the
+        // install again anyway, downloading a second copy of a project the user already had.
+        val installedPath = backend.store.installProgress().value[item.id]
+            ?.takeIf { it.state == UiInstallState.INSTALLED }?.rootPath
+        if (installedPath != null) {
+            openInstalledProject(installedPath)
+            return
+        }
+        if (!item.available) {
+            // Nothing to download and no local scaffold: the detail page is all there is to offer.
+            openStoreItem(item)
+            return
+        }
+        scope.launch {
+            val result = runCatching { backend.store.install(item.id) }.getOrNull()
+            // The unpacked project is on disk now, so Home has to be told to look again.
+            if (result?.success == true) refreshProjects()
+        }
+    }
+
+    /**
+     * Open a project installed from the store, by the path the install unpacked it to.
+     *
+     * The path is refused if the project has gone (deleted since it was installed): the store's list then
+     * goes back to offering an install, which is the truth, rather than landing on an empty editor.
+     */
+    fun openInstalledProject(rootPath: String) {
+        resumeSuperseded = true
+        scope.launch {
+            if (backend.projects.openProject(rootPath)) enterEditor() else refreshProjects()
+        }
+    }
+
+    fun createProject(templateId: String? = null) {
+        createTemplateId = templateId
+        screen = Screen.CreateProject
+    }
+
+    /** Create a project backup zip and hand it to the host's share/save sheet. */
+    suspend fun backupAndShare() {
+        backend.projects.backupProjects()?.let { fileActions.share(it) }
+    }
+
+    /** [backupAndShare] as a fire-and-forget intent, for callers that are not already in a coroutine. */
+    fun backupProjects() {
+        scope.launch { backupAndShare() }
+    }
+
+    // ---- project sharing ----
+
+    fun startExport(project: ProjectInfo) {
+        exportTarget = project
+        screen = Screen.ExportProject
+    }
+
+    fun finishExport() {
+        exportTarget = null
+        screen = Screen.Projects
+    }
+
+    fun exportAuthor(): String = backend.settings.preference(EXPORT_AUTHOR_PREF) ?: ""
+
+    fun rememberExportAuthor(author: String) = backend.settings.setPreference(EXPORT_AUTHOR_PREF, author)
+
+    /** Ask the host for a `.caproj` package or a `.zip` of a project, and import it. */
+    fun pickProjectPackage() {
+        fileActions.pickFile(listOf("caproj", "zip")) { path ->
+            if (path != null) scope.launch { openImportPackage(path) }
+        }
+    }
+
+    /**
+     * Import the file at [path]: a `.caproj` opens its import preview; any other zip is unpacked and the project
+     * in it imported like a picked folder ([openProjectArchive]). Anything else raises the unrecognized-file notice.
+     */
+    suspend fun openImportPackage(path: String) {
+        val preview = backend.projects.previewImportPackage(path)
+        if (preview != null) {
+            importArchivePath = path
+            importPreview = preview
+            if (screen != Screen.ImportProject) importReturn = screen
+            screen = Screen.ImportProject
+        } else {
+            openProjectArchive(path)
+        }
+    }
+
+    /** Unpack the `.zip` at [path] and import its project, asking which one when it holds several. */
+    private suspend fun openProjectArchive(path: String) {
+        importBusy = true
+        val archive = backend.projects.extractProjectArchive(path)
+        importBusy = false
+        val projects = archive?.projects.orEmpty()
+        val failure = archive?.error
+        when {
+            archive == null -> importError = ImportError.Unrecognized
+            failure != null -> importError = ImportError.ArchiveFailed(failure)
+            projects.isEmpty() -> importError = ImportError.ArchiveFailed()
+            projects.size == 1 -> importFolder(projects[0].path, projects[0].kind, fromArchive = true)
+            else -> archiveChoices = projects
+        }
+    }
+
+    /** Picked one of an archive's several projects. */
+    fun chooseArchiveProject(project: UiArchiveProject) {
+        archiveChoices = null
+        scope.launch { importFolder(project.path, project.kind, fromArchive = true) }
+    }
+
+    fun dismissArchiveChoice() {
+        archiveChoices = null
+        scope.launch { backend.projects.discardProjectArchive() }
+    }
+
+    /** Back out of the preview to where it was opened over (Home, or the editor when a package arrived mid-edit). */
+    fun cancelImportPreview() = leaveImportPreview(finished = false)
+
+    fun finishImportPreview() = leaveImportPreview(finished = true)
+
+    private fun leaveImportPreview(finished: Boolean) {
+        val back = importReturn
+        importPreview = null
+        importArchivePath = null
+        importReturn = Screen.Projects
+        // Back into the editor goes through the screen setter, which sends it Home if that project has since
+        // stopped being open; finishing opened the imported project, a real way in.
+        if (finished) enterEditor() else screen = back
+    }
+
+    // ---- project import ----
+
+    /** The folder the user picked, held while the compatibility/convert question is answered for it. */
+    private var pendingImportPath: String? = null
+
+    /** Whether [pendingImportPath] was unpacked from a zip, whose staging folder a cancel has to drop. */
+    private var pendingFromArchive = false
+
+    /**
+     * The picker's "Import project" action. Picks the folder FIRST and asks what it is, because the only
+     * follow-up question -- compatibility vs convert -- applies to a foreign build system and not to a
+     * Code Studio workspace. Asking first (as this did) meant a Code Studio project folder had to answer a
+     * question about Gradle conversion that meant nothing for it, before being rejected anyway.
+     */
+    fun requestProjectImport() {
+        // The two sources sit behind different host APIs (pickDirectory vs pickFile), so which picker to
+        // launch has to be answered first. With only one available, don't ask — go straight to it.
+        val folder = fileActions.canPickDirectory
+        val pkg = fileActions.canPickFile
+        when {
+            folder && pkg -> showImportSourceChoice = true
+            folder -> pickProjectFolder()
+            pkg -> pickProjectPackage()
+        }
+    }
+
+    fun dismissImportSourceChoice() {
+        showImportSourceChoice = false
+    }
+
+    /** Chose "Project folder" at the source prompt. */
+    fun chooseFolderImport() {
+        showImportSourceChoice = false
+        pickProjectFolder()
+    }
+
+    /** Chose "Project package" at the source prompt — hands off to the existing `.caproj` preview flow. */
+    fun choosePackageImport() {
+        showImportSourceChoice = false
+        pickProjectPackage()
+    }
+
+    private fun pickProjectFolder() {
+        fileActions.pickDirectory { path ->
+            if (path.isNullOrBlank()) return@pickDirectory
+            importBusy = true
+            scope.launch { importFolder(path, backend.projects.inspectProjectFolder(path), fromArchive = false) }
+        }
+    }
+
+    /** Import the folder at [path], which is a [kind] project, asking compatibility vs convert for a Gradle one. */
+    private suspend fun importFolder(path: String, kind: UiProjectFolderKind, fromArchive: Boolean) {
+        when (kind) {
+            // Nothing to translate: adopt it and open it.
+            UiProjectFolderKind.CODE_ASSIST -> {
+                importBusy = true
+                runImport(path, convert = false)
+            }
+            // Foreign build system: it still has a mode to choose.
+            // The question is the user's to answer, so drop the overlay while it is on screen.
+            UiProjectFolderKind.GRADLE -> {
+                importBusy = false
+                pendingImportPath = path
+                pendingFromArchive = fromArchive
+                showImportModeChoice = true
+            }
+            UiProjectFolderKind.UNKNOWN -> {
+                importBusy = false
+                importError = ImportError.GradleFailed("")
+            }
+        }
+    }
+
+    fun dismissImportModeChoice() {
+        showImportModeChoice = false
+        pendingImportPath = null
+        if (pendingFromArchive) scope.launch { backend.projects.discardProjectArchive() }
+        pendingFromArchive = false
+    }
+
+    /** Answer to the compatibility/convert prompt, for the folder already picked. */
+    fun importGradleProject(convert: Boolean) {
+        val path = pendingImportPath
+        showImportModeChoice = false
+        pendingImportPath = null
+        pendingFromArchive = false
+        if (path != null) {
+            importBusy = true
+            scope.launch { runImport(path, convert) }
+        }
+    }
+
+    /** Import [path] and open it; [convert] flags the freshly-opened editor to run the Gradle convert flow. */
+    private suspend fun runImport(path: String, convert: Boolean) {
+        val result = backend.projects.importExternalProject(path)
+        importBusy = false
+        if (result.success) {
+            if (convert) pendingGradleConvert = true
+            enterEditor()
+        } else {
+            importError = ImportError.GradleFailed(result.message)
+        }
+    }
+
+    /** Clear the convert one-shot once it has been baked into the (re-created) per-project state, so navigating
+     *  back to a project later never re-triggers the convert prompt. */
+    fun consumeGradleConvertPrompt() {
+        pendingGradleConvert = false
+    }
+
+    fun dismissImportError() {
+        importError = null
+    }
+
+    // ---- Learn ----
+
+    fun openTrack(trackId: String) {
+        currentTrackId = trackId
+        trackOpenedFromPath = false
+        screen = Screen.LessonTrack
+    }
+
+    fun openPath(pathId: String) {
+        currentPathId = pathId
+        screen = Screen.LearnPath
+    }
+
+    /** A track tapped on a path screen: Back from it comes back to the path. */
+    fun openTrackFromPath(trackId: String) {
+        currentTrackId = trackId
+        trackOpenedFromPath = true
+        screen = Screen.LessonTrack
+    }
+
+    /**
+     * Move the lesson the player just loaded into the editor: open its workspace project, then show the editor
+     * with the task banner at [stepIndex]. The flag goes up first, because opening a project lands on the
+     * editor by itself and the banner must be there on its first frame. On failure the player carries on.
+     */
+    fun openLessonInEditor(lessonId: String, stepIndex: Int) {
+        currentLessonId = lessonId
+        lessonInitialStep = stepIndex
+        lessonInEditor = true
+        scope.launch {
+            val ok = runCatching { backend.learn.openWorkspace(lessonId) }.getOrDefault(false)
+            if (ok) {
+                enterEditor()
+            } else {
+                lessonInEditor = false
+                lessonEditorUnavailable = true
+            }
+        }
+    }
+
+    /** The banner moved to step [index]: remembered, so coming back from a discussion resumes there. */
+    fun setLessonStep(index: Int) {
+        lessonInitialStep = index
+    }
+
+    private fun isCommunity(s: Screen) =
+        s == Screen.LearnDiscussion || s == Screen.LearnThread || s == Screen.LearnAsk || s == Screen.LearnSolutions
+
+    /** Arrive at a community screen: stacked when coming from another one, else remember where to return. */
+    private fun enterCommunity(target: Screen) {
+        if (isCommunity(screen)) pushEntry() else communityReturn = screen
+        screen = target
+    }
+
+    /** A lesson's (or one exercise's) discussion. */
+    fun openDiscussion(lessonId: String, stepId: String? = null) {
+        val entering = !isCommunity(screen)
+        if (!entering) pushEntry() else communityReturn = screen
+        communityLessonId = lessonId
+        communityStepId = stepId
+        screen = Screen.LearnDiscussion
+    }
+
+    fun openThread(threadId: String) {
+        enterCommunity(Screen.LearnThread)
+        communityThreadId = threadId
+    }
+
+    /** The question form, optionally carrying the learner's [code] and [errorText] ("Ask for help"). */
+    fun openAsk(lessonId: String, stepId: String?, code: String? = null, errorText: String? = null) {
+        enterCommunity(Screen.LearnAsk)
+        communityLessonId = lessonId
+        communityStepId = stepId
+        askPrefill = AskPrefill(code, errorText)
+    }
+
+    /** A question was posted: replace the form with the new thread, so Back does not return to the form. */
+    fun questionPosted(threadId: String) {
+        askPrefill = null
+        communityThreadId = threadId
+        screen = Screen.LearnThread
+    }
+
+    fun openSolutions(lessonId: String, stepId: String) {
+        enterCommunity(Screen.LearnSolutions)
+        communityLessonId = lessonId
+        communityStepId = stepId
+    }
+
+    /** Back from a community screen: the screen below on the stack, else where the community was entered. */
+    fun exitCommunity() {
+        if (backStack.isNotEmpty()) popBack() else {
+            navigatingBack = true
+            screen = communityReturn
+        }
+    }
+
+    /** Leave a lesson that ran in the editor: back to its track (or Learn), re-reading progress. */
+    fun exitLessonEditor() {
+        lessonInEditor = false
+        // The workspace is not a project the user opened: no Back target may lead into it once the lesson ends.
+        projectOpen = false
+        learnEpoch++
+        screen = if (currentTrackId != null) Screen.LessonTrack else Screen.Projects
+    }
+
+    /** Re-reads the Learn tab (progress, account), after a sign-in attempt. */
+    fun refreshLearn() {
+        learnEpoch++
+    }
+
+    fun exitLearnPath() {
+        learnEpoch++
+        screen = Screen.Projects
+    }
+
+    /** Opens the solve screen for [date] (empty for today). */
+    fun openChallenge(date: String = "") {
+        challengeDate = date
+        screen = Screen.ChallengePlayer
+    }
+
+    /** Leaves the solve screen for the Challenges tab, re-reading the day so a new result shows. */
+    fun exitChallenge() {
+        challengeEpoch++
+        screen = Screen.Projects
+        homeTab = HomeTab.Challenges
+    }
+
+    fun openChallengeBoard(date: String = "") {
+        challengeDate = date
+        screen = Screen.ChallengeBoard
+    }
+
+    fun exitChallengeBoard() {
+        screen = Screen.Projects
+        homeTab = HomeTab.Challenges
+    }
+
+    /** Re-reads the Challenges tab, after a sign-in or a pull to refresh. */
+    fun refreshChallenges() {
+        challengeEpoch++
+    }
+
+    fun openLesson(lessonId: String, initialStep: Int = 0) {
+        currentLessonId = lessonId
+        lessonInitialStep = initialStep
+        screen = Screen.LessonPlayer
+    }
+
+    /** The Learn tab's "continue where you left off" card: straight into the player at the saved step. */
+    fun resumeLesson(trackId: String, lessonId: String, step: Int) {
+        currentTrackId = trackId
+        openLesson(lessonId, step)
+    }
+
+    /** Leave the lesson player for its track (or the Learn tab when it was opened without one), re-reading
+     *  progress so the just-finished work shows. */
+    fun exitLessonPlayer() {
+        learnEpoch++
+        screen = if (currentTrackId != null) Screen.LessonTrack else Screen.Projects
+    }
+
+    fun exitLessonTrack() {
+        learnEpoch++
+        screen = if (trackOpenedFromPath && currentPathId != null) Screen.LearnPath else Screen.Projects
+        trackOpenedFromPath = false
+    }
+
+    // ---- the back stack ----
+
+    /**
+     * Whether [s] navigates as part of the stack.
+     *
+     * Everything else in the app reaches its sub-screens down a fixed path (the hub's tools, a lesson's
+     * track, a keystore's manager) and returns up that same path. These do not: the store screens
+     * cross-link, and a contributed screen goes wherever its plugin sends it, so more than one of them can
+     * be on the way to any other.
+     */
+    private fun navigatesAsStack(s: Screen): Boolean = when (s) {
+        Screen.StoreItem, Screen.PublisherProfile, Screen.You,
+        Screen.SubmitProject, Screen.PublishingGuide, Screen.Moderation,
+        Screen.PluginScreen,
+        Screen.LearnDiscussion, Screen.LearnThread, Screen.LearnAsk, Screen.LearnSolutions -> true
+
+        else -> false
+    }
+
+    /**
+     * Remember the screen being left, so Back comes back to it.
+     *
+     * Only from a screen that is itself on the stack: arriving from anywhere else (the Explore tab, the
+     * editor, a notification, a deep link) leaves the stack empty, and Back then falls through to the
+     * per-screen exits below, which is where those entries came from.
+     */
+    private fun pushEntry() {
+        if (!navigatesAsStack(screen)) return
+        val item = storeItem
+        val handle = publisherHandle
+        val project = submitProject
+        val slug = submitItemSlug
+        val plugin = pluginScreenId
+        val pluginArgument = pluginScreenArgument
+        val lesson = communityLessonId
+        val step = communityStepId
+        val thread = communityThreadId
+        val prefill = askPrefill
+        backStack += NavEntry(screen) {
+            storeItem = item
+            publisherHandle = handle
+            submitProject = project
+            submitItemSlug = slug
+            pluginScreenId = plugin
+            pluginScreenArgument = pluginArgument
+            communityLessonId = lesson
+            communityStepId = step
+            communityThreadId = thread
+            askPrefill = prefill
+        }
+        while (backStack.size > MAX_BACK_STACK) backStack.removeAt(0)
+    }
+
+    /** Take the entry off the top, or null when the stack is empty. */
+    private fun popEntry(): NavEntry? =
+        if (backStack.isEmpty()) null else backStack.removeAt(backStack.lastIndex)
+
+    /** Return to the entry below, arguments and all. */
+    private fun popBack() {
+        val entry = popEntry() ?: return
+        entry.restore()
+        screen = entry.screen
+        navigatingBack = true
+    }
+
+    fun openStoreItem(item: UiStoreItem) {
+        pushEntry()
+        storeItem = item
+        screen = Screen.StoreItem
+    }
+
+    /**
+     * Open a store item named only by its id, the way a deep link or a notification names one.
+     *
+     * The catalogue has no single-item lookup, so the id is resolved against what the store is already
+     * serving: the feed first, then a search, which is the only way to reach something the feed's shelves
+     * did not place. An id that resolves to nothing lands on the Store tab rather than nowhere — a link
+     * can legitimately name something this build cannot see (a submission still awaiting approval, an
+     * item withdrawn since the link was made), and leaving the screen untouched reads as the app
+     * ignoring the tap.
+     */
+    fun openStoreItemById(id: String) {
+        resumeSuperseded = true
+        if (id.isBlank()) return showStore()
+        scope.launch {
+            val item = findStoreItem(id)
+            if (item != null) openStoreItem(item) else showStore()
+        }
+    }
+
+    /** The Store tab of the home screen, from wherever the app currently is. */
+    fun showStore() {
+        selectHomeTab(HomeTab.Store)
+        screen = Screen.Projects
+    }
+
+    private suspend fun findStoreItem(id: String): UiStoreItem? = runCatching {
+        backend.store.feed()?.allItems?.firstOrNull { it.id == id }
+            ?: backend.store.search(id).firstOrNull { it.id == id }
+    }.getOrNull()
+
+    /** The project the publish flow should start from, when it was reached with one already chosen. */
+    var submitProject: ProjectInfo? by mutableStateOf(null)
+        private set
+
+    /** The listing the publish flow should offer to update, when it was reached from one. */
+    var submitItemSlug: String? by mutableStateOf(null)
+        private set
+
+    /**
+     * The publish flow. Full screen, not a sheet: it is a form with a file listing above it.
+     *
+     * [project] is set when the user already chose one (arriving from Share, for instance), so the flow
+     * does not ask again for something they just picked. [itemSlug] is set when the submission is a new
+     * version of a listing the user was already looking at, which is what answering a rejection is.
+     */
+    fun openSubmitProject(project: ProjectInfo? = null, itemSlug: String? = null) {
+        pushEntry()
+        submitProject = project
+        submitItemSlug = itemSlug
+        screen = Screen.SubmitProject
+    }
+
+    /** What publishing does, before committing to it. Previously this link opened Settings and explained nothing. */
+    fun openPublishingGuide() {
+        pushEntry()
+        screen = Screen.PublishingGuide
+    }
+
+    /** The handle whose profile is open. */
+    var publisherHandle: String? by mutableStateOf(null)
+        private set
+
+    /** A publisher's page: everything they have published, and what it adds up to. */
+    fun openPublisher(handle: String) {
+        pushEntry()
+        publisherHandle = handle
+        screen = Screen.PublisherProfile
+    }
+
+    /** Your own page: your profile, your submissions and what you have published. */
+    fun openYou() {
+        pushEntry()
+        screen = Screen.You
+    }
+
+    /**
+     * A submission landed: show it on the You screen, in the review queue it is now in.
+     *
+     * The publish flow is finished rather than stacked under this, so Back does not walk into the form the
+     * submission was just sent from: a second look at a page that would offer to send it again.
+     */
+    fun finishSubmission() {
+        popEntry()?.restore()
+        screen = Screen.You
+    }
+
+    /**
+     * The review queue, for an account that moderates the store.
+     *
+     * Reached from the You screen and nowhere else: it is not a tab, because on all but a handful of
+     * installs the account cannot use it. The screen still asks the backend for everything it shows, so
+     * arriving here without being a moderator produces refusals rather than a page of someone else's work.
+     */
+    fun openModeration() {
+        pushEntry()
+        screen = Screen.Moderation
+    }
+
+
+    /**
+     * Act on a tapped notification.
+     *
+     * A target that no longer resolves is a no-op rather than an error: a project can be deleted and a
+     * store item withdrawn between the notification being posted and the user opening it, and neither is
+     * worth an error dialog. The notification stays in the list so it is not silently swallowed.
+     */
+    fun openNotificationTarget(notification: com.shd.codestudio.ui.backend.UiNotification) = openNotificationTarget(notification.target)
+
+    /** Act on [target], from the in-app list or a tapped tray notification the host hands over. */
+    fun openNotificationTarget(target: com.shd.codestudio.ui.backend.UiNotificationTarget?) {
+        if (target == null) return
+        // Claimed up front, so a session resume still running at launch cannot open a project over the tap.
+        resumeSuperseded = true
+        when (target) {
+            is com.shd.codestudio.ui.backend.UiNotificationTarget.Project -> {
+                val match = backend.projects.projects().firstOrNull { it.rootPath == target.rootPath }
+                if (match != null) openProject(match)
+            }
+            is com.shd.codestudio.ui.backend.UiNotificationTarget.StoreItem -> {
+                // A notification that resolves to nothing stays put rather than moving to the Store tab:
+                // it is read from a list the user is already looking at, so a silent no-op is the note
+                // being unactionable, not the tap being lost.
+                scope.launch { findStoreItem(target.itemId)?.let { openStoreItem(it) } }
+            }
+            // The submissions live on the You screen, which is what a review decision is about.
+            com.shd.codestudio.ui.backend.UiNotificationTarget.Submissions -> openYou()
+            is com.shd.codestudio.ui.backend.UiNotificationTarget.Screen -> openNotificationRoute(target.route)
+        }
+    }
+
+    /**
+     * A `screen` target's route, as the server names it. Only destinations that stand on their own are honoured.
+     * A route used to be looked up among every [Screen] by name, so a server-side typo or a new route could land
+     * on one that needs a project or arguments (Module config, Run, a keystore import), while the daily
+     * challenge's `challenges` matched nothing and its tap did nothing. Anything else is ignored.
+     */
+    private fun openNotificationRoute(route: String) {
+        when {
+            // "Someone answered your question": the route carries the thread.
+            route.startsWith(LEARN_THREAD_ROUTE) -> openThread(route.removePrefix(LEARN_THREAD_ROUTE))
+            route.equals(Screen.You.name, ignoreCase = true) -> openYou()
+            // A home tab by name (`challenges` for the daily challenge, `Store`, `Learn`).
+            else -> HomeTab.entries.firstOrNull { it.name.equals(route, ignoreCase = true) }?.let {
+                selectHomeTab(it)
+                screen = Screen.Projects
+            }
+        }
+    }
+
+    // ---- first-launch sheets ----
+
+    fun dismissMigration() {
+        showMigration = false
+        backend.settings.setPreference(MIGRATION_ACK_PREF, "true")
+    }
+
+    fun dismissOnboarding() {
+        showOnboarding = false
+        backend.settings.setPreference(ONBOARDING_SEEN_PREF, "true")
+        // A first-time user, just through the welcome tour: offer the hands-on Code Studio lessons once.
+        if (backend.learn.learnAvailable() && backend.settings.preference(LEARN_TOUR_OFFERED_PREF) != "true") {
+            showLearnTourOffer = true
+        }
+    }
+
+    /** The one-time "Learn Code Studio" offer, raised after onboarding. */
+    var showLearnTourOffer: Boolean by mutableStateOf(false)
+        private set
+
+    /** Take the offer: the first Code Studio lesson, which moves into the editor on its own. */
+    fun startLearnTour() {
+        dismissLearnTourOffer()
+        homeTab = HomeTab.Learn
+        currentTrackId = "codestudio-editor"
+        openLesson("ca-ed-lightbulb")
+    }
+
+    fun dismissLearnTourOffer() {
+        showLearnTourOffer = false
+        backend.settings.setPreference(LEARN_TOUR_OFFERED_PREF, "true")
+    }
+
+    fun dismissLegacyRecovery() {
+        showLegacyRecovery = false
+        backend.settings.setPreference(LEGACY_RECOVERY_SEEN_PREF, "true")
+    }
+
+    fun setAnalyticsConsent(granted: Boolean) {
+        showAnalytics = false
+        backend.diagnostics.setAnalyticsConsent(granted)
+    }
+
+    // ---- back navigation ----
+
+    /**
+     * The system back gesture routed through in-app navigation instead of letting it close the app. The host
+     * registers this above the editor's own overlay handler, so an open sheet/dialog is closed first (the
+     * deeper handler wins) and this only sees screen-level back: pop a sub-screen to the editor, the editor to
+     * the project picker, or dismiss the first-launch sheets.
+     */
+    fun navigateBack() {
+        when {
+            showOnboarding -> dismissOnboarding()
+            showMigration -> dismissMigration()
+            showAnalytics -> setAnalyticsConsent(false)
+
+            // A contributed screen holding its own claim on Back answers first: it is the deeper handler,
+            // the same way an open sheet is, and popping the whole screen would throw away state it has
+            // somewhere to go inside. Scoped to the route those screens render on, so a claim still
+            // registered through a screen's exit animation cannot swallow a press meant for the host.
+            screen == Screen.PluginScreen && ScreenBackRegistry.consumeBack() -> Unit
+
+            // On the stacked screens, Back is a pop: whatever screen opened this one, with the arguments it
+            // was showing. Empty below the entry point, which falls through to the per-screen exits in the
+            // rest of this chain.
+            backStack.isNotEmpty() -> popBack()
+            // The first Learn community screen returns to where it was entered from (a lesson, the player).
+            isCommunity(screen) -> exitCommunity()
+
+            // The keystore Create/Import sub-screens step back to their manager, not all the way out.
+            screen == Screen.KeystoreCreate || screen == Screen.KeystoreImport -> screen = Screen.KeystoreManager
+            // Plugins opened from Home's card goes back there, not up into the hub it is also a pane of.
+            screen == Screen.Plugins && pluginsReturn != Screen.Hub -> {
+                val back = pluginsReturn
+                resetPluginsEntry()
+                screen = back
+            }
+            // The wide hub is one surface with its destinations: Back leaves it from any of them.
+            hubTwoPane && isHubPane(screen) -> screen = hubReturn
+            // The hub's sub-screens step back to the hub; the keystore manager honours its entry origin.
+            screen == Screen.SdkManager || screen == Screen.Settings || screen == Screen.CodeStyle ||
+                screen == Screen.ColorScheme || screen == Screen.EditorSymbols ||
+                screen == Screen.Plugins || screen == Screen.Storage ->
+                screen = Screen.Hub
+            screen == Screen.KeystoreManager -> screen = keystoreReturn
+            screen == Screen.AppIconStudio -> screen = Screen.IconManager
+            screen == Screen.IconManager -> screen = iconManagerReturn
+            // The hub returns to wherever it was opened from (picker or editor).
+            screen == Screen.Hub -> screen = hubReturn
+
+            screen == Screen.Run || screen == Screen.ModuleConfig -> screen = Screen.Editor
+
+            // A plugin screen returns to wherever it was opened from.
+            screen == Screen.PluginScreen -> {
+                pluginScreenId = null
+                pluginScreenArgument = null
+                screen = pluginScreenReturn
+            }
+
+            // The lesson player steps back to its track; the track steps back to the Learn tab (picker).
+            screen == Screen.LessonPlayer -> exitLessonPlayer()
+            screen == Screen.LessonTrack -> exitLessonTrack()
+            screen == Screen.LearnPath -> exitLearnPath()
+            // Nothing left on the stack, and contributed screens took their own exit above: what is left is
+            // a store screen the user entered the run on, so Back leaves for where the run was entered from:
+            // the Explore tab (still the selected home tab), or the editor a link or notification interrupted.
+            navigatesAsStack(screen) -> {
+                val base = stackBase
+                stackBase = Screen.Projects
+                screen = base
+            }
+
+            screen == Screen.ChallengePlayer -> exitChallenge()
+            screen == Screen.ChallengeBoard -> exitChallengeBoard()
+
+            screen == Screen.CreateProject -> screen = Screen.Projects
+            screen == Screen.ImportProject -> cancelImportPreview()
+            screen == Screen.ExportProject -> finishExport()
+            // During a lesson Back leaves the lesson; the workspace is not a project the user opened.
+            screen == Screen.Editor && lessonInEditor -> exitLessonEditor()
+            screen == Screen.Editor -> confirmCloseProject = true
+            // On the home screen, a Store/Learn tab steps back to the project picker before exiting.
+            screen == Screen.Projects && homeTab != HomeTab.Projects -> homeTab = HomeTab.Projects
+            else -> {}
+        }
+    }
+}
+
+/**
+ * Creates (and remembers) the [Code StudioAppState] for this composition, tied to a scope that is cancelled
+ * when the app leaves it. Re-created only if the backend or a host bridge is swapped.
+ */
+@Composable
+fun rememberCode StudioAppState(
+    backend: IdeBackend,
+    fileActions: FileActions = FileActions.None,
+    adHost: AdHost = AdHost.None,
+    scope: CoroutineScope = rememberCoroutineScope(),
+): Code StudioAppState = remember(backend, fileActions, adHost, scope) {
+    Code StudioAppState(backend, fileActions, scope, adHost)
+}
+
+/** The accent palette a settings profile selects. */
+internal fun accentOf(settings: UiSettings): CaAccent = when (settings.accent) {
+    UiAccent.Teal -> CaAccent.Teal
+    UiAccent.Orange -> CaAccent.Orange
+    UiAccent.Violet -> CaAccent.Violet
+    UiAccent.Pumpkin -> CaAccent.Pumpkin
+    else -> CaAccent.Lime
+}
+
+/** The color a Custom accent seeds the whole expressive theme from, or null for every other accent. */
+internal fun seedColorOf(settings: UiSettings): Color? =
+    if (settings.accent == UiAccent.Custom) Color(settings.customAccentColor) else null
+
+/** Whether a settings profile resolves to the dark theme, given the platform's current dark-mode signal. */
+internal fun isDarkTheme(settings: UiSettings, systemDark: Boolean): Boolean = when (settings.themeMode) {
+    "light" -> false
+    "system" -> systemDark
+    else -> true
+}

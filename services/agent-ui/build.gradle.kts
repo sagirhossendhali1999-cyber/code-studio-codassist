@@ -20,7 +20,7 @@ kotlin {
     }
 
     android {
-        namespace = "dev.ide.agent.ui"
+        namespace = "com.shd.codestudio.agent.ui"
         compileSdk = 36
         minSdk = 24
         compilerOptions {
@@ -56,9 +56,9 @@ kotlin {
 }
 
 // The module's own generated resource accessor for the chat_* strings (migrated here from :ide-ui). Kept
-// non-public and pinned to this module's package so it stays a `dev.ide.agent.ui` detail.
+// non-public and pinned to this module's package so it stays a `com.shd.codestudio.agent.ui` detail.
 compose.resources {
     publicResClass = false
-    packageOfResClass = "dev.ide.agent.ui.generated.resources"
+    packageOfResClass = "com.shd.codestudio.agent.ui.generated.resources"
     generateResClass = always
 }

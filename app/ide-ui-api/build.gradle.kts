@@ -20,7 +20,7 @@ kotlin {
     }
 
     android {
-        namespace = "dev.ide.ui.api"
+        namespace = "com.shd.codestudio.ui.api"
         compileSdk = 36
         minSdk = 24
         compilerOptions {

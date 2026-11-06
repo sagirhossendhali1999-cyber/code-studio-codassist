@@ -1,6 +1,6 @@
 // `build-logic` — Gradle plugins that depend on AGP. Applied to Android modules via the plugins DSL, so
 // they load in the same plugin classloader as AGP (and land on AGP's instrumentation worker classpath),
-// which buildSrc cannot do. Currently: `dev.ide.kotlinc-art`, the Kotlin-compiler-on-ART ASM
+// which buildSrc cannot do. Currently: `com.shd.codestudio.kotlinc-art`, the Kotlin-compiler-on-ART ASM
 // instrumentation.
 plugins {
     `kotlin-dsl`
@@ -33,12 +33,12 @@ dependencies {
 
 tasks.withType<Test>().configureEach { useJUnitPlatform() }
 
-// The `dev.ide.kotlinc-art` plugin id → :ide-android applies it with one line.
+// The `com.shd.codestudio.kotlinc-art` plugin id → :ide-android applies it with one line.
 gradlePlugin {
     plugins {
         create("kotlincArt") {
-            id = "dev.ide.kotlinc-art"
-            implementationClass = "dev.ide.build.kotlinc.KotlincArtPlugin"
+            id = "com.shd.codestudio.kotlinc-art"
+            implementationClass = "com.shd.codestudio.build.kotlinc.KotlincArtPlugin"
         }
     }
 }

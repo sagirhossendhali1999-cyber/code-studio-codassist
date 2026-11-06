@@ -1,4 +1,4 @@
-// ndkclangd: a resident clang for the CodeAssist NDK plugin.
+// ndkclangd: a resident clang for the Code Studio NDK plugin.
 //
 // Launching clang per request costs a process start (~17 ms on the emulator, several times that on a
 // phone) and a reload of the precompiled preamble, on every completion and every error check. This keeps

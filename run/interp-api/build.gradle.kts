@@ -2,7 +2,7 @@ plugins {
     alias(libs.plugins.kotlin.jvm)
     `java-library`
     // Published for plugin authors to compile against; see the convention plugin for the coordinate.
-    id("dev.ide.spi-publish")
+    id("com.shd.codestudio.spi-publish")
 }
 
 // interp-api -> platform-core (the service key), vfs-api (paths are VirtualFile-free here, but a session's

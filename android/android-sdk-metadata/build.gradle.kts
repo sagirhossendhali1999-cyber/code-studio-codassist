@@ -15,7 +15,7 @@ dependencies {
 }
 
 application {
-    mainClass.set("dev.ide.android.support.metadata.gen.SdkMetadataGeneratorKt")
+    mainClass.set("com.shd.codestudio.android.support.metadata.gen.SdkMetadataGeneratorKt")
 }
 
 // The API-level table generator (api-versions.xml -> android-api-levels.bin):
@@ -24,7 +24,7 @@ tasks.register<JavaExec>("generateApiLevels") {
     group = "application"
     description = "Generates the bundled Android API-level table from a platform's api-versions.xml."
     classpath = sourceSets["main"].runtimeClasspath
-    mainClass.set("dev.ide.android.support.metadata.gen.ApiLevelsGeneratorKt")
+    mainClass.set("com.shd.codestudio.android.support.metadata.gen.ApiLevelsGeneratorKt")
     workingDir = rootDir
 }
 
@@ -34,7 +34,7 @@ tasks.register<JavaExec>("generateAndroidDocs") {
     group = "application"
     description = "Generates the bundled Android parameter-name and javadoc pack from a platform's sources."
     classpath = sourceSets["main"].runtimeClasspath
-    mainClass.set("dev.ide.android.support.metadata.gen.AndroidDocsGeneratorKt")
+    mainClass.set("com.shd.codestudio.android.support.metadata.gen.AndroidDocsGeneratorKt")
     workingDir = rootDir
 }
 
@@ -44,7 +44,7 @@ tasks.register<JavaExec>("generateJdkApiLevels") {
     group = "application"
     description = "Generates the bundled JDK API-level table from a JDK's lib/ct.sym."
     classpath = sourceSets["main"].runtimeClasspath
-    mainClass.set("dev.ide.android.support.metadata.gen.JdkApiLevelsGeneratorKt")
+    mainClass.set("com.shd.codestudio.android.support.metadata.gen.JdkApiLevelsGeneratorKt")
     workingDir = rootDir
 }
 
@@ -54,6 +54,6 @@ tasks.register<JavaExec>("generatePermissions") {
     group = "application"
     description = "Generates the bundled Android @RequiresPermission table from a platform's annotations.zip."
     classpath = sourceSets["main"].runtimeClasspath
-    mainClass.set("dev.ide.android.support.metadata.gen.PermissionsGeneratorKt")
+    mainClass.set("com.shd.codestudio.android.support.metadata.gen.PermissionsGeneratorKt")
     workingDir = rootDir
 }

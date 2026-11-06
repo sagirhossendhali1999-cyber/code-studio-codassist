@@ -1,0 +1,97 @@
+package com.shd.codestudio.core
+
+import com.shd.codestudio.model.BuildSystemId
+import com.shd.codestudio.model.ContentRole
+import com.shd.codestudio.model.DependencyScope
+import com.shd.codestudio.model.FacetCodecRegistry
+import com.shd.codestudio.model.FacetTemplate
+import com.shd.codestudio.model.ModuleType
+import com.shd.codestudio.model.ModuleTypeRegistry
+import com.shd.codestudio.model.SourceSetTemplate
+import com.shd.codestudio.model.impl.ProjectModel
+import com.shd.codestudio.platform.PluginId
+import com.shd.codestudio.platform.impl.PlatformCore
+import com.shd.codestudio.testkit.withTempDir
+import com.shd.codestudio.ui.backend.RunPhase
+import java.nio.file.Files
+import java.nio.file.Path
+import kotlin.test.Test
+import kotlin.test.assertEquals
+import kotlin.test.assertTrue
+import com.shd.codestudio.model.impl.open
+
+/**
+ * End-to-end of running an INSTANCE `main` — a plain `class Test { fun main() {} }` with no static entry point.
+ * The run service detects it (index-backed, no regex) and the bytecode interpreter constructs the class with
+ * its no-arg constructor and calls the instance method. Proves detection + the interpreter's instance-main path.
+ */
+class InstanceMainRunTest {
+
+    private class JavaLib : ModuleType {
+        override val id = "java-lib"
+        override val displayName = "Java Library"
+        override fun defaultSourceSets(): List<SourceSetTemplate> = emptyList()
+        override fun defaultFacets(): List<FacetTemplate> = emptyList()
+        override fun supportedBuildSystems(): Set<BuildSystemId> = setOf(BuildSystemId.NATIVE)
+    }
+
+    private fun createWorkspace(dir: Path) {
+        val platform = PlatformCore()
+        try {
+            ModuleTypeRegistry(platform.extensions).register(JavaLib(), PluginId("java-support"))
+            val store = ProjectModel.open(dir, platform, FacetCodecRegistry())
+            val javaLib = ModuleTypeRegistry(platform.extensions).resolve("java-lib")
+            store.workspace.beginModification().apply { addProject("instmain", BuildSystemId.NATIVE, store.vfs.root()); commit() }
+            val mainSet = SourceSetTemplate(
+                "main", DependencyScope.IMPLEMENTATION, mapOf("src/main/kotlin" to setOf(ContentRole.SOURCE)),
+            )
+            store.workspace.projects.single().beginModification().apply {
+                addModule("app", javaLib).addSourceSet(mainSet)
+                commit()
+            }
+            val f = dir.resolve("app/src/main/kotlin/com/example/App.kt")
+            Files.createDirectories(f.parent)
+            Files.writeString(
+                f,
+                """
+                package com.example
+
+                class App {
+                    fun main() {
+                        println("hello from instance main")
+                    }
+                }
+                """.trimIndent(),
+            )
+            store.save()
+        } finally {
+            platform.dispose()
+        }
+    }
+
+    @Test
+    fun runsAnInstanceMain() = withTempDir("instance-main-run") { dir ->
+        createWorkspace(dir)
+        IdeServices.open(dir).use { ide ->
+            // Detection: a plain class with an instance `fun main` is offered as a run task.
+            assertTrue(
+                ide.build.runTasks().any { it.id == "run:app" },
+                "an instance main() should be runnable: ${ide.build.runTasks().map { it.id }}",
+            )
+
+            ide.build.runTask("run:app")
+            await(60_000) { ide.build.runConsole.value?.phase == RunPhase.Finished }
+
+            val rc = ide.build.runConsole.value
+            val text = rc?.transcript?.joinToString("") { it.text } ?: ""
+            assertEquals(RunPhase.Finished, rc?.phase, "the program should finish; transcript:\n$text")
+            assertEquals(0, rc?.exitCode, "the program should exit 0; transcript:\n$text")
+            assertTrue("hello from instance main" in text, "the instance main() should have run:\n$text")
+        }
+    }
+
+    private fun await(timeoutMs: Long, cond: () -> Boolean) {
+        val deadline = System.currentTimeMillis() + timeoutMs
+        while (!cond() && System.currentTimeMillis() < deadline) Thread.sleep(40)
+    }
+}

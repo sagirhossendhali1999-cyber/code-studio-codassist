@@ -2,7 +2,7 @@
 # Build clang/lld/llvm-tools that RUN ON an Android arm64 device, for the NDK plugin.
 #
 # Why this exists: Google's NDK has no Android host build. Every `clang` in it is a
-# linux-x86_64/darwin/windows binary, so none of them can run on a phone. A CodeAssist plugin that
+# linux-x86_64/darwin/windows binary, so none of them can run on a phone. A Code Studio plugin that
 # compiles C and C++ on the device has to bring an LLVM built *for* Android, and this is that build.
 #
 # It also has to be SMALL, because of a second constraint: since Android 10 an app may not exec() or
@@ -83,10 +83,10 @@ apply_patches() {
 patch_libclang_dylib() {
     local cm="$SRC/clang/tools/libclang/CMakeLists.txt"
     [ -f "$cm" ] || return 0
-    grep -q 'CodeAssist: link the C API against clang-cpp' "$cm" && return 0
+    grep -q 'Code Studio: link the C API against clang-cpp' "$cm" && return 0
     log "patching libclang: link clang-cpp instead of a private copy of the frontend"
-    perl -0pi -e 's/(set\(LIBS\n  clangAST\n.*?\n\)\n)/$1\n# CodeAssist: link the C API against clang-cpp when the frontend is a shared library.\nif (CLANG_LINK_CLANG_DYLIB)\n  set(LIBS clang-cpp)\nendif()\n/s' "$cm"
-    grep -q 'CodeAssist: link the C API against clang-cpp' "$cm" \
+    perl -0pi -e 's/(set\(LIBS\n  clangAST\n.*?\n\)\n)/$1\n# Code Studio: link the C API against clang-cpp when the frontend is a shared library.\nif (CLANG_LINK_CLANG_DYLIB)\n  set(LIBS clang-cpp)\nendif()\n/s' "$cm"
+    grep -q 'Code Studio: link the C API against clang-cpp' "$cm" \
         || { echo "the libclang patch did not apply; has its CMakeLists changed?" >&2; exit 1; }
 }
 
@@ -117,7 +117,7 @@ patch_lld_elf_only() {
 
     # And declares only the driver it links. Overriding the macro rather than editing its two use sites keeps
     # this to one hunk, and leaves an obvious marker for anyone re-reading it.
-    perl -0pi -e 's/LLD_HAS_DRIVER\(coff\)\nLLD_HAS_DRIVER\(elf\)\nLLD_HAS_DRIVER\(mingw\)\nLLD_HAS_DRIVER\(macho\)\nLLD_HAS_DRIVER\(wasm\)/LLD_HAS_DRIVER(elf)\n\n\/\/ CodeAssist: ELF is the only flavor built here, so the driver table holds only that one.\n#undef LLD_ALL_DRIVERS\n#define LLD_ALL_DRIVERS {{lld::Gnu, \&lld::elf::link}}/' "$src"
+    perl -0pi -e 's/LLD_HAS_DRIVER\(coff\)\nLLD_HAS_DRIVER\(elf\)\nLLD_HAS_DRIVER\(mingw\)\nLLD_HAS_DRIVER\(macho\)\nLLD_HAS_DRIVER\(wasm\)/LLD_HAS_DRIVER(elf)\n\n\/\/ Code Studio: ELF is the only flavor built here, so the driver table holds only that one.\n#undef LLD_ALL_DRIVERS\n#define LLD_ALL_DRIVERS {{lld::Gnu, \&lld::elf::link}}/' "$src"
 }
 
 stage_deps() {

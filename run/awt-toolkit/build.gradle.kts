@@ -10,7 +10,7 @@ plugins {
 //
 // The classes deliberately do NOT live in `java.awt`/`javax.swing`: those package names are not app-definable
 // (`java.*` is refused by every class loader, ART included). They mirror the real names one package prefix
-// over -- `java.awt.Component` -> `dev.ide.awt.Component`, `javax.swing.JFrame` -> `dev.ide.swing.JFrame` --
+// over -- `java.awt.Component` -> `com.shd.codestudio.awt.Component`, `javax.swing.JFrame` -> `com.shd.codestudio.swing.JFrame` --
 // and `AwtNameRemapper` rewrites an interpreted program's references at class-load time, the same ASM
 // remapping trick `:layout-preview-impl`'s BridgeRemapper uses to reparent a custom View onto BridgeView.
 // The program therefore sees the API it wrote against, while the toolkit runs as ordinary bridged code.
@@ -47,7 +47,7 @@ val swingApiStubsJar = tasks.register<JavaExec>("swingApiStubsJar") {
     description = "Generate the compile-time java.awt/javax.swing API jar from the owned toolkit."
     dependsOn(tasks.named("classes"))
     classpath = sourceSets.main.get().runtimeClasspath
-    mainClass.set("dev.ide.awt.interp.SwingApiStubs")
+    mainClass.set("com.shd.codestudio.awt.interp.SwingApiStubs")
     val out = layout.buildDirectory.file("swing-api/swing-api-stubs.jar")
     argsProvider(sourceSets.main.get().output.classesDirs, out)
     inputs.files(sourceSets.main.get().output.classesDirs)

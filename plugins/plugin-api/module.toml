@@ -4,7 +4,7 @@ version = 2
 type = "java-lib"
 name = "plugin-api"
 languageLevel = "JAVA_17"
-output = "build/codeassist/classes"
+output = "build/codestudio/classes"
 
 [sourceSets.main]
 scope = "IMPLEMENTATION"

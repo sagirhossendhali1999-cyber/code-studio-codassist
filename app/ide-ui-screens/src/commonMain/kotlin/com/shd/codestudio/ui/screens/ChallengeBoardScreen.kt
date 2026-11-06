@@ -1,0 +1,160 @@
+package com.shd.codestudio.ui.screens
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
+import com.shd.codestudio.ui.backend.AdPlacement
+import com.shd.codestudio.ui.backend.IdeBackend
+import com.shd.codestudio.ui.backend.UiChallengeBoard
+import com.shd.codestudio.ui.components.AdSlot
+import com.shd.codestudio.ui.components.CircularProgressIndicator
+import com.shd.codestudio.ui.generated.resources.Res
+import com.shd.codestudio.ui.generated.resources.back
+import com.shd.codestudio.ui.generated.resources.challenge_board_empty_body
+import com.shd.codestudio.ui.generated.resources.challenge_board_empty_title
+import com.shd.codestudio.ui.generated.resources.challenge_everyone_else
+import com.shd.codestudio.ui.generated.resources.challenge_leaderboard
+import com.shd.codestudio.ui.generated.resources.challenge_today
+import com.shd.codestudio.ui.icons.CaSymbols
+import com.shd.codestudio.ui.itemsIndexedKeyed
+import com.shd.codestudio.ui.theme.Ca
+import com.shd.codestudio.ui.theme.Symbol
+import com.shd.codestudio.ui.theme.tonalPair
+import org.jetbrains.compose.resources.stringResource
+
+/**
+ * The full leaderboard for one day.
+ *
+ * The viewer's own row is pinned above the list as well as highlighted within it, because the answer to
+ * "where am I" should not require scrolling to find out.
+ */
+@Composable
+fun ChallengeBoardScreen(
+    backend: IdeBackend,
+    date: String,
+    onBack: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    var board by remember(date) { mutableStateOf<UiChallengeBoard?>(null) }
+    LaunchedEffect(date) {
+        board = runCatching { backend.challenges.board(date, limit = 200) }.getOrDefault(UiChallengeBoard())
+    }
+
+    Column(modifier.fillMaxSize().background(MaterialTheme.colorScheme.surface)) {
+        Row(
+            Modifier.fillMaxWidth().padding(horizontal = 8.dp, vertical = 8.dp),
+            verticalAlignment = Alignment.CenterVertically,
+        ) {
+            Box(
+                Modifier.size(40.dp).clip(RoundedCornerShape(Ca.radius.pill)).clickable(onClick = onBack),
+                contentAlignment = Alignment.Center,
+            ) {
+                Symbol(
+                    CaSymbols.arrowBack,
+                    contentDescription = stringResource(Res.string.back),
+                    size = 22.dp,
+                    tint = MaterialTheme.colorScheme.onSurface,
+                )
+            }
+            Column(Modifier.weight(1f).padding(horizontal = 4.dp)) {
+                Text(
+                    stringResource(Res.string.challenge_leaderboard),
+                    style = MaterialTheme.typography.titleMedium,
+                    fontWeight = FontWeight.Bold,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                Text(
+                    if (date.isBlank()) stringResource(Res.string.challenge_today) else date,
+                    style = MaterialTheme.typography.labelSmall,
+                    color = MaterialTheme.colorScheme.outline,
+                )
+            }
+        }
+
+        val loaded = board
+        when {
+            loaded == null -> Box(Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
+                CircularProgressIndicator(strokeWidth = 3.dp, modifier = Modifier.size(28.dp))
+            }
+
+            loaded.rows.isEmpty() -> EmptyBoard()
+
+            else -> LazyColumn(
+                contentPadding = PaddingValues(horizontal = 20.dp, vertical = 12.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                loaded.you?.takeIf { row -> loaded.rows.none { it.isYou } }?.let { you ->
+                    item { BoardRow(you) }
+                    item {
+                        Text(
+                            stringResource(Res.string.challenge_everyone_else),
+                            style = MaterialTheme.typography.labelMedium,
+                            color = MaterialTheme.colorScheme.outline,
+                            modifier = Modifier.padding(top = 8.dp),
+                        )
+                    }
+                }
+                // Position-keyed, not rank-keyed. A tie is a legitimate leaderboard, and two rows sharing
+                // a rank were a duplicate lazy-list key, which throws out of the measure pass.
+                val head = loaded.rows.take(ROWS_BEFORE_AD)
+                val tail = loaded.rows.drop(ROWS_BEFORE_AD)
+                itemsIndexedKeyed(head, key = { i, r -> "h$i:${r.rank}" }) { _, row -> BoardRow(row) }
+                // One break in the list, after the part of the board anyone came to read. A short board
+                // puts it at the foot instead, which is where it belongs when there is nothing to break.
+                item("ad") { AdSlot(AdPlacement.CHALLENGE, Modifier.padding(vertical = 4.dp)) }
+                itemsIndexedKeyed(tail, key = { i, r -> "t$i:${r.rank}" }) { _, row -> BoardRow(row) }
+            }
+        }
+    }
+}
+
+/** How far down the board the single ad break sits: past the ranks the page is actually opened for. */
+private const val ROWS_BEFORE_AD = 10
+
+@Composable
+private fun EmptyBoard() {
+    val pair = tonalPair(0)
+    Column(
+        Modifier.fillMaxSize().padding(32.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+        verticalArrangement = Arrangement.Center,
+    ) {
+        Symbol(CaSymbols.workspacePremium, contentDescription = null, size = 40.dp, tint = pair.container)
+        Text(
+            stringResource(Res.string.challenge_board_empty_title),
+            style = MaterialTheme.typography.titleSmall,
+            fontWeight = FontWeight.Bold,
+            color = MaterialTheme.colorScheme.onSurface,
+            modifier = Modifier.padding(top = 12.dp),
+        )
+        Text(
+            stringResource(Res.string.challenge_board_empty_body),
+            style = MaterialTheme.typography.bodySmall,
+            color = MaterialTheme.colorScheme.outline,
+        )
+    }
+}

@@ -16,7 +16,7 @@ kotlin {
     }
 
     android {
-        namespace = "dev.ide.ui.screens"
+        namespace = "com.shd.codestudio.ui.screens"
         compileSdk = 36
         minSdk = 24
         compilerOptions { jvmTarget.set(JvmTarget.JVM_17) }

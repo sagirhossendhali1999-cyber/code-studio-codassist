@@ -20,7 +20,7 @@ kotlin {
     }
 
     android {
-        namespace = "dev.ide.vcs.ui"
+        namespace = "com.shd.codestudio.vcs.ui"
         compileSdk = 36
         minSdk = 24
         compilerOptions {
@@ -45,9 +45,9 @@ kotlin {
 }
 
 // The module's own generated resource accessor for the vcs_* strings. Kept non-public and pinned to this
-// module's package so it stays a `dev.ide.vcs.ui` detail.
+// module's package so it stays a `com.shd.codestudio.vcs.ui` detail.
 compose.resources {
     publicResClass = false
-    packageOfResClass = "dev.ide.vcs.ui.generated.resources"
+    packageOfResClass = "com.shd.codestudio.vcs.ui.generated.resources"
     generateResClass = always
 }

@@ -225,7 +225,7 @@
     <string name="vcs_tab_conflict">تعارض دمج</string>
     <string name="vcs_tab_untracked">ليس تحت التحكم في الإصدارات</string>
     <string name="vcs_tab_changed">تغيّر منذ HEAD</string>
-    <!-- Engine and backend messages (dev.ide.vcs.VcsMessage). Keep in step with that enum. -->
+    <!-- Engine and backend messages (com.shd.codestudio.vcs.VcsMessage). Keep in step with that enum. -->
     <string name="vcs_msg_with_reason">%1$s: %2$s</string>
     <string name="vcs_msg_something_went_wrong">حدث خطأ ما (%1$s)</string>
     <string name="vcs_msg_some_files">بعض الملفات</string>

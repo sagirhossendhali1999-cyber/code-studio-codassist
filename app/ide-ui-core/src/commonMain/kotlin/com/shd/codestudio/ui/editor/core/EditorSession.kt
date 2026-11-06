@@ -1,0 +1,1665 @@
+package com.shd.codestudio.ui.editor.core
+
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.text.TextRange
+import com.shd.codestudio.ui.backend.UiComposePreview
+import com.shd.codestudio.ui.backend.UiDiagnostic
+import com.shd.codestudio.ui.backend.UiGutterMark
+import com.shd.codestudio.ui.backend.UiInlayHint
+import com.shd.codestudio.ui.backend.UiResourceSwatch
+import com.shd.codestudio.ui.backend.UiTextDecoration
+import com.shd.codestudio.ui.backend.UiSemanticToken
+import com.shd.codestudio.ui.editor.CodeLanguage
+import com.shd.codestudio.ui.editor.folding.FoldModel
+import com.shd.codestudio.ui.editor.folding.FoldRegion
+import com.shd.codestudio.ui.editor.shiftComposePreviews
+import com.shd.codestudio.ui.editor.shiftDiagnostics
+import com.shd.codestudio.ui.editor.shiftFoldRegions
+import com.shd.codestudio.ui.editor.shiftGutterMarks
+import com.shd.codestudio.ui.editor.shiftInlayHints
+import com.shd.codestudio.ui.editor.shiftResourceSwatches
+import com.shd.codestudio.ui.editor.shiftTextDecorations
+import com.shd.codestudio.ui.editor.shiftSemanticTokens
+import kotlin.math.max
+import kotlin.math.min
+
+/**
+ * The editor's edit engine: the single place document text, selection, and IME composition mutate, and
+ * the authoritative per-tab buffer (no host-side `TextFieldValue` mirror exists). It speaks only
+ * `String`/[TextRange]/[EditorDocument]; nothing here builds a `TextFieldValue`.
+ *
+ * This is what makes typing O(edited line) instead of O(document): every change funnels through
+ * [replaceRange], which splices the [EditorDocument] line index and the [LineStyles] token cache
+ * incrementally and bumps only the affected lines' revisions, so the render layer re-lays-out just those
+ * lines. State fields are Compose snapshot state — the canvas redraws by reading them, and the host keys
+ * its debounced effects on [textRevision] and pulls [EditorDocument.text] lazily (never per keystroke).
+ *
+ * Out-of-band replacement (file revert, programmatic load) goes through [setText]; editors mutate via the
+ * editing ops below.
+ */
+class EditorSession(
+    initialText: String,
+    val language: CodeLanguage,
+    initialSelection: TextRange = TextRange(0),
+    /** When false the buffer is READ-ONLY: content mutations (typing/IME/paste/delete/format/code-actions —
+     *  everything funnels through [replaceRange]) are inert; caret/selection navigation stays live so the text
+     *  can still be read, selected, and copied. Used for decompiled/library views. */
+    val editable: Boolean = true,
+) {
+
+    var doc by mutableStateOf(EditorDocument.of(initialText))
+        private set
+    var selection by mutableStateOf(initialSelection.coercedIn(initialText.length))
+        private set
+    /** The IME composition region, drawn underlined; null when not composing. */
+    var composing by mutableStateOf<TextRange?>(null)
+        private set
+
+    /**
+     * The first visible document line (0-based) — a lightweight scroll anchor persisted per tab so a reopened
+     * tab scrolls back to roughly where the user left it (see `UiOpenTab.scrollLine`). The editor seeds its
+     * scroll from this on first layout and keeps it updated (debounced) as the user scrolls; the host reads it
+     * for the session snapshot. Snapshot state so a scroll-only change can still schedule the debounced session
+     * save — it is a persistence stash, not part of the edit engine.
+     */
+    var viewportTopLine by mutableIntStateOf(0)
+    /**
+     * State a view of this buffer keeps while another view of it is showing (the Blocks view's open function,
+     * zoom and palette while the tab is switched to Code), keyed by view. Lives as long as the tab's session.
+     */
+    val viewStates: MutableMap<String, Any> = HashMap()
+    /** Bumped on every edit/caret move — the UI's bring-caret-into-view trigger. */
+    var editCount by mutableIntStateOf(0)
+        private set
+    /**
+     * Bumped only on text edits (not caret/selection moves). This is the host's O(1) "the buffer
+     * changed" signal: debounced analyze/breadcrumb/projection effects key on it instead of the full text
+     * `String`, so a keystroke costs an `Int` write, not an O(n) materialize-and-compare.
+     */
+    var textRevision by mutableIntStateOf(0)
+        private set
+    /** Longest line seen (chars) — monotonic per buffer; sizes the horizontal scroll range. */
+    var maxLineChars by mutableIntStateOf(0)
+        private set
+
+    // Live horizontal-scroll extent (px), mirrored from the editor geometry so gesture handlers OUTSIDE the
+    // editor (the right tool-window swipe overlay) can tell whether the editor still has content to reveal
+    // rightward before they claim a leftward swipe — otherwise that swipe-to-open steals the editor's
+    // horizontal scroll near the right edge. Plain vars, not snapshot state: written in the scroll/measure
+    // phase and read from pointer coroutines, both on the main thread, never in composition/draw.
+    var hScrollOffsetPx: Float = 0f
+    var hScrollMaxPx: Float = 0f
+
+    /**
+     * Diagnostics anchored to this buffer: error/warning squiggles and gutter marks. The editor treats
+     * them like every other span it owns (the line index, the token spans): [replaceRange] shifts them in
+     * place on each edit (O(diagnostics), no string diff), so they track the text as it is typed. The host
+     * supplies fresh authoritative results via [applyAnalysis] (debounced) and reads this to render.
+     */
+    var diagnostics by mutableStateOf<List<UiDiagnostic>>(emptyList())
+        private set
+
+    /**
+     * Type-aware semantic-highlight tokens anchored to this buffer. Like [diagnostics], the editor shifts them
+     * in place on each edit ([shiftSemanticTokens]) so the coloring tracks the text between debounced passes;
+     * the host supplies fresh authoritative results via [applySemanticTokens]. The render layer overlays them
+     * on the lexical token spans.
+     */
+    var semanticTokens by mutableStateOf<List<UiSemanticToken>>(emptyList())
+        private set
+
+    /**
+     * `@Preview` gutter markers anchored to this buffer. Like [diagnostics]/[semanticTokens] the editor shifts
+     * their offsets in place on each edit ([shiftComposePreviews]) so the gutter icons track the function they
+     * mark while typing, instead of sitting at a stale line until the debounced refetch. Host refills via
+     * [applyComposePreviews].
+     */
+    var previewMarkers by mutableStateOf<List<UiComposePreview>>(emptyList())
+        private set
+
+    /**
+     * Gutter color/drawable swatches for the buffer's resource references, anchored by offset and shifted in
+     * place on each edit like [previewMarkers], so a swatch stays beside its line between debounced refetches.
+     * Host refills via [applyResourceSwatches].
+     */
+    var resourceSwatches by mutableStateOf<List<UiResourceSwatch>>(emptyList())
+        private set
+
+    /**
+     * Inlay hints (inferred `val`/lambda types, parameter names) anchored to this buffer. Like
+     * [diagnostics]/[semanticTokens] the editor shifts their offsets in place on each edit
+     * ([com.shd.codestudio.ui.editor.shiftInlayHints]) so the phantom text tracks its anchor between debounced daemon
+     * passes; the host refills the authoritative set via [applyInlayHints].
+     */
+    var inlayHints by mutableStateOf<List<UiInlayHint>>(emptyList())
+        private set
+
+    /**
+     * The lines the editor currently shows, published by the editor as it lays out and scrolls. Work that is
+     * only useful on screen (inlay hints) is asked for these lines first.
+     */
+    var viewportLines by mutableStateOf(0..0)
+
+    /**
+     * A plugin's tinted ranges anchored to this buffer (`platform.editorDecoration`). Shifted in place on
+     * each edit like [semanticTokens], so a coverage or diff tint keeps covering its text between debounced
+     * daemon passes; the host refills the authoritative set via [applyDecorations].
+     */
+    var textDecorations by mutableStateOf<List<UiTextDecoration>>(emptyList())
+        private set
+
+    /**
+     * A plugin's gutter marks for this buffer. Anchored to a LINE rather than an offset, so these ride the
+     * line splice ([com.shd.codestudio.ui.editor.shiftGutterMarks]) rather than the offset shifts the rest use.
+     */
+    var gutterMarks by mutableStateOf<List<UiGutterMark>>(emptyList())
+        private set
+
+    /**
+     * Foldable regions anchored to this buffer (imports, type/function bodies, comments) with each one's
+     * collapsed/expanded toggle. Like [diagnostics] the editor shifts their offsets on each edit
+     * ([com.shd.codestudio.ui.editor.shiftFoldRegions]) so a collapsed fold keeps covering its block while typing; the
+     * host refills the authoritative set via [applyCodeFolds], preserving the user's current toggles. The
+     * renderer/geometry read [foldModel], rebuilt lazily whenever the regions or the document change.
+     */
+    var foldRegions by mutableStateOf<List<FoldRegion>>(emptyList())
+        private set
+
+    /** Whether the [collapsedByDefault] folds have been applied once for this file (so a refetch doesn't re-collapse
+     *  a region the user has since expanded). */
+    private var defaultFoldsApplied = false
+
+    private var foldModelCache: FoldModel? = null
+    private var foldModelDoc: EditorDocument? = null
+    private var foldModelRegions: List<FoldRegion>? = null
+
+    /** The current folding projection (document ⇄ visual-row mapping + composites), rebuilt only when the
+     *  regions or the document change. [FoldModel.EMPTY]-equivalent when nothing folds. A rebuild that comes
+     *  out the same as the cached model (the usual keystroke: no fold boundary moved) keeps the cached
+     *  INSTANCE, so consumers that key on it (the wrap model, the composite layouts) keep their caches. */
+    val foldModel: FoldModel
+        get() {
+            val d = doc; val r = foldRegions
+            val cached = foldModelCache
+            if (cached == null || foldModelDoc !== d || foldModelRegions !== r) {
+                val built = FoldModel.build(d, r)
+                foldModelCache = if (cached != null && cached.sameAs(built)) cached else built
+                foldModelDoc = d; foldModelRegions = r
+            }
+            return foldModelCache!!
+        }
+
+    val styles = LineStyles(language)
+
+    /**
+     * Fired synchronously after every text edit with the contiguous [EditSpan] that changed (selection-only
+     * moves don't fire). The host uses it to mark the buffer dirty in O(1) — no `String` is built or diffed.
+     * (Diagnostics shift themselves inside the session; this hook is for host save-state only.) Fires once
+     * per [replaceRange], including inside a batch.
+     */
+    var onTextEdit: ((EditSpan) -> Unit)? = null
+    /**
+     * Secondary per-edit hook, used by an active snippet (template) session to keep its tab-stop offsets in
+     * sync as the user types into a placeholder. Separate from [onTextEdit] (owned by the host for dirty
+     * tracking) so neither clobbers the other. Fires synchronously after every [replaceRange], like [onTextEdit].
+     */
+    var onSnippetEdit: ((EditSpan) -> Unit)? = null
+    /** Render-cache hook: lines at/after `fromOldLine` (pre-edit indices) shifted by `delta`. */
+    var onLinesShifted: ((fromOldLine: Int, delta: Int) -> Unit)? = null
+
+    // Lines whose overlay spans (semantic tokens, inlay hints) need re-binning: every line an edit touched
+    // since the render layer last took them ([takeOverlayDirtyLines]), as one covering range in current line
+    // numbers ([overlayDirtyEnd] exclusive, -1 when clean). Lines outside it only moved, and the render cache
+    // splices those itself, so a keystroke re-bins the edited lines instead of the whole file.
+    private var overlayDirtyFirst = -1
+    private var overlayDirtyEnd = -1
+
+    /**
+     * Bumped whenever an overlay list (semantic tokens, inlay hints, a plugin's decorations or inlays) is
+     * replaced wholesale, or the whole buffer is. A live edit shifts those lists instead, so the render layer
+     * compares this to tell a fresh pass, which it re-bins in full, from an edit, which it re-bins per line.
+     */
+    var overlayGeneration: Int = 0
+        private set
+
+    /** The lines edited since the last call (clamped to the buffer), or null when none were; resets the range. */
+    fun takeOverlayDirtyLines(): IntRange? {
+        val first = overlayDirtyFirst
+        if (first < 0) return null
+        val end = overlayDirtyEnd.coerceAtMost(doc.lineCount)
+        overlayDirtyFirst = -1
+        overlayDirtyEnd = -1
+        return first until end
+    }
+
+    /** Fold the edit that replaced old lines `[first, first + removed)` with `inserted` lines into the range. */
+    private fun markOverlayLines(first: Int, removed: Int, inserted: Int) {
+        val newEnd = first + inserted
+        if (overlayDirtyFirst < 0) {
+            overlayDirtyFirst = first
+            overlayDirtyEnd = newEnd
+            return
+        }
+        // Carry the range already recorded through this edit, then take the union with the edited lines.
+        val oldEditEnd = first + removed
+        val delta = inserted - removed
+        val ds = overlayDirtyFirst
+        val de = overlayDirtyEnd
+        val mappedStart = when {
+            ds < first -> ds
+            ds >= oldEditEnd -> ds + delta
+            else -> first
+        }
+        val mappedEnd = when {
+            de <= first -> de
+            de >= oldEditEnd -> de + delta
+            else -> newEnd
+        }
+        overlayDirtyFirst = min(mappedStart, first)
+        overlayDirtyEnd = max(mappedEnd, newEnd)
+    }
+    /**
+     * Smart-Tab hook the editor surface registers: if the completion popup is showing, accept the highlighted
+     * item and return true; otherwise return false. Lets a soft-keyboard Tab (the touch symbol bar, which has
+     * no physical key event) commit a completion exactly as a hardware Tab does, falling back to [indent] when
+     * nothing is open. Null when no editor is mounted on this session.
+     */
+    var acceptCompletionIfShowing: (() -> Boolean)? = null
+    /**
+     * Enter hook the editor surface registers: when a live-template session is active, advance to the next
+     * template field (accepting a showing completion first) and return true; otherwise return false so the caller
+     * inserts a newline. The soft-keyboard Enter arrives via the IME (`commitText "\n"` / `performEditorAction`),
+     * which bypasses the editor's key handler, so the IME node consults this to keep template stepping working on
+     * touch. Null when no editor is mounted on this session.
+     */
+    var advanceTemplateOnEnter: (() -> Boolean)? = null
+    /** Set by the platform text-input node while an IME session is active. */
+    var imeListener: ImeListener? = null
+
+    /**
+     * The handle that raises and dismisses the soft keyboard for this buffer.
+     *
+     * Owned by the session rather than remembered inside the editor composable so that the chrome AROUND the
+     * editor can reach it — the keyboard accessory bar is a sibling of the editor, not a child, and on a host
+     * with no system back it is the only thing that can put the keyboard away.
+     */
+    val ime: EditorImeHandle = EditorImeHandle()
+
+    interface ImeListener {
+        /** Selection and/or composition changed (no text edit) — push `InputMethodManager.updateSelection`. */
+        fun onStateChanged()
+        /**
+         * The buffer's text changed. [span] is the single contiguous edit, so the platform can push a partial
+         * `updateExtractedText` (cheap — only the changed run is materialized); a null [span] (emitted once at
+         * the end of a multi-edit batch) asks for a full-snapshot refresh. Default: a plain selection push, so a
+         * listener that doesn't mirror text keeps behaving as it did before.
+         */
+        fun onTextChanged(span: EditSpan?) { onStateChanged() }
+        /** The buffer was replaced externally — the IME must `restartInput`. */
+        fun onRestartInput()
+        /**
+         * Whether an IME is continuously mirroring our text (an extracted-text monitor is active). When true a
+         * smart edit needn't `restartInput` to resync: the per-edit [onTextChanged] push already keeps the IME's
+         * model exact, so [resyncIme] skips the (disruptive) restart and only the legacy non-monitoring path uses it.
+         */
+        fun isSyncingExtractedText(): Boolean = false
+    }
+
+    private var batchDepth = 0
+    private var pendingIme = false // an IME state push was deferred while a batch was open
+    private var pendingImeText = false // ...and at least one of those deferred pushes was a text edit
+    private var pendingRestart = false // an IME restart was deferred while a batch was open
+    // The batch's text edits folded into one covering span while they stay contiguous (each edit touches or
+    // overlaps the run so far), so [endBatch] can still push a PARTIAL extracted-text update. [batchSpanStart]
+    // and [batchSpanRemoved] are in pre-batch coordinates, [batchSpanAdded] is the run's current length.
+    // [batchSpanStart] is -1 before the first edit; [batchSpanContiguous] drops to false once an edit lands
+    // apart from the run, and the batch then falls back to a full refresh.
+    private var batchSpanStart = -1
+    private var batchSpanRemoved = 0
+    private var batchSpanAdded = 0
+    private var batchSpanContiguous = true
+    // An IME commit ending in a symbol happened in the CURRENT batch — arms the split auto-space swallow
+    // in [imeCommitText] (a bare " " commit in the same batch is the keyboard's, not the user's).
+    private var batchImeSymbolCommit = false
+    // Offset (and char) of a space/tab the IME's 1,0-delete fast path removed in the CURRENT batch, -1 when
+    // none. A symbol commit landing at exactly that offset later in the same batch reveals the delete as the
+    // keyboard's punctuation swap, and [imeCommitText] restores the char — the user's space is not the
+    // keyboard's to take. Cleared by any other edit or caret move, so only back-to-back swap ops match.
+    private var batchImeSpaceDeleteOffset = -1
+    private var batchImeSpaceDeleteChar = ' '
+    private var goalColumn = -1 // sticky column for consecutive vertical caret moves
+
+    // ---- undo / redo ----
+    // Each step stores the *inverse-able* edits (only the changed substrings, so memory is O(edited text), not
+    // O(document)) plus the selection before/after. A batch (completion accept, IME multi-delete) records into
+    // ONE step; consecutive single-char typing/backspacing coalesces into the step on top so undo removes a
+    // run, not one char. undo/redo replay through [replaceRange] with [applyingUndo] set so they don't re-record.
+    private val undoStack = ArrayDeque<UndoStep>()
+    private val redoStack = ArrayDeque<UndoStep>()
+    private var currentGroup: UndoStep? = null   // open while a batch accumulates into one step
+    private var applyingUndo = false             // suppress recording while undo/redo replays edits
+    private var coalesceTyping = false           // may the next 1-char edit merge into the top step?
+
+    /** Whether [undo]/[redo] would do something — observable so a toolbar can enable/disable its buttons. */
+    var canUndo by mutableStateOf(false)
+        private set
+    var canRedo by mutableStateOf(false)
+        private set
+
+    init {
+        styles.reset(doc)
+        var m = 0
+        for (i in 0 until doc.lineCount) m = max(m, doc.lineLength(i))
+        maxLineChars = m
+    }
+
+    // ---- core mutation ----
+
+    /** Replace `[start, end)` with [text]; everything else funnels here. */
+    fun replaceRange(start: Int, end: Int, text: String, newSelection: TextRange, newComposing: TextRange? = null) {
+        val s = start.coerceIn(0, doc.length)
+        val e = end.coerceIn(s, doc.length)
+        if (s == e && text.isEmpty()) {
+            updateSelectionAndComposing(newSelection, newComposing)
+            return
+        }
+        // Read-only buffer: reject the content change (caret navigation goes through the branch above / setCaret).
+        if (!editable) return
+        batchImeSpaceDeleteOffset = -1 // any real edit breaks the swap-op adjacency (the delete re-arms after)
+        val removedText = if (applyingUndo) "" else doc.substring(s, e)
+        val selBefore = selection
+        val firstLine = doc.lineForOffset(s)
+        val lastLine = doc.lineForOffset(e)
+        doc = doc.replace(s, e, text)
+        var breaks = 0
+        for (c in text) if (c == '\n') breaks++
+        val removed = lastLine - firstLine + 1
+        val inserted = breaks + 1
+        styles.splice(doc, firstLine, removed, inserted)
+        markOverlayLines(firstLine, removed, inserted)
+        if (inserted != removed) onLinesShifted?.invoke(firstLine + removed, inserted - removed)
+        for (l in firstLine until firstLine + inserted) maxLineChars = max(maxLineChars, doc.lineLength(l))
+        selection = newSelection.coercedIn(doc.length)
+        composing = newComposing?.coercedIn(doc.length)?.takeIf { it.min < it.max }
+        goalColumn = -1
+        editCount++
+        textRevision++
+        val edit = EditSpan(s, e - s, text.length)
+        // Diagnostics are spans anchored to this buffer, so the editor shifts them here — in place, in apply
+        // order (multi-edit ops re-map each diagnostic correctly), O(diagnostics), no String diff. Just like
+        // the line index and token spans above, the buffer keeps its own decorations in sync.
+        if (diagnostics.isNotEmpty()) diagnostics = shiftDiagnostics(diagnostics, edit, doc)
+        if (semanticTokens.isNotEmpty()) semanticTokens = shiftSemanticTokens(semanticTokens, edit, doc.length)
+        if (previewMarkers.isNotEmpty()) previewMarkers = shiftComposePreviews(previewMarkers, edit, doc.length)
+        if (resourceSwatches.isNotEmpty()) resourceSwatches = shiftResourceSwatches(resourceSwatches, edit, doc.length)
+        if (foldRegions.isNotEmpty()) foldRegions = shiftFoldRegions(foldRegions, edit, doc.length)
+        if (inlayHints.isNotEmpty()) inlayHints = shiftInlayHints(inlayHints, edit, doc.length)
+        if (textDecorations.isNotEmpty()) textDecorations = shiftTextDecorations(textDecorations, edit, doc.length)
+        if (pluginInlays.isNotEmpty()) pluginInlays = shiftInlayHints(pluginInlays, edit, doc.length)
+        if (gutterMarks.isNotEmpty()) gutterMarks = shiftGutterMarks(gutterMarks, edit, doc)
+        if (bookmarks.isNotEmpty() && inserted != removed) {
+            val delta = inserted - removed
+            bookmarks = bookmarks.mapTo(HashSet()) { l ->
+                when {
+                    l <= firstLine -> l
+                    l <= lastLine -> firstLine // its line was merged into the edit's first line
+                    else -> l + delta
+                }
+            }
+        }
+        if (!applyingUndo) recordEdit(s, removedText, text, selBefore)
+        // Host hook for save-state only (mark dirty); no String is built. Fires per edit, including in a batch.
+        onTextEdit?.invoke(edit)
+        onSnippetEdit?.invoke(edit)
+        if (typedPairs.isNotEmpty()) shiftTypedPairs(edit)
+        notifyImeText(edit)
+    }
+
+    /** Swap in a fresh authoritative analysis (aligned to the current text). The host calls this debounced. */
+    fun applyAnalysis(result: List<UiDiagnostic>) {
+        diagnostics = result
+    }
+
+    /** Swap in fresh authoritative semantic-highlight tokens (aligned to the current text). Host calls debounced. */
+    fun applySemanticTokens(result: List<UiSemanticToken>) {
+        if (result !== semanticTokens) overlayGeneration++
+        semanticTokens = result
+    }
+
+    /** Swap in fresh `@Preview` gutter markers (aligned to the current text). The host calls this debounced. */
+    fun applyComposePreviews(result: List<UiComposePreview>) {
+        previewMarkers = result
+    }
+
+    /** Swap in fresh resource swatches (aligned to the current text). The editor calls this debounced. */
+    fun applyResourceSwatches(result: List<UiResourceSwatch>) {
+        resourceSwatches = result
+    }
+
+    /** Swap in fresh inlay hints (aligned to the current text). The host calls this debounced (daemon pass). */
+    fun applyInlayHints(result: List<UiInlayHint>) {
+        if (result !== inlayHints) overlayGeneration++
+        inlayHints = result
+    }
+
+    /**
+     * Swap in a plugin tier's fresh marks for this buffer (aligned to the current text). The host calls this
+     * from the daemon's decoration pass.
+     *
+     * The plugin inlays are kept apart from [inlayHints] rather than merged into it: the language pass owns
+     * that list and replaces it wholesale, so a merge would have each pass delete the other's hints on every
+     * run. The render layer reads both.
+     */
+    fun applyDecorations(ranges: List<UiTextDecoration>, gutter: List<UiGutterMark>, inlays: List<UiInlayHint>) {
+        overlayGeneration++
+        textDecorations = ranges
+        // Resolve each mark's line to the offset it is really anchored to, so the live shift can track it (see
+        // [UiGutterMark.anchorOffset]). A plugin supplies a line; the editor works in offsets.
+        gutterMarks = gutter.map { m ->
+            val line = m.line.coerceIn(0, doc.lineCount - 1)
+            m.copy(line = line, anchorOffset = doc.lineStart(line))
+        }
+        pluginInlays = inlays
+    }
+
+    /**
+     * A plugin's inlay hints, held separately from the language backend's [inlayHints] so the two passes
+     * cannot clobber each other. Shifted with the same helper.
+     */
+    var pluginInlays by mutableStateOf<List<UiInlayHint>>(emptyList())
+        private set
+
+    /**
+     * Adopt a freshly-computed set of foldable regions (host calls this debounced). The user's collapsed
+     * toggles are PRESERVED across refetches: a new region overlapping a currently-collapsed one stays
+     * collapsed. [collapsedByDefault] regions (imports) collapse only the FIRST time they appear for this file
+     * (so re-expanding imports survives the next pass). Offsets come straight from the fresh parse.
+     */
+    fun applyCodeFolds(fresh: List<FoldRegion>) {
+        val previouslyCollapsed = foldRegions.filter { it.collapsed }
+        val next = fresh.map { r ->
+            val keepCollapsed = previouslyCollapsed.any { it.start == r.start && it.end == r.end } ||
+                (r.collapsed && !defaultFoldsApplied) // collapsedByDefault, first time only
+            r.copy(collapsed = keepCollapsed)
+        }
+        defaultFoldsApplied = true
+        // Skip the state write (and the [foldModel] rebuild it forces) when the fresh set is identical to the
+        // current one — the common case while typing inside a block, where the structure is unchanged and the
+        // in-place edit shift already moved the offsets to match. Keeps the same list reference. FoldRegion is a
+        // data class, so this is a value comparison.
+        if (next != foldRegions) foldRegions = next
+    }
+
+    /** Toggle the fold whose START is on document [line] (the gutter chevron / placeholder click). No-op when
+     *  no fold starts there. Returns true if a fold was toggled. */
+    fun toggleFoldAtLine(line: Int): Boolean {
+        var toggled = false
+        foldRegions = foldRegions.map { r ->
+            if (!toggled && doc.lineForOffset(r.start) == line) { toggled = true; r.copy(collapsed = !r.collapsed) }
+            else r
+        }
+        return toggled
+    }
+
+    /** Expand the fold covering document [offset] if any is collapsed there (used when the caret/selection
+     *  lands inside hidden text, e.g. via go-to-definition). Returns true if something expanded. */
+    fun expandFoldAt(offset: Int): Boolean {
+        var changed = false
+        foldRegions = foldRegions.map { r ->
+            if (r.collapsed && offset > r.start && offset < r.end) { changed = true; r.copy(collapsed = false) } else r
+        }
+        return changed
+    }
+
+    private fun updateSelectionAndComposing(sel: TextRange, comp: TextRange?) {
+        val ns = sel.coercedIn(doc.length)
+        val nc = comp?.coercedIn(doc.length)?.takeIf { it.min < it.max }
+        if (ns == selection && nc == composing) return
+        batchImeSpaceDeleteOffset = -1 // a caret/composition move breaks the swap-op adjacency
+        selection = ns
+        composing = nc
+        if (typedPairs.isNotEmpty()) pruneTypedPairs()
+        goalColumn = -1
+        coalesceTyping = false // a caret/selection move ends the current typing run → next type is a new undo step
+        editCount++
+        notifyIme()
+    }
+
+    /**
+     * Push the IME its new selection/composition. This is the only per-edit "notification" left, and it's
+     * O(1) — there is no host text mirror to rebuild. The host observes [textRevision]/[selection] as Compose
+     * snapshot state and pulls [EditorDocument.text] lazily (debounced), so a keystroke never materializes a
+     * `String`. Coalesced across a batch so a multi-edit op pushes the IME once.
+     */
+    private fun notifyIme() {
+        if (batchDepth > 0) {
+            pendingIme = true
+            return
+        }
+        imeListener?.onStateChanged()
+    }
+
+    /** Like [notifyIme] but for a text edit: carries the [span] so the platform can push a partial extracted-text
+     *  update. Coalesced across a batch into a single full-refresh push at [endBatch]. */
+    private fun notifyImeText(span: EditSpan) {
+        if (batchDepth > 0) {
+            pendingIme = true
+            pendingImeText = true
+            mergeBatchSpan(span)
+            return
+        }
+        imeListener?.onTextChanged(span)
+    }
+
+    /** Fold [span] (in current coordinates) into the batch's covering span, see [batchSpanStart]. */
+    private fun mergeBatchSpan(span: EditSpan) {
+        if (!batchSpanContiguous) return
+        if (batchSpanStart < 0) {
+            batchSpanStart = span.start
+            batchSpanRemoved = span.removed
+            batchSpanAdded = span.added
+            return
+        }
+        val runEnd = batchSpanStart + batchSpanAdded
+        val editEnd = span.start + span.removed
+        if (editEnd < batchSpanStart || span.start > runEnd) {
+            batchSpanContiguous = false
+            return
+        }
+        val start = min(batchSpanStart, span.start)
+        val end = max(runEnd, editEnd) // union in current (pre-this-edit) coordinates
+        // Text before the run maps 1:1 to pre-batch offsets, text past it by the run's accumulated delta.
+        val oldEnd = batchSpanStart + batchSpanRemoved + (end - runEnd)
+        batchSpanRemoved = oldEnd - start
+        batchSpanAdded = end - start - span.removed + span.added
+        batchSpanStart = start
+    }
+
+    private fun resetBatchSpan() {
+        batchSpanStart = -1
+        batchSpanRemoved = 0
+        batchSpanAdded = 0
+        batchSpanContiguous = true
+    }
+
+    /** IME batch edits (and multi-edit completion accepts): one IME push for the whole group, and ONE undo step. */
+    fun beginBatch() {
+        if (batchDepth == 0 && !applyingUndo) {
+            currentGroup = UndoStep(ArrayList(), selection, selection)
+            coalesceTyping = false
+        }
+        if (batchDepth == 0) {
+            batchImeSymbolCommit = false
+            batchImeSpaceDeleteOffset = -1
+            resetBatchSpan()
+        }
+        batchDepth++
+    }
+
+    fun endBatch() {
+        if (batchDepth > 0 && --batchDepth == 0) {
+            batchImeSymbolCommit = false
+            batchImeSpaceDeleteOffset = -1
+            val g = currentGroup
+            currentGroup = null
+            if (g != null && g.edits.isNotEmpty()) {
+                g.selAfter = selection
+                redoStack.clear()
+                undoStack.addLast(g)
+                trimUndo()
+                refreshUndoState()
+            }
+            if (pendingRestart) {
+                // A restart supersedes the deferred selection/text pushes — the IME re-reads everything.
+                pendingRestart = false
+                pendingIme = false
+                pendingImeText = false
+                imeListener?.onRestartInput()
+            } else if (pendingIme) {
+                pendingIme = false
+                val l = imeListener
+                if (pendingImeText) {
+                    pendingImeText = false
+                    // One contiguous run still gets a partial update; scattered edits ask for a full refresh.
+                    val span = if (batchSpanContiguous && batchSpanStart >= 0) {
+                        EditSpan(batchSpanStart, batchSpanRemoved, batchSpanAdded)
+                    } else {
+                        null
+                    }
+                    l?.onTextChanged(span)
+                } else {
+                    l?.onStateChanged()
+                }
+            }
+            resetBatchSpan()
+        }
+    }
+
+    // ---- undo / redo ----
+
+    private fun recordEdit(start: Int, removed: String, inserted: String, selBefore: TextRange) {
+        val group = currentGroup
+        if (group != null) {
+            group.edits.add(UndoEdit(start, removed, inserted)) // inside a batch → one finalized step in endBatch
+            coalesceTyping = false
+            return
+        }
+        redoStack.clear()
+        val top = undoStack.lastOrNull()
+        if (!(coalesceTyping && top != null && tryCoalesce(top, start, removed, inserted))) {
+            undoStack.addLast(UndoStep(arrayListOf(UndoEdit(start, removed, inserted)), selBefore, selection))
+            trimUndo()
+        }
+        coalesceTyping = isCoalescable(removed, inserted)
+        refreshUndoState()
+    }
+
+    /** Merge a single-char edit into [top] if it continues a forward typing run or a backspace run. */
+    private fun tryCoalesce(top: UndoStep, start: Int, removed: String, inserted: String): Boolean {
+        if (top.edits.size != 1) return false
+        val ed = top.edits[0]
+        if (removed.isEmpty() && inserted.length == 1 && ed.removed.isEmpty() && start == ed.start + ed.inserted.length) {
+            ed.inserted += inserted // typing one more char right after the run
+            top.selAfter = selection
+            return true
+        }
+        if (inserted.isEmpty() && removed.length == 1 && ed.inserted.isEmpty() && start + removed.length == ed.start) {
+            ed.start = start // backspacing one more char right before the run
+            ed.removed = removed + ed.removed
+            top.selAfter = selection
+            return true
+        }
+        return false
+    }
+
+    private fun isCoalescable(removed: String, inserted: String): Boolean {
+        val pureInsert = removed.isEmpty() && inserted.length == 1 && inserted[0] != '\n'
+        val pureDelete = inserted.isEmpty() && removed.length == 1 && removed[0] != '\n'
+        return pureInsert || pureDelete
+    }
+
+    /** Revert the most recent edit step. Returns false if there's nothing to undo (or a batch is open). */
+    fun undo(): Boolean {
+        if (currentGroup != null || undoStack.isEmpty()) return false
+        val step = undoStack.removeLast()
+        replayStep(step, undoing = true)
+        redoStack.addLast(step)
+        coalesceTyping = false
+        refreshUndoState()
+        return true
+    }
+
+    /** Re-apply the most recently undone step. Returns false if there's nothing to redo. */
+    fun redo(): Boolean {
+        if (currentGroup != null || redoStack.isEmpty()) return false
+        val step = redoStack.removeLast()
+        replayStep(step, undoing = false)
+        undoStack.addLast(step)
+        coalesceTyping = false
+        refreshUndoState()
+        return true
+    }
+
+    private fun replayStep(step: UndoStep, undoing: Boolean) {
+        applyingUndo = true
+        beginBatch() // coalesces the IME push; records nothing while applyingUndo is set
+        composing = null
+        if (undoing) {
+            // invert edits in REVERSE application order: each stored start is valid in the state it restores
+            for (i in step.edits.indices.reversed()) {
+                val ed = step.edits[i]
+                replaceRange(ed.start, ed.start + ed.inserted.length, ed.removed, TextRange(ed.start + ed.removed.length))
+            }
+            updateSelectionAndComposing(step.selBefore.coercedIn(doc.length), null)
+        } else {
+            for (ed in step.edits) {
+                replaceRange(ed.start, ed.start + ed.removed.length, ed.inserted, TextRange(ed.start + ed.inserted.length))
+            }
+            updateSelectionAndComposing(step.selAfter.coercedIn(doc.length), null)
+        }
+        endBatch()
+        applyingUndo = false
+    }
+
+    private fun trimUndo() {
+        while (undoStack.size > MAX_UNDO_STEPS) undoStack.removeFirst()
+    }
+
+    private fun refreshUndoState() {
+        canUndo = undoStack.isNotEmpty()
+        canRedo = redoStack.isNotEmpty()
+    }
+
+    // ---- external replacement ----
+
+    /**
+     * Replace the whole buffer out-of-band — a file revert or a programmatic load. Not on the typing path
+     * (editors mutate via the editing ops); this rebuilds the document, resets the styler, lands the caret
+     * at [selection], and bumps [textRevision] so the debounced analysis re-runs and the IME restarts.
+     */
+    fun setText(text: String, selection: TextRange = TextRange(0)) {
+        typedPairs.clear()
+        doc = EditorDocument.of(text)
+        styles.reset(doc)
+        overlayGeneration++
+        overlayDirtyFirst = -1
+        overlayDirtyEnd = -1
+        var m = 0
+        for (i in 0 until doc.lineCount) m = max(m, doc.lineLength(i))
+        maxLineChars = m
+        this.selection = selection.coercedIn(doc.length)
+        composing = null
+        diagnostics = emptyList() // a wholesale replace invalidates the old anchors; re-analysis will refill
+        semanticTokens = emptyList()
+        previewMarkers = emptyList()
+        foldRegions = emptyList()
+        defaultFoldsApplied = false // re-apply collapse-by-default (imports) for the freshly-loaded buffer
+        goalColumn = -1
+        // a wholesale replace invalidates the inverse-edit history (offsets no longer mean anything)
+        undoStack.clear(); redoStack.clear(); currentGroup = null; coalesceTyping = false
+        refreshUndoState()
+        editCount++
+        textRevision++
+        imeListener?.onRestartInput()
+    }
+
+    /**
+     * Make the IME drop its internal cursor/composition model and re-read our post-edit text + selection.
+     * The IME only learns our new selection offset (via `updateSelection`), never that the surrounding text
+     * shifted by a different amount than the keystroke it delivered. After a smart edit (auto-close pair,
+     * skip-over closer, newline + indent, pair-aware backspace, indent/dedent, forward-delete) its model
+     * drifts, and a later absolute `setSelection`/`setComposingRegion` computed against that stale model lands
+     * the caret on the wrong line. Restarting resyncs it — the same fix [applyEdits] uses on a completion
+     * accept. NOT called on a plain insert or on a multi-char IME commit (the keyboard's own compose path),
+     * where its model is already coherent and a restart would needlessly reset prediction/gesture state.
+     *
+     * Skipped entirely when an extracted-text monitor is active: that IME is kept exact by the per-edit
+     * [ImeListener.onTextChanged] push (a partial `updateExtractedText`), so it never drifts and the restart
+     * would be pure churn. The restart remains the fallback for IMEs that don't mirror our text.
+     *
+     * [force] overrides that skip. A smart edit that changed NO text (skip-over closer, aligned-closer
+     * backspace keep) never produces an [ImeListener.onTextChanged] push, so nothing corrects a monitoring
+     * IME (SwiftKey) that already applied its own insert/delete to its mirror — its absolute offsets drift
+     * by one per occurrence and every later `setComposingRegion`/suggestion replacement lands off-target.
+     * Only a restart resets that model; the callers force it exactly in the no-text-change divergence cases.
+     *
+     * Deferred while a batch is open: a smart edit can fire from *inside* an IME batch (the Gboard
+     * `deleteSurroundingText` fast path routes through [backspace]), and restarting input between the IME's
+     * own batched ops would drop the rest of them. [endBatch] flushes the restart once the batch closes.
+     */
+    private fun resyncIme(force: Boolean = false) {
+        val l = imeListener ?: return
+        if (!force && l.isSyncingExtractedText()) return
+        if (batchDepth > 0) {
+            pendingRestart = true
+            return
+        }
+        l.onRestartInput()
+    }
+
+    // ---- editing ops (keyboard + UI) ----
+
+    // ---- Tab out of an auto-closed pair (IntelliJ's "Jump outside closing bracket/quote with Tab when typing") ----
+
+    /**
+     * The pairs the editor auto-closed as the user typed, each `[opener offset, closer offset]`, innermost last.
+     * A pair is kept only while the caret stays inside it: moving out, or deleting either end, forgets it, so Tab
+     * jumps only over a closer the user is typing up to, never over one elsewhere in the file.
+     */
+    private val typedPairs = ArrayList<IntArray>()
+
+    /**
+     * Tab with the caret right before the closer of a pair auto-closed while typing (`foo(a|)`, `"text|"`): step
+     * past the closer instead of indenting, as IntelliJ does by default. Returns false (the caller indents) when
+     * the caret isn't there.
+     */
+    fun tabOut(): Boolean {
+        val sel = selection
+        if (!sel.collapsed) return false
+        val pair = typedPairs.lastOrNull { it[1] == sel.start } ?: return false
+        typedPairs.remove(pair)
+        updateSelectionAndComposing(TextRange(pair[1] + 1), null)
+        return true
+    }
+
+    /** Keep [typedPairs] on their brackets across [edit]; a pair whose opener or closer it touched is dropped. */
+    private fun shiftTypedPairs(edit: EditSpan) {
+        val es = edit.start
+        val ee = edit.start + edit.removed
+        val d = edit.delta
+        val it = typedPairs.iterator()
+        while (it.hasNext()) {
+            val p = it.next()
+            when {
+                ee <= p[0] -> { p[0] += d; p[1] += d } // before the opener
+                es > p[0] && ee <= p[1] -> p[1] += d // typed or deleted inside the pair
+                es > p[1] -> Unit                    // after the closer
+                else -> it.remove()                  // the edit took the opener or the closer
+            }
+        }
+        pruneTypedPairs()
+    }
+
+    /** Forget the pairs the caret is no longer inside. */
+    private fun pruneTypedPairs() {
+        val sel = selection
+        typedPairs.removeAll { p -> !sel.collapsed || sel.start <= p[0] || sel.start > p[1] }
+    }
+
+    /** Type [text] at the selection. Single chars get the smart-edit rules (auto-close, skip-over…). */
+    fun commitText(text: String) {
+        if (text.length == 1) {
+            val selMin = selection.min
+            val selMax = selection.max
+            val edit = smartInsert(doc.chars, selMin, selMax, text[0], language)
+            replaceRange(edit.start, edit.end, edit.text, TextRange(edit.caret))
+            // An auto-closed pair (`(|)`, `"|"`): remember it so Tab can step over its closer.
+            if (edit.start == selMin && edit.end == selMax && edit.caret == selMin + 1 && edit.text in AUTO_PAIRS) {
+                typedPairs += intArrayOf(edit.start, edit.start + 1)
+            }
+            // A smart rule that didn't simply replace the selection with the typed char shifted the buffer by a
+            // different amount than the IME delivered, so its model is now stale. Forced when the edit changed
+            // no text (skip-over closer): no extracted-text push follows, so even a monitoring IME needs the
+            // restart — its mirror already holds the char it committed and nothing else will evict it.
+            //
+            // An auto-closed pair and a skipped-over closer are the exceptions: the text before the caret and the
+            // caret itself are exactly what the IME committed, only the text after the caret differs. The
+            // selection push already tells the IME where the caret is, and a restart here costs typed
+            // characters: the keystrokes the IME already sent land on the old, now inactive connection and are
+            // dropped (`"Sys` typed fast came out as `""`, `abs(1), 2` as `abs(1)2`). A mirroring IME gets an
+            // auto-closed closer through the extracted-text push; a skip-over pushes no text, so only that IME
+            // is still restarted, to evict the closer its mirror holds.
+            val collapsed = selMin == selMax
+            val closedPair = edit.start == selMin && edit.end == selMax && edit.caret == selMin + 1 &&
+                edit.text.length > 1 && edit.text.startsWith(text)
+            val skippedOver = collapsed && edit.start == edit.end && edit.text.isEmpty() && edit.caret == selMin + 1
+            when {
+                closedPair -> Unit
+                skippedOver -> if (imeListener?.isSyncingExtractedText() == true) resyncIme(force = true)
+                edit.start != selMin || edit.end != selMax || edit.text != text || edit.caret != selMin + 1 ->
+                    resyncIme(force = edit.start == edit.end && edit.text.isEmpty())
+            }
+        } else {
+            // The IME's own commit of a composed word lands here too — it matches the buffer, so no resync.
+            val s = selection.min
+            replaceRange(s, selection.max, text, TextRange(s + text.length))
+        }
+    }
+
+    /**
+     * Tab: indent to the next tab stop so code aligns to [tabWidth]-column boundaries (spaces, not a raw
+     * `\t`). A collapsed caret (or a selection within one line) inserts just enough spaces to reach the next
+     * stop from the caret's visual column; a multi-line selection indents every non-blank line one level and
+     * keeps the block selected.
+     */
+    fun indent(tabWidth: Int = 4) {
+        val sel = selection
+        val firstLine = doc.lineForOffset(sel.min)
+        var lastLine = doc.lineForOffset(sel.max)
+        // A selection ending exactly at a line start doesn't include that trailing line.
+        if (lastLine > firstLine && sel.max == doc.lineStart(lastLine)) lastLine--
+
+        if (lastLine > firstLine) {
+            beginBatch()
+            val pad = " ".repeat(tabWidth)
+            // Edit bottom-up so earlier line offsets stay valid as we splice.
+            for (line in lastLine downTo firstLine) {
+                val ls = doc.lineStart(line)
+                if (doc.lineEnd(line) == ls) continue // leave blank lines un-indented
+                replaceRange(ls, ls, pad, TextRange(ls))
+            }
+            updateSelectionAndComposing(TextRange(doc.lineStart(firstLine), doc.lineEnd(lastLine)), null)
+            endBatch()
+            resyncIme()
+            return
+        }
+
+        val ls = doc.lineStart(firstLine)
+        val col = visualColumn(ls, sel.min, tabWidth)
+        val spaces = tabWidth - (col % tabWidth)
+        val s = sel.min
+        replaceRange(s, sel.max, " ".repeat(spaces), TextRange(s + spaces))
+        resyncIme()
+    }
+
+    /**
+     * Shift-Tab: remove one indent level (up to [tabWidth] leading spaces, or a single leading tab) from the
+     * caret's line, or from every line a selection touches — keeping the block selected.
+     */
+    fun dedent(tabWidth: Int = 4) {
+        val sel = selection
+        val firstLine = doc.lineForOffset(sel.min)
+        var lastLine = doc.lineForOffset(sel.max)
+        if (lastLine > firstLine && sel.max == doc.lineStart(lastLine)) lastLine--
+        val multi = lastLine > firstLine
+
+        beginBatch()
+        var removedOnFirst = 0
+        for (line in lastLine downTo firstLine) {
+            val ls = doc.lineStart(line)
+            val n = leadingIndentToRemove(ls, tabWidth)
+            if (n > 0) {
+                if (line == firstLine) removedOnFirst = n
+                replaceRange(ls, ls + n, "", TextRange(ls))
+            }
+        }
+        if (multi) {
+            updateSelectionAndComposing(TextRange(doc.lineStart(firstLine), doc.lineEnd(lastLine)), null)
+        } else {
+            val ls = doc.lineStart(firstLine)
+            updateSelectionAndComposing(TextRange((sel.start - removedOnFirst).coerceAtLeast(ls)), null)
+        }
+        endBatch()
+        resyncIme()
+    }
+
+    /** Visual column of [offset] within its line starting at [lineStartOffset], expanding tabs to [tabWidth]. */
+    private fun visualColumn(lineStartOffset: Int, offset: Int, tabWidth: Int): Int {
+        var col = 0
+        val chars = doc.chars
+        for (i in lineStartOffset until offset) {
+            col += if (chars[i] == '\t') tabWidth - (col % tabWidth) else 1
+        }
+        return col
+    }
+
+    /** Number of leading chars to drop for one dedent on the line at [lineStartOffset]: one `\t`, else ≤[tabWidth] spaces. */
+    private fun leadingIndentToRemove(lineStartOffset: Int, tabWidth: Int): Int {
+        val chars = doc.chars
+        if (lineStartOffset < doc.length && chars[lineStartOffset] == '\t') return 1
+        var n = 0
+        while (n < tabWidth && lineStartOffset + n < doc.length && chars[lineStartOffset + n] == ' ') n++
+        return n
+    }
+
+    fun backspace(word: Boolean = false) {
+        if (word && selection.collapsed) {
+            val s = wordBoundaryLeft(doc.chars, selection.start)
+            if (s < selection.start) {
+                replaceRange(s, selection.start, "", TextRange(s))
+                resyncIme() // a word delete removes more than the IME asked for
+            }
+            return
+        }
+        val selMin = selection.min
+        val selMax = selection.max
+        val edit = smartBackspace(doc.chars, selMin, selMax, language) ?: return
+        replaceRange(edit.start, edit.end, edit.text, TextRange(edit.caret))
+        // Pair-aware / blank-line backspace can delete more than the single char deleteSurroundingText(1,0) asked
+        // for, so its result diverges from the IME's model.
+        val literalStart = if (selMin == selMax) selMin - 1 else selMin
+        if (edit.start != literalStart || edit.end != selMax || edit.text.isNotEmpty() || edit.caret != edit.start) {
+            resyncIme()
+        }
+    }
+
+    fun deleteForward(word: Boolean = false) {
+        if (!selection.collapsed) {
+            replaceRange(selection.min, selection.max, "", TextRange(selection.min))
+            resyncIme()
+            return
+        }
+        val p = selection.start
+        val e = if (word) wordBoundaryRight(doc.chars, p) else nextCharBoundary(doc.chars, p)
+        if (e > p) {
+            replaceRange(p, e, "", TextRange(p))
+            resyncIme()
+        }
+    }
+
+    fun moveHorizontal(dir: Int, select: Boolean, word: Boolean = false) {
+        val text = doc.chars
+        // plain arrow over a selection collapses to its edge (platform convention)
+        if (!select && !word && !selection.collapsed) {
+            setCaret(if (dir < 0) selection.min else selection.max)
+            return
+        }
+        val from = selection.end
+        val target = when {
+            word -> if (dir < 0) wordBoundaryLeft(text, from) else wordBoundaryRight(text, from)
+            dir < 0 -> prevCharBoundary(text, from)
+            else -> nextCharBoundary(text, from)
+        }
+        if (select) updateSelectionAndComposing(TextRange(selection.start, target), composing)
+        else setCaret(target)
+    }
+
+    fun moveVertical(lines: Int, select: Boolean) {
+        val from = selection.end
+        val line = doc.lineForOffset(from)
+        val col = from - doc.lineStart(line)
+        val goal = if (goalColumn >= 0) goalColumn else col
+        val targetLine = (line + lines).coerceIn(0, doc.lineCount - 1)
+        val target = when {
+            targetLine == line && lines < 0 -> 0 // already at the first line → document start
+            targetLine == line && lines > 0 -> doc.length
+            else -> doc.lineStart(targetLine) + goal.coerceAtMost(doc.lineLength(targetLine))
+        }
+        if (select) updateSelectionAndComposing(TextRange(selection.start, target), composing)
+        else setCaret(target)
+        goalColumn = goal // survive across consecutive vertical moves
+    }
+
+    /** Smart Home: first non-whitespace of the line, or column 0 when already there. */
+    fun moveLineStart(select: Boolean) {
+        val line = doc.lineForOffset(selection.end)
+        val start = doc.lineStart(line)
+        var indentEnd = start
+        while (indentEnd < doc.lineEnd(line) && (doc.charAt(indentEnd) == ' ' || doc.charAt(indentEnd) == '\t')) indentEnd++
+        val target = if (selection.end != indentEnd) indentEnd else start
+        if (select) updateSelectionAndComposing(TextRange(selection.start, target), composing) else setCaret(target)
+    }
+
+    fun moveLineEnd(select: Boolean) {
+        val target = doc.lineEnd(doc.lineForOffset(selection.end))
+        if (select) updateSelectionAndComposing(TextRange(selection.start, target), composing) else setCaret(target)
+    }
+
+    fun moveDocBoundary(dir: Int, select: Boolean) {
+        val target = if (dir < 0) 0 else doc.length
+        if (select) updateSelectionAndComposing(TextRange(selection.start, target), composing) else setCaret(target)
+    }
+
+    fun setCaret(offset: Int) {
+        updateSelectionAndComposing(TextRange(offset.coerceIn(0, doc.length)), null)
+    }
+
+    /** Bookmarked lines (0-based). They move with edits like diagnostics do: a line added above shifts them down,
+     *  and a bookmarked line merged into the one above it by a delete lands on that line. */
+    var bookmarks by mutableStateOf<Set<Int>>(emptySet())
+
+    /** Bookmark [line], or remove its bookmark. */
+    fun toggleBookmark(line: Int = doc.lineForOffset(selection.start.coerceIn(0, doc.length))) {
+        bookmarks = if (line in bookmarks) bookmarks - line else bookmarks + line
+    }
+
+    /** Bumped to open Paste from History from outside the editor (the symbol bar's Clipboard key). */
+    var pasteHistoryRequests by mutableIntStateOf(0)
+        private set
+
+    fun requestPasteHistory() {
+        pasteHistoryRequests++
+    }
+
+    // ---- the floating cursor (the symbol bar's hold-and-drag trackpad) ----
+
+    /**
+     * Where the trackpad's free cursor is, in fractional document [line]s and [column]s, while one is being
+     * dragged; null otherwise. It goes wherever the finger takes it, past a line's end or between lines, and the
+     * real caret snaps to the text position nearest it, as iOS's floating cursor does: so dragging right past
+     * the end of a line holds the caret at that end instead of wrapping it onto the next line, and dragging down
+     * keeps the column the cursor is at rather than the one a short line clamped the caret to.
+     */
+    var floatingCaret by mutableStateOf<FloatingCaret?>(null)
+        private set
+
+    /** Start a floating cursor at the caret. */
+    fun beginFloatingCaret() {
+        val at = selection.end.coerceIn(0, doc.length)
+        val line = doc.lineForOffset(at)
+        floatingCaret = FloatingCaret(line.toFloat(), (at - doc.lineStart(line)).toFloat())
+    }
+
+    /** Move the floating cursor by [dColumns] and [dLines], and snap the caret to the text under it. */
+    fun moveFloatingCaret(dColumns: Float, dLines: Float) {
+        val from = floatingCaret ?: return
+        val line = (from.line + dLines).coerceIn(0f, (doc.lineCount - 1).toFloat())
+        val snappedLine = kotlin.math.round(line).toInt()
+        // It may float past the end of the line it is on, but not off into nowhere: no further than the longest
+        // line around it, so dragging back reaches text again without a long dead zone.
+        var widest = 0
+        for (l in (snappedLine - FLOAT_NEIGHBOURHOOD).coerceAtLeast(0)..(snappedLine + FLOAT_NEIGHBOURHOOD).coerceAtMost(doc.lineCount - 1)) {
+            widest = maxOf(widest, doc.lineLength(l))
+        }
+        val column = (from.column + dColumns).coerceIn(0f, (widest + 1).toFloat())
+        floatingCaret = FloatingCaret(line, column)
+        val snappedColumn = kotlin.math.round(column).toInt().coerceIn(0, doc.lineLength(snappedLine))
+        setCaret(doc.lineStart(snappedLine) + snappedColumn)
+    }
+
+    /** Let go of the floating cursor; the caret stays where it snapped. */
+    fun endFloatingCaret() {
+        floatingCaret = null
+    }
+
+    /** Drag-selection: keep the current anchor ([TextRange.start]), move the live end. */
+    fun extendSelectionTo(offset: Int) {
+        updateSelectionAndComposing(TextRange(selection.start, offset.coerceIn(0, doc.length)), null)
+    }
+
+    /** Selection-handle drag: replace one edge, normalized so start stays the anchor. */
+    fun setSelectionRange(start: Int, end: Int) {
+        updateSelectionAndComposing(TextRange(start.coerceIn(0, doc.length), end.coerceIn(0, doc.length)), null)
+    }
+
+    fun selectAll() {
+        updateSelectionAndComposing(TextRange(0, doc.length), null)
+    }
+
+    fun selectWordAt(offset: Int) {
+        val r = wordRangeAt(doc.chars, offset.coerceIn(0, doc.length))
+        if (!r.isEmpty()) updateSelectionAndComposing(TextRange(r.first, r.last + 1), null)
+        else setCaret(offset)
+    }
+
+    /** Select the whole line containing [offset] (excluding the trailing newline). */
+    fun selectLineAt(offset: Int) {
+        val line = doc.lineForOffset(offset.coerceIn(0, doc.length))
+        updateSelectionAndComposing(TextRange(doc.lineStart(line), doc.lineEnd(line)), null)
+    }
+
+    /**
+     * Move the caret to the next ([forward]) or previous diagnostic relative to the current caret, wrapping
+     * around the buffer ends. Visits every diagnostic in offset order (errors and warnings alike). Returns
+     * false (a no-op) when the file has no diagnostics.
+     */
+    fun goToDiagnostic(forward: Boolean): Boolean {
+        if (diagnostics.isEmpty()) return false
+        val offsets = diagnostics.map { it.startOffset.coerceIn(0, doc.length) }.distinct().sorted()
+        val caret = selection.start
+        val target = if (forward) offsets.firstOrNull { it > caret } ?: offsets.first()
+        else offsets.lastOrNull { it < caret } ?: offsets.last()
+        setCaret(target)
+        return true
+    }
+
+    fun selectedText(): String? =
+        if (selection.collapsed) null else doc.substring(selection.min, selection.max)
+
+    fun cutSelection(): String? {
+        val t = selectedText() ?: return null
+        replaceRange(selection.min, selection.max, "", TextRange(selection.min))
+        resyncIme()
+        return t
+    }
+
+    // ---- line operations (keyboard + symbol-bar) ----
+
+    /** The inclusive line range the current selection touches. A selection ending exactly at a line start
+     *  doesn't include that trailing line (matching [indent]/[dedent]). */
+    private fun selectedLineRange(): IntRange {
+        val sel = selection
+        val first = doc.lineForOffset(sel.min)
+        var last = doc.lineForOffset(sel.max)
+        if (last > first && sel.max == doc.lineStart(last)) last--
+        return first..last
+    }
+
+    /**
+     * Duplicate the selection, or — when the caret is collapsed — the whole current line. The copy lands
+     * directly after the original: a collapsed caret moves to the same column on the new (lower) line; a
+     * range selection re-selects the copy, so a repeated press keeps duplicating.
+     */
+    fun duplicateSelection() {
+        val sel = selection
+        if (sel.collapsed) {
+            val line = doc.lineForOffset(sel.min)
+            val ls = doc.lineStart(line)
+            val le = doc.lineEnd(line)
+            val lineText = doc.substring(ls, le)
+            replaceRange(le, le, "\n" + lineText, TextRange(le + 1 + (sel.min - ls)))
+        } else {
+            val text = doc.substring(sel.min, sel.max)
+            replaceRange(sel.max, sel.max, text, TextRange(sel.max, sel.max + text.length))
+        }
+        resyncIme()
+    }
+
+    /**
+     * Move the line(s) the selection touches up ([dir] < 0) or down ([dir] > 0) by one, swapping with the
+     * adjacent line and keeping the same text selected. A no-op at the corresponding buffer edge.
+     */
+    fun moveLines(dir: Int) {
+        val range = selectedLineRange()
+        val first = range.first
+        val last = range.last
+        if (dir < 0) {
+            if (first == 0) return
+            val prevStart = doc.lineStart(first - 1)
+            val prevEnd = doc.lineEnd(first - 1)
+            val prevText = doc.substring(prevStart, prevEnd)
+            val blockText = doc.substring(doc.lineStart(first), doc.lineEnd(last))
+            val delta = -((prevEnd - prevStart) + 1)
+            replaceRange(
+                prevStart, doc.lineEnd(last), blockText + "\n" + prevText,
+                TextRange(selection.start + delta, selection.end + delta),
+            )
+        } else {
+            if (last >= doc.lineCount - 1) return
+            val blockStart = doc.lineStart(first)
+            val blockText = doc.substring(blockStart, doc.lineEnd(last))
+            val nextStart = doc.lineStart(last + 1)
+            val nextEnd = doc.lineEnd(last + 1)
+            val nextText = doc.substring(nextStart, nextEnd)
+            val delta = (nextEnd - nextStart) + 1
+            replaceRange(
+                blockStart, nextEnd, nextText + "\n" + blockText,
+                TextRange(selection.start + delta, selection.end + delta),
+            )
+        }
+        resyncIme()
+    }
+
+    /** Delete the line(s) the selection touches, including the line break, leaving the caret at the start of
+     *  the following line (or the new end of the buffer). */
+    fun deleteLines() {
+        val range = selectedLineRange()
+        val first = range.first
+        val last = range.last
+        val start: Int
+        val end: Int
+        if (last < doc.lineCount - 1) {
+            start = doc.lineStart(first)
+            end = doc.lineStart(last + 1)
+        } else {
+            // Deleting through the last line: also drop the preceding newline so no blank tail line is left.
+            start = if (first > 0) doc.lineEnd(first - 1) else doc.lineStart(first)
+            end = doc.length
+        }
+        replaceRange(start, end, "", TextRange(start))
+        resyncIme()
+    }
+
+    /** Join the next line up onto the caret's line (or fuse all lines a selection spans), collapsing each
+     *  line break + the next line's leading indent into a single space. */
+    fun joinLines() {
+        val range = selectedLineRange()
+        val first = range.first
+        if (first >= doc.lineCount - 1) return // nothing below to join
+        val joins = if (range.last > first) range.last - first else 1
+        beginBatch()
+        var caret = -1
+        repeat(joins) {
+            if (first >= doc.lineCount - 1) return@repeat
+            val le = doc.lineEnd(first) // the '\n' ending the joined-onto line
+            val nextEnd = doc.lineEnd(first + 1)
+            var nextNonWs = doc.lineStart(first + 1)
+            while (nextNonWs < nextEnd && (doc.charAt(nextNonWs) == ' ' || doc.charAt(nextNonWs) == '\t')) nextNonWs++
+            // No separating space when the upper line is blank / already ends in space, or the lower line is blank.
+            val upperBlank = le == doc.lineStart(first)
+            val upperEndsSpace = le > 0 && (doc.charAt(le - 1) == ' ' || doc.charAt(le - 1) == '\t')
+            val lowerBlank = nextNonWs == nextEnd
+            val sep = if (upperBlank || upperEndsSpace || lowerBlank) "" else " "
+            if (caret < 0) caret = le
+            replaceRange(le, nextNonWs, sep, TextRange(le + sep.length))
+        }
+        updateSelectionAndComposing(TextRange(if (caret < 0) selection.min else caret), null)
+        endBatch()
+        resyncIme()
+    }
+
+    // ---- comment toggling ----
+
+    private class CommentSyntax(val line: String?, val blockOpen: String?, val blockClose: String?)
+
+    /** Straight off the language's profile, so a contributed language comments like any built-in. */
+    private fun commentSyntax(): CommentSyntax =
+        CommentSyntax(
+            language.profile.lineComment,
+            language.profile.blockCommentOpen,
+            language.profile.blockCommentClose,
+        )
+
+    /** Toggle comments on the touched line(s): line comments by default, block comments when [preferBlock]
+     *  (or when the language has no line comment, e.g. XML). Already-commented lines are uncommented. */
+    fun toggleComment(preferBlock: Boolean = false) {
+        val c = commentSyntax()
+        when {
+            !preferBlock && c.line != null -> toggleLineComment(c.line)
+            c.blockOpen != null && c.blockClose != null -> toggleBlockComment(c.blockOpen, c.blockClose)
+            c.line != null -> toggleLineComment(c.line)
+        }
+    }
+
+    private fun firstNonWsOnLine(line: Int): Int {
+        var i = doc.lineStart(line)
+        val end = doc.lineEnd(line)
+        while (i < end && (doc.charAt(i) == ' ' || doc.charAt(i) == '\t')) i++
+        return i
+    }
+
+    private fun lineStartsWith(line: Int, token: String): Boolean {
+        val at = firstNonWsOnLine(line)
+        if (at + token.length > doc.lineEnd(line)) return false
+        for (k in token.indices) if (doc.charAt(at + k) != token[k]) return false
+        return true
+    }
+
+    private fun toggleLineComment(token: String) {
+        val range = selectedLineRange()
+        val first = range.first
+        val last = range.last
+        val wasCollapsed = selection.collapsed
+        // Operate on non-blank lines; if the whole range is blank, comment the first line anyway.
+        val nonBlank = (first..last).filter { firstNonWsOnLine(it) < doc.lineEnd(it) }
+        val lines = if (nonBlank.isEmpty()) listOf(first) else nonBlank
+        val allCommented = lines.all { lineStartsWith(it, token) }
+        beginBatch()
+        if (allCommented) {
+            for (l in lines.sortedDescending()) {
+                val at = firstNonWsOnLine(l)
+                var removeEnd = at + token.length
+                if (removeEnd < doc.lineEnd(l) && doc.charAt(removeEnd) == ' ') removeEnd++
+                replaceRange(at, removeEnd, "", TextRange(at))
+            }
+        } else {
+            // Insert at the common minimum indent column so the markers line up (IntelliJ-style).
+            val col = lines.minOf { firstNonWsOnLine(it) - doc.lineStart(it) }
+            for (l in lines.sortedDescending()) {
+                val at = doc.lineStart(l) + col
+                replaceRange(at, at, "$token ", TextRange(at))
+            }
+        }
+        endBatch()
+        if (wasCollapsed) updateSelectionAndComposing(TextRange(firstNonWsOnLine(first)), null)
+        else updateSelectionAndComposing(TextRange(doc.lineStart(first), doc.lineEnd(last)), null)
+        resyncIme()
+    }
+
+    private fun toggleBlockComment(open: String, close: String) {
+        val sel = selection
+        val start: Int
+        val end: Int
+        if (sel.collapsed) {
+            val line = doc.lineForOffset(sel.min)
+            start = firstNonWsOnLine(line)
+            end = doc.lineEnd(line)
+        } else {
+            start = sel.min
+            end = sel.max
+        }
+        val text = doc.substring(start, end)
+        val inner = text.trim()
+        val wrapped = inner.startsWith(open) && inner.endsWith(close) && inner.length >= open.length + close.length
+        beginBatch()
+        if (wrapped) {
+            val oRel = text.indexOf(open)
+            val cRel = text.lastIndexOf(close)
+            // Remove the closer first (higher offset), each with one padding space if present.
+            var cs = start + cRel
+            val ce = cs + close.length
+            if (cs > start && doc.charAt(cs - 1) == ' ') cs--
+            replaceRange(cs, ce, "", TextRange(cs))
+            val os = start + oRel
+            var oe = os + open.length
+            if (oe < doc.length && doc.charAt(oe) == ' ') oe++
+            replaceRange(os, oe, "", TextRange(os))
+            updateSelectionAndComposing(TextRange(os), null)
+        } else {
+            replaceRange(end, end, " $close", TextRange(end))
+            replaceRange(start, start, "$open ", TextRange(start))
+            updateSelectionAndComposing(TextRange(start, end + open.length + close.length + 2), null)
+        }
+        endBatch()
+        resyncIme()
+    }
+
+    /**
+     * Apply a completion accept: the main replacement plus optional additional edits (auto-import),
+     * already expressed in pre-edit offsets, then land the caret at [finalSelection]. One notify.
+     */
+    fun applyEdits(edits: List<RangeEdit>, finalSelection: TextRange) {
+        // A completion accepted while the IME was composing (the typed prefix is the composing region) replaces
+        // that region programmatically. Clearing our own [composing] + pushing the new selection isn't enough:
+        // the IME keeps its OWN composing buffer (the pre-accept prefix), so the next keystroke/Enter re-inserts
+        // it. Force the IME to restart so it discards that buffer and re-reads the post-accept text/selection —
+        // but only when a region was actually composing, to avoid an unnecessary restart on a plain edit
+        // (auto-close bracket, block edit) where the IME state is already coherent.
+        val wasComposing = composing != null
+        beginBatch()
+        composing = null
+        for (e in edits.sortedByDescending { it.start }) {
+            replaceRange(e.start, e.end, e.text, TextRange(e.text.length + e.start))
+        }
+        updateSelectionAndComposing(finalSelection, null)
+        endBatch()
+        if (wasComposing) imeListener?.onRestartInput()
+    }
+
+    // ---- IME bridge (called by the platform InputConnection) ----
+
+    fun imeCommitText(text: String, newCursorPosition: Int) {
+        // A bare newline commit (Enter on the soft keyboard, or an editor action) runs the editor's smart-Enter —
+        // the same path the hardware Enter key takes — rather than pasting "\n" over the composing region (which
+        // would drop the just-composed word). [commitText] clears any composition as it splices.
+        if (text == "\n") {
+            val wasComposing = composing != null
+            commitText("\n")
+            // Keeping the composed word deviates from the contract (a commit REPLACES the composing text), so
+            // an IME that was composing now models the word as gone. Forced restart: commitText's own
+            // divergence check can't see this (it compares against a plain insert at the selection, and an
+            // un-indented smart Enter matches one exactly), and a monitoring IME's mirror can't absorb the
+            // partial push at offsets shifted by the word it believes vanished.
+            if (wasComposing) resyncIme(force = true)
+            return
+        }
+        // SwiftKey-style "auto insert space after punctuation", in BOTH wire shapes. Markdown/plain files
+        // keep the keyboard's spacing (auto-space after `.` is what prose wants).
+        val codeFile = language != CodeLanguage.Markdown && language != CodeLanguage.Plain
+        // Split shape: the symbol and its auto-space arrive as TWO commits inside ONE batch edit. A human
+        // tap produces one commit; a second bare-space commit in the same batch can only be the keyboard's
+        // auto-space — swallow it. The IME's model holds the space, so force the restart (deferred to the
+        // batch end).
+        if (codeFile && text == " " && batchDepth > 0 && batchImeSymbolCommit) {
+            resyncIme(force = true)
+            return
+        }
+        // Bundled shape: the commit itself ends "<symbol><space>" — ") " from a bare punctuation tap, or
+        // "word) " committed over the composing region. In code that trailing auto-space is wrong (`foo() ;`,
+        // a closing quote followed by a space mid-string), and on the single-char shape the two-char commit
+        // also bypassed the smart path, so skip-over/auto-close silently stopped working on those keyboards.
+        // Strip the space; word commits ("hello ", a suggestion pick) keep theirs. The IME applied the full
+        // text to its own model, so a phantom space survives there that no extracted-text push can evict —
+        // force the restart.
+        var t = text
+        var strippedAutoSpace = false
+        if (codeFile && newCursorPosition == 1 && t.length >= 2 && t[t.length - 1] == ' ' &&
+            isAutoSpacedSymbol(t[t.length - 2])
+        ) {
+            t = t.substring(0, t.length - 1)
+            strippedAutoSpace = true
+        }
+        if (batchDepth > 0 && t.isNotEmpty() && isAutoSpacedSymbol(t[t.length - 1])) {
+            batchImeSymbolCommit = true
+        }
+        // Punctuation swap, second half: a symbol commit landing exactly where this batch's IME delete
+        // removed a space reveals that delete as the keyboard's "no space before punctuation" swap (prose
+        // manners; SwiftKey sends batch { delete(1,0); commit ")"; commit " " }). The user typed that
+        // space — restore it and let the symbol land after it. The keyboard's model (space gone) is stale
+        // either way, so force the restart.
+        if (codeFile && batchImeSpaceDeleteOffset >= 0 && composing == null && selection.collapsed &&
+            selection.min == batchImeSpaceDeleteOffset && t.isNotEmpty() && isAutoSpacedSymbol(t[0])
+        ) {
+            val off = batchImeSpaceDeleteOffset
+            replaceRange(off, off, batchImeSpaceDeleteChar.toString(), TextRange(off + 1))
+            resyncIme(force = true)
+        }
+        // single-char direct commits (no composition) get the same smart edits as hardware typing
+        if (composing == null && selection.collapsed && t.length == 1 && newCursorPosition == 1) {
+            if (strippedAutoSpace) {
+                beginBatch() // folds the smart path's own resync and the forced one into a single restart
+                commitText(t)
+                resyncIme(force = true)
+                endBatch()
+            } else {
+                commitText(t)
+            }
+            return
+        }
+        val region = composing ?: selection
+        val rs = region.min
+        val caret = imeCaret(rs, t.length, newCursorPosition)
+        replaceRange(rs, region.max, t, TextRange(caret), null)
+        if (strippedAutoSpace) resyncIme(force = true)
+    }
+
+    fun imeSetComposingText(text: String, newCursorPosition: Int) {
+        val region = composing ?: selection
+        val rs = region.min
+        val caret = imeCaret(rs, text.length, newCursorPosition)
+        val comp = if (text.isEmpty()) null else TextRange(rs, rs + text.length)
+        replaceRange(rs, region.max, text, TextRange(caret), comp)
+    }
+
+    fun imeSetComposingRegion(start: Int, end: Int) {
+        val s = min(start, end).coerceIn(0, doc.length)
+        val e = max(start, end).coerceIn(0, doc.length)
+        updateSelectionAndComposing(selection, if (s < e) TextRange(s, e) else null)
+    }
+
+    fun imeFinishComposing() {
+        if (composing != null) updateSelectionAndComposing(selection, null)
+    }
+
+    fun imeDeleteSurrounding(before: Int, after: Int) {
+        // the Gboard backspace fast path — and the one place pair-aware delete applies
+        if (before == 1 && after == 0 && composing == null && selection.collapsed) {
+            val p = selection.start
+            // A WHITESPACE delete stays LITERAL. SwiftKey's punctuation swap removes the space before a
+            // symbol via deleteSurroundingText(1,0) in the same batch as the commit that follows, and at
+            // this point it is byte-identical to the user's backspace tap (both batched) — but the smart
+            // rules that fire on a space delete (unindent level, blank-line collapse, aligned-closer keep)
+            // would eat real code on every swap (the "typing ) deletes my indent" bug). Deleting exactly
+            // what the IME asked for also keeps its model coherent — no resync needed. The smart rules
+            // still run for the editor's own [backspace] (hardware key / symbol bar), and the pair-aware
+            // delete below still fires on IME deletes of non-whitespace (no keyboard deletes those on
+            // its own).
+            if (p > 0 && (doc.charAt(p - 1) == ' ' || doc.charAt(p - 1) == '\t')) {
+                val ch = doc.charAt(p - 1)
+                replaceRange(p - 1, p, "", TextRange(p - 1))
+                // Arm the punctuation-swap detector: if a symbol commit lands at this offset later in the
+                // SAME batch, this delete was the keyboard's swap and [imeCommitText] restores the char.
+                if (batchDepth > 0) {
+                    batchImeSpaceDeleteOffset = p - 1
+                    batchImeSpaceDeleteChar = ch
+                }
+                return
+            }
+            val rev = textRevision
+            backspace()
+            // A smart rule that kept the text unchanged still looked like a successful one-char delete to
+            // the IME, so its model is now off by one — resync it. Forced past the monitoring-IME skip:
+            // with no text change there is no extracted-text push to correct the mirror, and the selection
+            // didn't move either, so the IME gets no signal at all without a restart.
+            if (textRevision == rev) resyncIme(force = true)
+            return
+        }
+        // Deletion happens OUTSIDE the composing region as well as the selection (the framework contract:
+        // deleteSurroundingText never touches the composing text), and the composition survives, shifted.
+        beginBatch()
+        val comp = composing
+        val delBeforeEnd = min(selection.min, comp?.min ?: selection.min)
+        val delAfterStart = max(selection.max, comp?.max ?: selection.max)
+        val aEnd = (delAfterStart + after).coerceAtMost(doc.length)
+        if (aEnd > delAfterStart) {
+            replaceRange(delAfterStart, aEnd, "", TextRange(selection.start, selection.end), composing)
+        }
+        val bStart = (delBeforeEnd - before).coerceAtLeast(0)
+        if (bStart < delBeforeEnd) {
+            val del = delBeforeEnd - bStart
+            val sel = selection
+            val c = composing
+            replaceRange(
+                bStart, delBeforeEnd, "",
+                TextRange(sel.start - del, sel.end - del),
+                c?.let { TextRange(it.min - del, it.max - del) },
+            )
+        }
+        endBatch()
+    }
+
+    fun imeSetSelection(start: Int, end: Int) {
+        // Clamp before constructing: TextRange itself rejects negative offsets, and a misbehaving IME
+        // sending them must not crash the editor.
+        updateSelectionAndComposing(
+            TextRange(start.coerceIn(0, doc.length), end.coerceIn(0, doc.length)), composing,
+        )
+    }
+
+    /**
+     * `InputConnection.replaceText` (API 34+, how modern keyboards rewrite a PREVIOUS word without moving
+     * through the selection): atomically replace `[start, end)` with [text], finishing any active
+     * composition first (the framework contract: the replacement never leaves a composing region), with
+     * the caret placed by [newCursorPosition] using commitText semantics relative to the replacement.
+     * Applied literally, in one batch (one undo step, one IME push): the IME initiated the edit against
+     * offsets it computed itself, so its model stays coherent and no resync is needed.
+     */
+    fun imeReplaceText(start: Int, end: Int, text: String, newCursorPosition: Int) {
+        beginBatch()
+        if (composing != null) updateSelectionAndComposing(selection, null)
+        val s = min(start, end).coerceIn(0, doc.length)
+        val e = max(start, end).coerceIn(0, doc.length)
+        replaceRange(s, e, text, TextRange(imeCaret(s, text.length, newCursorPosition)))
+        endBatch()
+    }
+
+    /**
+     * The platform refused an IME-initiated rewrite of existing text (rawMode `replaceText`). The IME has
+     * already applied that edit to its own optimistic model, so without a restart every absolute offset it
+     * sends afterwards is shifted by the phantom text; force the restart so it re-reads our state.
+     */
+    fun imeRewriteRefused() {
+        resyncIme(force = true)
+    }
+
+    fun imeTextBeforeCursor(n: Int): String {
+        val end = selection.min
+        return doc.substring((end - n.coerceIn(0, MAX_IPC_TEXT)).coerceAtLeast(0), end)
+    }
+
+    fun imeTextAfterCursor(n: Int): String {
+        val start = selection.max
+        return doc.substring(start, (start + n.coerceIn(0, MAX_IPC_TEXT)).coerceAtMost(doc.length))
+    }
+
+    /** A char SwiftKey-style keyboards auto-space after: any symbol (identifier chars and whitespace never
+     *  get the bundled-space treatment, and a plain `"x "` word commit must keep its trailing space). */
+    private fun isAutoSpacedSymbol(c: Char): Boolean = !c.isLetterOrDigit() && !c.isWhitespace()
+
+    // Clamped at 0: a large negative newCursorPosition near the document start must not produce a negative
+    // offset (TextRange throws on those). The upper bound is coerced where the TextRange is applied.
+    private fun imeCaret(regionStart: Int, insertedLen: Int, newCursorPosition: Int): Int =
+        (if (newCursorPosition > 0) regionStart + insertedLen + newCursorPosition - 1
+        else regionStart + newCursorPosition).coerceAtLeast(0)
+
+    private companion object {
+        /** What an auto-close inserts for one typed opener: the pairs Tab can step out of. */
+        val AUTO_PAIRS = setOf("()", "[]", "{}", "\"\"", "''")
+
+        /** Cap for IME text queries — never ship megabytes across the binder. */
+        const val MAX_IPC_TEXT = 4096
+
+        /** Undo-stack depth cap. With coalescing each step can be a whole run, so this is generous. */
+        const val MAX_UNDO_STEPS = 300
+    }
+}
+
+/** One reversible change: at [start], the [removed] text was replaced by [inserted]. Coalescing mutates these. */
+private class UndoEdit(var start: Int, var removed: String, var inserted: String)
+
+/** One undo unit: its edits in application order, plus the selection to restore before ([selBefore]) and after. */
+private class UndoStep(val edits: MutableList<UndoEdit>, val selBefore: TextRange, var selAfter: TextRange)
+
+private fun TextRange.coercedIn(length: Int): TextRange =
+    TextRange(start.coerceIn(0, length), end.coerceIn(0, length))
+
+private fun nextCharBoundary(text: CharSequence, i: Int): Int = when {
+    i >= text.length -> text.length
+    text[i].isHighSurrogate() && i + 1 < text.length && text[i + 1].isLowSurrogate() -> i + 2
+    else -> i + 1
+}
+
+private fun prevCharBoundary(text: CharSequence, i: Int): Int = when {
+    i <= 0 -> 0
+    text[i - 1].isLowSurrogate() && i >= 2 && text[i - 2].isHighSurrogate() -> i - 2
+    else -> i - 1
+}
+
+/** The trackpad's free cursor: a fractional document [line] and [column] (see [EditorSession.floatingCaret]). */
+data class FloatingCaret(val line: Float, val column: Float)
+
+/** How many lines either side bound how far past a line's end the floating cursor may go. */
+private const val FLOAT_NEIGHBOURHOOD = 12

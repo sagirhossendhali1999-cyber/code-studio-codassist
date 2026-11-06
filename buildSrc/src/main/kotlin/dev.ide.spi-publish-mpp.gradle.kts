@@ -1,5 +1,5 @@
 // Publishing for the published SPI modules that are multiplatform: :model-api, :platform-core, :vfs-api,
-// :language-api and :project-model-api. The JVM-only ones take `dev.ide.spi-publish` instead, which applies
+// :language-api and :project-model-api. The JVM-only ones take `com.shd.codestudio.spi-publish` instead, which applies
 // `java-library`, a plugin the multiplatform one rejects. That is why this exists as a second convention
 // rather than as a branch inside that one. Same coordinate, same POM, same staging repository and same
 // signing rule; what differs is that a multiplatform module publishes SEVERAL components (the root module
@@ -17,8 +17,8 @@
 plugins {
     `maven-publish`
     // The coordinate, the version, the POM, the staging repository and the signing rule, shared with
-    // `dev.ide.spi-publish` and `:plugin-bom`.
-    id("dev.ide.spi-pom")
+    // `com.shd.codestudio.spi-publish` and `:plugin-bom`.
+    id("com.shd.codestudio.spi-pom")
 }
 
 publishing {

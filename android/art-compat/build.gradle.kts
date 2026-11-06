@@ -1,4 +1,4 @@
-import dev.ide.build.RelocateTypesInJar
+import com.shd.codestudio.build.RelocateTypesInJar
 // Imported (not fully-qualified) because the Java plugin's `java` project extension shadows the `java.*`
 // package inside a build script — `java.io.File` would parse as `(java extension).io`.
 import java.io.File
@@ -39,7 +39,7 @@ plugins {
 
 // --- ecj-on-ART patch (java.lang.Runtime$Version) -------------------------------------------------
 // ecj's compiler reads `Runtime.Version` for its --release handling; the type is absent from ART, so
-// relocate the references onto the shim :lang-jdt ships (dev.ide.lang.jdt.compat.RuntimeVersion) and dex the
+// relocate the references onto the shim :lang-jdt ships (com.shd.codestudio.lang.jdt.compat.RuntimeVersion) and dex the
 // patched jar. :ide-android strips the stock module from every runtime classpath so only this copy is dexed.
 val ecjUnpatched: Configuration by configurations.creating {
     isCanBeConsumed = false
@@ -51,7 +51,7 @@ val relocateEcjForArt = tasks.register<RelocateTypesInJar>("relocateEcjForArt") 
     // Lazy: `elements` resolves the configuration at execution time, not during configuration.
     inputJar.fileProvider(ecjUnpatched.elements.map { it.single().asFile })
     outputJar.set(layout.buildDirectory.file("ecj-art/ecj-art.jar"))
-    renames.put("java/lang/Runtime\$Version", "dev/ide/lang/jdt/compat/RuntimeVersion")
+    renames.put("java/lang/Runtime\$Version", "com/shd/codestudio/lang/jdt/compat/RuntimeVersion")
 }
 
 // --- Eclipse-runtime-on-ART patch (java.lang.StackWalker) -----------------------------------------
@@ -61,7 +61,7 @@ val relocateEcjForArt = tasks.register<RelocateTypesInJar>("relocateEcjForArt") 
 // absent from ART at our minSdk and (being in java.*) un-stubbable, so on-device that <clinit> throws an
 // uncatchable NoClassDefFoundError (java.lang.StackWalker$Option) — and because Status is ubiquitous, it
 // disables editor analysis entirely. As with ecj's Runtime$Version, relocate the references onto a shim we
-// ship (dev.ide.lang.jdt.compat.StackWalker in :lang-jdt) and dex the patched jars. These two modules
+// ship (com.shd.codestudio.lang.jdt.compat.StackWalker in :lang-jdt) and dex the patched jars. These two modules
 // reach the app only transitively via :ide-core → lang-jdt → jdt.core, so resolve jdt.core's graph here and
 // pick the two jars out by name (tracks the `jdt` catalog version automatically). Desktop runs on a real
 // JVM and is left untouched. The single `java/lang/StackWalker` rename also covers the nested
@@ -78,12 +78,12 @@ fun eclipseRuntimeJar(prefix: String) =
 val relocateCoreRuntimeForArt = tasks.register<RelocateTypesInJar>("relocateCoreRuntimeForArt") {
     inputJar.fileProvider(eclipseRuntimeJar("org.eclipse.core.runtime-"))
     outputJar.set(layout.buildDirectory.file("eclipse-art/org.eclipse.core.runtime-art.jar"))
-    renames.put("java/lang/StackWalker", "dev/ide/lang/jdt/compat/StackWalker")
+    renames.put("java/lang/StackWalker", "com/shd/codestudio/lang/jdt/compat/StackWalker")
 }
 val relocateEquinoxCommonForArt = tasks.register<RelocateTypesInJar>("relocateEquinoxCommonForArt") {
     inputJar.fileProvider(eclipseRuntimeJar("org.eclipse.equinox.common-"))
     outputJar.set(layout.buildDirectory.file("eclipse-art/org.eclipse.equinox.common-art.jar"))
-    renames.put("java/lang/StackWalker", "dev/ide/lang/jdt/compat/StackWalker")
+    renames.put("java/lang/StackWalker", "com/shd/codestudio/lang/jdt/compat/StackWalker")
 }
 
 // --- bundletool's protobuf, relocated off com.google.protobuf --------------------------------------
@@ -109,8 +109,8 @@ val bundletoolUnshaded: Configuration by configurations.creating {
 dependencies { bundletoolUnshaded(libs.android.bundletool) }
 
 val SHADED_PROTOBUF = mapOf(
-    "com/google/protobuf/" to "dev/ide/shadedproto/",
-    "com.google.protobuf." to "dev.ide.shadedproto.",
+    "com/google/protobuf/" to "com/shd/codestudio/shadedproto/",
+    "com.google.protobuf." to "com.shd.codestudio.shadedproto.",
 )
 check(SHADED_PROTOBUF.all { (k, v) -> k.length == v.length }) { "the protobuf relocation must keep string lengths" }
 

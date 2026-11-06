@@ -151,7 +151,7 @@ compose-runtime-desktop = { module = "org.jetbrains.compose.runtime:runtime-desk
 compose-ui-desktop = { module = "org.jetbrains.compose.ui:ui-desktop", version.ref = "compose" }
 # The androidx.compose artifacts Compose Multiplatform maps to on Android, i.e. exactly what the IDE's APK
 # bundles. A plugin app compiles against these (compileOnly) and binds to the IDE's copies at runtime, so they
-# must stay in step with `compose` above and with the pins CodeAssistPluginTemplate writes into a scaffolded
+# must stay in step with `compose` above and with the pins CodeStudioPluginTemplate writes into a scaffolded
 # plugin. Re-derive after a Compose upgrade:
 #   ./gradlew :ide-android:dependencies --configuration debugCompileClasspath
 androidx-compose-runtime = { module = "androidx.compose.runtime:runtime", version.ref = "androidxCompose" }

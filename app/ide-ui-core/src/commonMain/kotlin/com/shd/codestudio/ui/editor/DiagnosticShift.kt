@@ -1,0 +1,321 @@
+package com.shd.codestudio.ui.editor
+
+import com.shd.codestudio.ui.backend.UiComposePreview
+import com.shd.codestudio.ui.backend.UiDiagnostic
+import com.shd.codestudio.ui.backend.UiGutterMark
+import com.shd.codestudio.ui.backend.UiInlayHint
+import com.shd.codestudio.ui.backend.UiResourceSwatch
+import com.shd.codestudio.ui.backend.UiTextDecoration
+import com.shd.codestudio.ui.backend.UiSemanticToken
+import com.shd.codestudio.ui.editor.core.EditSpan
+import com.shd.codestudio.ui.editor.core.EditorDocument
+import com.shd.codestudio.ui.editor.folding.FoldRegion
+
+/**
+ * Re-aligns diagnostics to an edited buffer so error squiggles and gutter marks track the text *as the
+ * user types*, instead of sitting at stale offsets for the analysis debounce window (and then snapping).
+ * Pure and backend-neutral: the editor calls [shiftDiagnostics] on every edit, and a fresh analysis
+ * replaces the result a moment later — this just keeps the UI consistent in between.
+ *
+ * The session knows exactly what changed, so the live path takes an [EditSpan] + the post-edit
+ * [EditorDocument] and re-maps in O(diagnostics) with no string diff. ([shiftDiagnostics] over two whole
+ * strings is kept for callers that only have the before/after text.)
+ */
+
+/**
+ * The minimal single edit that turns [old] into [new], recovered from their common prefix and suffix. An
+ * editor emits one contiguous change per keystroke / paste / delete / range-replace, so this reconstructs
+ * it exactly. (A non-contiguous change collapses to the smallest span covering it — slightly conservative,
+ * which the follow-up re-analysis corrects.)
+ */
+private fun diffEdit(old: String, new: String): EditSpan {
+    if (old == new) return EditSpan(0, 0, 0)
+    val maxPrefix = minOf(old.length, new.length)
+    var p = 0
+    while (p < maxPrefix && old[p] == new[p]) p++
+    var s = 0
+    val maxSuffix = minOf(old.length - p, new.length - p) // keep the suffix from overlapping the prefix
+    while (s < maxSuffix && old[old.length - 1 - s] == new[new.length - 1 - s]) s++
+    return EditSpan(p, old.length - p - s, new.length - p - s)
+}
+
+// Diagnostic boundaries are mapped with gravity so an edit at a boundary does the intuitive thing: text
+// inserted at a diagnostic's start pushes the start right (the insertion isn't part of it), while text at
+// its end is left out — and an edit *inside* the range moves only the end, stretching/shrinking it.
+
+/** Right-gravity map for a range start: an insertion at the boundary pushes it right; a position inside a
+ *  deleted span clamps to the edit point. */
+private fun mapStart(o: Int, edit: EditSpan): Int = when {
+    o < edit.start -> o
+    o == edit.start -> if (edit.removed == 0) o + edit.delta else o
+    o < edit.start + edit.removed -> edit.start
+    else -> o + edit.delta
+}
+
+/** Left-gravity map for a range end: an insertion at the boundary leaves it; a position inside (or at the
+ *  end of) a deleted span clamps to the edit point. */
+private fun mapEnd(o: Int, edit: EditSpan): Int = when {
+    o <= edit.start -> o
+    o <= edit.start + edit.removed -> edit.start
+    else -> o + edit.delta
+}
+
+/** 1-based line of [offset] in [text]. */
+private fun lineOf(text: String, offset: Int): Int {
+    var line = 1
+    val end = offset.coerceIn(0, text.length)
+    for (i in 0 until end) if (text[i] == '\n') line++
+    return line
+}
+
+/**
+ * Returns [diagnostics] (computed against [old]) re-mapped onto [new]. Offsets before the edit are kept;
+ * offsets after it shift by the net length change; an edit *within* a diagnostic stretches or shrinks it
+ * (the start holds via [mapOffset], the end moves) — and an edit that deletes a whole diagnostic drops it.
+ * [UiDiagnostic.line] / [UiDiagnostic.col] are recomputed so the gutter stays in sync.
+ */
+fun shiftDiagnostics(diagnostics: List<UiDiagnostic>, old: String, new: String): List<UiDiagnostic> {
+    if (diagnostics.isEmpty()) return diagnostics
+    val edit = diffEdit(old, new)
+    if (edit.isNoOp) return diagnostics
+    val out = ArrayList<UiDiagnostic>(diagnostics.size)
+    for (d in diagnostics) {
+        val start = mapStart(d.startOffset, edit).coerceIn(0, new.length)
+        val end = mapEnd(d.endOffset, edit).coerceIn(start, new.length)
+        if (end <= start && d.endOffset > d.startOffset) continue // the edit consumed the whole range
+        val line = lineOf(new, start)
+        val col = start - (new.lastIndexOf('\n', start - 1) + 1) + 1
+        out.add(d.copy(startOffset = start, endOffset = end, line = line, col = col))
+    }
+    return out
+}
+
+/**
+ * The O(diagnostics) live path: re-map [diagnostics] across a single [edit] the session just applied, using
+ * the post-edit [doc] for line/col (a binary search per diagnostic — no whole-text scan). Used per keystroke.
+ */
+fun shiftDiagnostics(diagnostics: List<UiDiagnostic>, edit: EditSpan, doc: EditorDocument): List<UiDiagnostic> {
+    if (diagnostics.isEmpty() || edit.isNoOp) return diagnostics
+    val len = doc.length
+    return mapPreserving(diagnostics) { d ->
+        val start = mapStart(d.startOffset, edit).coerceIn(0, len)
+        val end = mapEnd(d.endOffset, edit).coerceIn(start, len)
+        if (end <= start && d.endOffset > d.startOffset) return@mapPreserving null // the edit consumed the whole range
+        val ln = doc.lineForOffset(start)
+        val line = ln + 1
+        val col = start - doc.lineStart(ln) + 1
+        if (start == d.startOffset && end == d.endOffset && line == d.line && col == d.col) d
+        else d.copy(startOffset = start, endOffset = end, line = line, col = col)
+    }
+}
+
+/**
+ * [list] with [transform] applied to each element (null drops it), returning [list] ITSELF when every element
+ * came back identical. The live shifts run on every keystroke, and an edit past the last anchored item (typing
+ * at the end of a file) moves nothing, so this skips the copy and lets the state write see the same instance.
+ */
+internal inline fun <T : Any> mapPreserving(list: List<T>, transform: (T) -> T?): List<T> {
+    var out: ArrayList<T>? = null
+    for (i in list.indices) {
+        val item = list[i]
+        val mapped = transform(item)
+        if (out == null) {
+            if (mapped === item) continue
+            out = ArrayList(list.size)
+            for (k in 0 until i) out.add(list[k])
+        }
+        if (mapped != null) out.add(mapped)
+    }
+    return out ?: list
+}
+
+/**
+ * Re-map semantic-highlight tokens across a single [edit] the session just applied, so the type-aware
+ * coloring tracks the text until a fresh (debounced) pass replaces it — the same live-shift the editor does
+ * for diagnostics, just for color spans (no line/col to recompute). A token the edit fully consumed is dropped.
+ *
+ * The result is a [ShiftedSemanticTokens] whenever anything moved: a whole file's tokens run to tens of
+ * thousands, and every one after the edit moves on every keystroke, so copying them as objects was a large
+ * share of the editor's garbage, all of it on the UI thread. The shifted list holds the new offsets in two
+ * int arrays and shares the tokens themselves across successive shifts.
+ */
+fun shiftSemanticTokens(tokens: List<UiSemanticToken>, edit: EditSpan, docLength: Int): List<UiSemanticToken> {
+    if (tokens.isEmpty() || edit.isNoOp) return tokens
+    val shifted = tokens as? ShiftedSemanticTokens
+    val n = tokens.size
+    var starts: IntArray? = null
+    var ends: IntArray? = null
+    var dropped = 0
+    for (i in 0 until n) {
+        // Explicit branches, not `?.` with `?:`: that would box an Int per token.
+        val s0 = if (shifted != null) shifted.startAt(i) else tokens[i].startOffset
+        val e0 = if (shifted != null) shifted.endAt(i) else tokens[i].endOffset
+        val start = mapStart(s0, edit).coerceIn(0, docLength)
+        val end = mapEnd(e0, edit).coerceIn(start, docLength)
+        if (starts == null) {
+            if (start == s0 && end == e0) continue
+            starts = IntArray(n)
+            ends = IntArray(n)
+            for (k in 0 until i) {
+                starts[k] = if (shifted != null) shifted.startAt(k) else tokens[k].startOffset
+                ends[k] = if (shifted != null) shifted.endAt(k) else tokens[k].endOffset
+            }
+        }
+        if (end <= start) dropped++
+        starts[i] = start
+        ends!![i] = end
+    }
+    if (starts == null) return tokens
+    val base: Array<UiSemanticToken> = shifted?.tokens ?: Array(n) { tokens[it] }
+    if (dropped == 0) return ShiftedSemanticTokens(base, starts, ends!!)
+    // A token the edit consumed leaves the list (rare: a deletion spanning a whole token).
+    val kept = n - dropped
+    val keptTokens = arrayOfNulls<UiSemanticToken>(kept)
+    val keptStarts = IntArray(kept)
+    val keptEnds = IntArray(kept)
+    var j = 0
+    for (i in 0 until n) {
+        if (ends!![i] <= starts[i]) continue
+        keptTokens[j] = base[i]
+        keptStarts[j] = starts[i]
+        keptEnds[j] = ends[i]
+        j++
+    }
+    @Suppress("UNCHECKED_CAST")
+    return ShiftedSemanticTokens(keptTokens as Array<UiSemanticToken>, keptStarts, keptEnds)
+}
+
+/**
+ * Semantic tokens after one or more live shifts: the [tokens] as the analysis produced them (their kind and
+ * modifiers) and their current offsets, held apart in [starts] and [ends] so a shift copies two int arrays
+ * instead of every token. Reads as an ordinary list; [get] rebuilds a token only when its offsets moved. A
+ * hot reader that walks every token uses [startAt], [endAt] and [tokenAt] instead, which allocate nothing.
+ */
+class ShiftedSemanticTokens internal constructor(
+    internal val tokens: Array<UiSemanticToken>,
+    private val starts: IntArray,
+    private val ends: IntArray,
+) : AbstractList<UiSemanticToken>() {
+    override val size: Int get() = tokens.size
+
+    /** The current start offset of token [index]. */
+    fun startAt(index: Int): Int = starts[index]
+
+    /** The current end offset of token [index]. */
+    fun endAt(index: Int): Int = ends[index]
+
+    /** Token [index] as the analysis produced it: read its kind and modifiers, not its offsets. */
+    fun tokenAt(index: Int): UiSemanticToken = tokens[index]
+
+    override fun get(index: Int): UiSemanticToken {
+        val t = tokens[index]
+        val s = starts[index]
+        val e = ends[index]
+        return if (t.startOffset == s && t.endOffset == e) t else t.copy(startOffset = s, endOffset = e)
+    }
+}
+
+/**
+ * Re-map `@Preview` gutter markers across a single [edit], so the gutter icons track the function they mark
+ * as the user types above them, instead of sitting at a stale line until the debounced refetch. A marker
+ * whose anchor offset the edit consumed is kept clamped to the edit point (refetch corrects it shortly).
+ */
+fun shiftComposePreviews(markers: List<UiComposePreview>, edit: EditSpan, docLength: Int): List<UiComposePreview> {
+    if (markers.isEmpty() || edit.isNoOp) return markers
+    return mapPreserving(markers) { m ->
+        val offset = mapStart(m.offset, edit).coerceIn(0, docLength)
+        if (offset == m.offset) m else m.copy(offset = offset)
+    }
+}
+
+/** Re-map resource swatches across a single [edit], like [shiftComposePreviews]. */
+fun shiftResourceSwatches(swatches: List<UiResourceSwatch>, edit: EditSpan, docLength: Int): List<UiResourceSwatch> {
+    if (swatches.isEmpty() || edit.isNoOp) return swatches
+    return mapPreserving(swatches) { s ->
+        val offset = mapStart(s.offset, edit).coerceIn(0, docLength)
+        if (offset == s.offset) s else s.copy(offset = offset)
+    }
+}
+
+/**
+ * Re-map fold regions across a single [edit], so a collapsed fold keeps covering its block as the user types
+ * before/inside it, until a fresh (debounced) pass replaces the set. A region the edit fully consumed (its
+ * braces deleted) collapses to empty and is dropped — the refetch re-derives folds from the new structure.
+ */
+fun shiftFoldRegions(regions: List<FoldRegion>, edit: EditSpan, docLength: Int): List<FoldRegion> {
+    if (regions.isEmpty() || edit.isNoOp) return regions
+    return mapPreserving(regions) { r ->
+        val start = mapStart(r.start, edit).coerceIn(0, docLength)
+        val end = mapEnd(r.end, edit).coerceIn(start, docLength)
+        when {
+            end <= start -> null
+            start == r.start && end == r.end -> r
+            else -> r.copy(start = start, end = end)
+        }
+    }
+}
+
+/**
+ * Re-anchor inlay-hint offsets across a single [edit], so the phantom type/parameter hints stay attached to
+ * their anchor between debounced daemon passes. A hint before the edit holds; one after it shifts by the
+ * length delta; one inside the replaced span is dropped (the next pass repositions it). Text typed exactly at
+ * a hint goes on the side the hint does not belong to: after a parameter hint (it labels the argument that
+ * follows), and before a type hint, which moves along with the name it follows.
+ */
+fun shiftInlayHints(hints: List<UiInlayHint>, edit: EditSpan, docLength: Int): List<UiInlayHint> {
+    if (hints.isEmpty() || edit.isNoOp) return hints
+    val removedEnd = edit.start + edit.removed
+    return mapPreserving(hints) { h ->
+        when {
+            h.offset < edit.start -> h
+            h.offset == edit.start && !(edit.removed == 0 && h.relatesToPreceding) -> h
+            h.offset >= removedEnd -> {
+                val offset = (h.offset + edit.delta).coerceIn(0, docLength)
+                if (offset == h.offset) h else h.copy(offset = offset)
+            }
+            else -> null
+        }
+    }
+}
+
+/**
+ * Re-map a plugin's tinted ranges across a single [edit], the same live-shift the editor does for semantic
+ * tokens, so a coverage or diff tint keeps covering its text while the user types instead of jumping at the
+ * next debounced pass. A range the edit fully consumed is dropped.
+ */
+fun shiftTextDecorations(decorations: List<UiTextDecoration>, edit: EditSpan, docLength: Int): List<UiTextDecoration> {
+    if (decorations.isEmpty() || edit.isNoOp) return decorations
+    return mapPreserving(decorations) { d ->
+        val start = mapStart(d.startOffset, edit).coerceIn(0, docLength)
+        val end = mapEnd(d.endOffset, edit).coerceIn(start, docLength)
+        when {
+            end <= start -> null
+            start == d.startOffset && end == d.endOffset -> d
+            else -> d.copy(startOffset = start, endOffset = end)
+        }
+    }
+}
+
+/**
+ * Re-anchor a plugin's gutter marks across a single [edit], so a mark stays on its line as the user types
+ * above it instead of sitting one line off until the next debounced pass.
+ *
+ * A mark reads as line-anchored to the plugin that made it, but it is shifted by OFFSET here, off
+ * [UiGutterMark.anchorOffset], with the line recomputed from the post-edit [doc]. Shifting the line number
+ * directly cannot work: a splice replaces a range of old lines with a range of new ones, and a mark on a line
+ * inside that range has no line number to map to, while the offset of the text it marked is exactly what the
+ * edit is expressed in. This is the same arrangement `shiftComposePreviews` uses for the `@Preview` gutter
+ * icons, which are line-anchored in the same way and offset-anchored underneath.
+ *
+ * A mark whose anchor the edit deleted clamps to the edit point rather than being dropped, so it can briefly
+ * share a line with another mark; the render layer collapses a line to one glyph, and the next pass corrects
+ * the set.
+ */
+fun shiftGutterMarks(marks: List<UiGutterMark>, edit: EditSpan, doc: EditorDocument): List<UiGutterMark> {
+    if (marks.isEmpty() || edit.isNoOp) return marks
+    return mapPreserving(marks) { m ->
+        val offset = mapStart(m.anchorOffset, edit).coerceIn(0, doc.length)
+        val line = doc.lineForOffset(offset)
+        if (offset == m.anchorOffset && line == m.line) m else m.copy(anchorOffset = offset, line = line)
+    }
+}

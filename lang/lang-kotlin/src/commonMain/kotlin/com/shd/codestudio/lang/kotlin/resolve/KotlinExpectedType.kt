@@ -1,0 +1,174 @@
+package com.shd.codestudio.lang.kotlin.resolve
+
+import com.shd.codestudio.kotlin.syntax.psi.KtAnnotationEntry
+import com.shd.codestudio.kotlin.syntax.psi.KtBinaryExpression
+import com.shd.codestudio.kotlin.syntax.psi.KtCallExpression
+import com.shd.codestudio.kotlin.syntax.psi.KtDoWhileExpression
+import com.shd.codestudio.kotlin.syntax.psi.KtElement
+import com.shd.codestudio.kotlin.syntax.psi.KtExpression
+import com.shd.codestudio.kotlin.syntax.psi.KtIfExpression
+import com.shd.codestudio.kotlin.syntax.psi.KtLambdaExpression
+import com.shd.codestudio.kotlin.syntax.psi.KtNameReferenceExpression
+import com.shd.codestudio.kotlin.syntax.psi.KtNamedFunction
+import com.shd.codestudio.kotlin.syntax.psi.KtPrefixExpression
+import com.shd.codestudio.kotlin.syntax.psi.KtProperty
+import com.shd.codestudio.kotlin.syntax.psi.KtReturnExpression
+import com.shd.codestudio.kotlin.syntax.psi.KtTokens
+import com.shd.codestudio.kotlin.syntax.psi.KtValueArgument
+import com.shd.codestudio.kotlin.syntax.psi.KtValueArgumentList
+import com.shd.codestudio.kotlin.syntax.psi.KtWhenConditionWithExpression
+import com.shd.codestudio.kotlin.syntax.psi.KtWhenExpression
+import com.shd.codestudio.kotlin.syntax.psi.KtWhileExpression
+import com.shd.codestudio.kotlin.syntax.psi.getStrictParentOfType
+import com.shd.codestudio.lang.kotlin.symbols.KotlinType
+
+/** Expected type at a position: the target type a return or argument slot demands. */
+
+/**
+ * The type the context at [offset] expects an expression to have, or null when unconstrained: a typed
+ * property initializer (`val x: T = ‹here›`), a `return ‹here›` / expression body of a typed function, a
+ * call-argument slot (positional or named), and a boolean condition (`if`/`while`/`do-while`, `&&`/`||`,
+ * `!`). Powers expected-type-aware completion (rank matches first, offer enum constants + booleans).
+ */
+fun KotlinResolver.expectedTypeAt(offset: Int): KotlinType? {
+    var child: KtElement? = null
+    var node: KtElement? = elementAt(offset)
+    while (node != null) {
+        when (node) {
+            is KtProperty ->
+                if (child != null && child === node.initializer)
+                    return node.typeReference?.text?.let { service.typeFromText(it, fileContext) }
+
+            is KtNamedFunction ->
+                if (child != null && child === node.bodyExpression && !node.hasBlockBody())
+                    return node.typeReference?.text?.let { service.typeFromText(it, fileContext) }
+
+            is KtReturnExpression ->
+                if (child === node.returnedExpression) return enclosingFunctionReturnType(node)
+
+            is KtValueArgument -> return expectedArgType(node)
+            // A `when`-entry condition with a SUBJECT (`when (color) { █ }`) expects the subject's type — so
+            // value completion offers its enum constants / companion constants. A subjectless `when` has
+            // Boolean conditions; left to the generic path (offering true/false there is low value).
+            is KtWhenConditionWithExpression ->
+                node.getStrictParentOfType<KtWhenExpression>()?.subjectExpression?.let { s ->
+                    inferType(
+                        s
+                    )?.let { return it }
+                }
+            // A condition is wrapped in a container node, so match by range rather than child identity.
+            is KtIfExpression -> if (node.condition?.textRange?.contains(offset) == true) return service.typeByFqn(
+                "kotlin.Boolean"
+            )
+
+            is KtWhileExpression -> if (node.condition?.textRange?.contains(offset) == true) return service.typeByFqn(
+                "kotlin.Boolean"
+            )
+
+            is KtDoWhileExpression -> if (node.condition?.textRange?.contains(offset) == true) return service.typeByFqn(
+                "kotlin.Boolean"
+            )
+
+            is KtPrefixExpression ->
+                if (node.operationToken == KtTokens.EXCL) return service.typeByFqn("kotlin.Boolean")
+
+            is KtBinaryExpression -> when {
+                node.operationToken == KtTokens.ANDAND || node.operationToken == KtTokens.OROR ->
+                    return service.typeByFqn("kotlin.Boolean")
+                // The right side of a plain assignment expects the TARGET's type, exactly as a typed initializer
+                // does. Without this, `gv = findViewById(R.id.game)` (a `lateinit var gv: GameView`) left
+                // `<T : View>` with nothing but its bound, read as View, and flagged "inferred type is View but
+                // GameView was expected" on every view lookup in an Activity, while `val gv: GameView =
+                // findViewById(...)` was fine. Augmented assignments (`+=`) are operator calls, not this.
+                node.operationToken == KtTokens.EQ && child != null && child === node.right ->
+                    return node.left?.let { assignmentTargetDeclaredType(it) }
+            }
+        }
+        child = node
+        node = node.parent
+    }
+    return null
+}
+
+/**
+ * The DECLARED type of an assignment target, which is not the same as its type at the assignment.
+ *
+ * `inferType` applies smart casts, and a variable is routinely assigned inside a narrowing of itself:
+ * `var p = e.parent; while (p is Paren) { p = p.parent }` advances the walk by assigning the wider declared
+ * type back, which is legal Kotlin and simply ends the smart cast. Reading the narrowed type as the target's
+ * type made that read "inferred type is KtElement? but KtParenthesizedExpression was expected" -- a complaint
+ * about the only line that could ever terminate the loop.
+ *
+ * A local's declaration type is taken straight from its binding; anything else (a property, a qualified
+ * target) keeps the inferred type, since Kotlin does not smart-cast a mutable property anyway.
+ */
+internal fun KotlinResolver.assignmentTargetDeclaredType(left: KtExpression): KotlinType? {
+    if (left is KtNameReferenceExpression) {
+        val name = left.getReferencedName()
+        localsAt(left.textRange.startOffset).firstOrNull { it.name == name }
+            ?.let { return it.type as? KotlinType }
+    }
+    return inferType(left)
+}
+
+internal fun KotlinResolver.enclosingFunctionReturnType(from: KtElement): KotlinType? {
+    var node: KtElement? = from.parent
+    while (node != null) {
+        if (node is KtNamedFunction) {
+            node.typeReference?.text?.let { return service.typeFromText(it, fileContext) }
+            // No declared type: a BLOCK body's return type is `Unit` (so `return f()` there expects Unit, which
+            // is what coerces a lambda-bound result, see [coerceLambdaReturnVarToUnit]); an EXPRESSION body's
+            // is inferred FROM the returned expression, so the context demands nothing.
+            return if (node.hasBlockBody()) service.typeByFqn("kotlin.Unit") else null
+        }
+        if (node is KtLambdaExpression) return null // a return@label leaves the lambda's type to inference
+        node = node.parent
+    }
+    return null
+}
+
+internal fun KotlinResolver.expectedArgType(arg: KtValueArgument): KotlinType? {
+    val argList = arg.parent as? KtValueArgumentList ?: return null
+    // An ANNOTATION argument (`@Foo(mode = <caret>)`): resolve against the annotation's parameter types so an
+    // enum-typed argument offers its constants — the annotation's arg list parent is a KtAnnotationEntry, not a
+    // KtCallExpression, so the call path below can't reach it.
+    (argList.parent as? KtAnnotationEntry)?.let { entry ->
+        val params = annotationParameters(entry)
+        val argName = arg.getArgumentName()?.asName?.identifier
+        val p = if (argName != null) params.firstOrNull { it.name == argName }
+        else params.getOrNull(argList.arguments.indexOf(arg))
+        return p?.type
+    }
+    val call = argList.parent as? KtCallExpression ?: return null
+    // Overloads that can take this many arguments come first. Without that the first overload wins, whatever
+    // its arity: `stream.collect(Collectors.toList())` read its argument against the three-argument
+    // `collect(Supplier<R>, …)`, so `toList()` got no `T` from the parameter it really fills and typed as
+    // `Collector<Object, …>`, and the whole chain off `collect` became `List<Object>`.
+    val targets = callTargets(call).sortedBy { if (acceptsArgCount(it, call.valueArguments.size)) 0 else 1 }
+    if (targets.isEmpty()) return null
+    val argName = arg.getArgumentName()?.asName?.identifier
+    if (argName != null) {
+        targets.forEach { s ->
+            val i = s.paramNames.indexOf(argName)
+            if (i >= 0) (s.paramTypes.getOrNull(i) as? KotlinType)?.let { return it }
+        }
+        return null
+    }
+    val index = argList.arguments.indexOf(arg)
+    targets.forEach { s ->
+        // A positional argument past a vararg still fills the vararg, not the parameter after it.
+        val paramIndex = if (s.varargParamIndex in 0..<index) s.varargParamIndex else index
+        (s.paramTypes.getOrNull(paramIndex) as? KotlinType)?.let { return it }
+    }
+    return null
+}
+
+/** Whether [sym] can be called with [count] arguments: every parameter filled, or the missing ones have
+ *  defaults, or the extras go to its vararg. */
+private fun acceptsArgCount(sym: com.shd.codestudio.lang.kotlin.symbols.KotlinSymbol, count: Int): Boolean {
+    val n = sym.paramTypes.size
+    if (count == n) return true
+    if (sym.varargParamIndex >= 0) return count >= n - 1
+    if (count > n) return false
+    return (count until n).all { sym.paramHasDefault.getOrNull(it) == true }
+}

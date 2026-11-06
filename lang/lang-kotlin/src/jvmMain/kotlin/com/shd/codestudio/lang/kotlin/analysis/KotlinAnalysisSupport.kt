@@ -1,0 +1,189 @@
+package com.shd.codestudio.lang.kotlin.analysis
+
+import com.shd.codestudio.analysis.ACTION_PROVIDER_EP
+import com.shd.codestudio.analysis.ActionProvider
+import com.shd.codestudio.analysis.AnalysisTarget
+import com.shd.codestudio.analysis.AnalyzerId
+import com.shd.codestudio.analysis.CodeActionKind
+import com.shd.codestudio.analysis.DIAGNOSTIC_PROVIDER_EP
+import com.shd.codestudio.analysis.Diagnostic
+import com.shd.codestudio.analysis.DiagnosticProvider
+import com.shd.codestudio.analysis.DiagnosticSource
+import com.shd.codestudio.analysis.FixContext
+import com.shd.codestudio.analysis.QUICK_FIX_PROVIDER_EP
+import com.shd.codestudio.analysis.QuickFix
+import com.shd.codestudio.analysis.QuickFixProvider
+import com.shd.codestudio.analysis.WorkspaceEdit
+import com.shd.codestudio.lang.dom.TextRange
+import com.shd.codestudio.lang.kotlin.KotlinApiLevelFixes
+import com.shd.codestudio.lang.kotlin.KotlinDiagnosticCodes
+import com.shd.codestudio.lang.kotlin.KotlinLanguageBackend
+import com.shd.codestudio.lang.kotlin.KotlinSourceAnalyzer
+import com.shd.codestudio.platform.ExtensionRegistry
+import com.shd.codestudio.platform.PluginId
+
+/**
+ * Contributes the Kotlin editor analysis surface onto the analysis-api extension points: a diagnostic
+ * provider (the tolerant PSI parse + the resolver's semantic findings) and a code-action provider (the
+ * "import unresolved reference" fixes). Both delegate to the per-module [KotlinSourceAnalyzer] reached via
+ * `target.resolver`, so the analyzer's tuned incremental work is preserved — the engine's `targetFor`
+ * already parsed the live buffer through that same cached instance. Declares `languages = {kotlin}` so it
+ * never runs on Java/XML targets now that one pipeline serves every language.
+ */
+private val KOTLIN = KotlinLanguageBackend.LANGUAGE_ID
+
+/** The Kotlin diagnostics, adapted from the resolver into the unified [Diagnostic] stream. */
+class KotlinDiagnosticProvider(override val id: String = "kotlin") : DiagnosticProvider {
+    override val languages = setOf(KOTLIN)
+
+    override suspend fun diagnose(target: AnalysisTarget): List<Diagnostic> {
+        val analyzer = target.resolver as? KotlinSourceAnalyzer ?: return emptyList()
+        return analyzer.analyze(target.file).diagnostics.map { d ->
+            // The tolerant parser tags syntax errors `kt.syntax`; everything else is a semantic finding.
+            val sid = if (d.code == KotlinDiagnosticCodes.SYNTAX) "kotlin.syntax" else "kotlin.semantic"
+            Diagnostic(d.range, d.severity, d.message, DiagnosticSource.Analyzer(AnalyzerId(sid)), d.code)
+        }
+    }
+}
+
+/** Caret intentions for Kotlin: offer an `import` for each unresolved reference at the caret. */
+class KotlinImportActionProvider : ActionProvider {
+    override val languages = setOf(KOTLIN)
+
+    override fun actions(target: AnalysisTarget, range: TextRange): List<QuickFix> {
+        val analyzer = target.resolver as? KotlinSourceAnalyzer ?: return emptyList()
+        return analyzer.importFixesAt(target.file, range.start).map { fix ->
+            object : QuickFix {
+                override val title = fix.title
+                override val kind = CodeActionKind.QUICK_FIX
+                override suspend fun computeEdits(ctx: FixContext): WorkspaceEdit =
+                    WorkspaceEdit.of(ctx.target.file, *fix.edits.toTypedArray())
+            }
+        }
+    }
+}
+
+/** Code-keyed quick-fix: on `kt.abstractNotImplemented`, generate `override` stubs for the unimplemented
+ *  inherited abstract members into the class body (the "Implement members" lightbulb). */
+class KotlinImplementMembersFixProvider : QuickFixProvider {
+    override val forCodes = setOf(KotlinDiagnosticCodes.ABSTRACT_NOT_IMPLEMENTED)
+    override val languages = setOf(KOTLIN)
+
+    override fun fixes(diagnostic: Diagnostic, target: AnalysisTarget): List<QuickFix> {
+        val analyzer = target.resolver as? KotlinSourceAnalyzer ?: return emptyList()
+        val fix = analyzer.implementMembersFix(target.file, diagnostic.range.start) ?: return emptyList()
+        return listOf(object : QuickFix {
+            override val title = fix.title
+            override val kind = CodeActionKind.QUICK_FIX
+            override suspend fun computeEdits(ctx: FixContext): WorkspaceEdit =
+                WorkspaceEdit.of(ctx.target.file, *fix.edits.toTypedArray())
+        })
+    }
+}
+
+/** Code-keyed quick-fix: on `kt.suspendOverride`, add the `suspend` modifier the override is missing (or
+ *  remove the one it shouldn't have) so it matches the member it overrides. */
+class KotlinSuspendModifierFixProvider : QuickFixProvider {
+    override val forCodes = setOf(KotlinDiagnosticCodes.SUSPEND_OVERRIDE)
+    override val languages = setOf(KOTLIN)
+
+    override fun fixes(diagnostic: Diagnostic, target: AnalysisTarget): List<QuickFix> {
+        val analyzer = target.resolver as? KotlinSourceAnalyzer ?: return emptyList()
+        val fix = analyzer.suspendModifierFix(target.file, diagnostic.range.start) ?: return emptyList()
+        return listOf(object : QuickFix {
+            override val title = fix.title
+            override val kind = CodeActionKind.QUICK_FIX
+            override suspend fun computeEdits(ctx: FixContext): WorkspaceEdit =
+                WorkspaceEdit.of(ctx.target.file, *fix.edits.toTypedArray())
+        })
+    }
+}
+
+/** Code-keyed quick-fixes for the minSdk check: `@RequiresApi(N)` on the enclosing declaration, or an
+ *  `SDK_INT >= N` guard around the statement. */
+class KotlinNewApiFixProvider : QuickFixProvider {
+    override val forCodes = setOf(KotlinDiagnosticCodes.NEW_API)
+    override val languages = setOf(KOTLIN)
+
+    override fun fixes(diagnostic: Diagnostic, target: AnalysisTarget): List<QuickFix> {
+        val analyzer = target.resolver as? KotlinSourceAnalyzer ?: return emptyList()
+        val level = KotlinApiLevelFixes.levelIn(diagnostic.message) ?: return emptyList()
+        return analyzer.newApiFixes(target.file, diagnostic.range.start, level).map { fix ->
+            object : QuickFix {
+                override val title = fix.title
+                override val kind = CodeActionKind.QUICK_FIX
+                override suspend fun computeEdits(ctx: FixContext): WorkspaceEdit =
+                    WorkspaceEdit.of(ctx.target.file, *fix.edits.toTypedArray())
+            }
+        }
+    }
+}
+
+/** The missing-permission check's in-file fix: check the permission before the statement and return without it.
+ *  Only for the run-time warning; a permission missing from the manifest is fixed in the manifest (the host's). */
+class KotlinPermissionFixProvider : QuickFixProvider {
+    override val forCodes = setOf(KotlinDiagnosticCodes.MISSING_PERMISSION)
+    override val languages = setOf(KOTLIN)
+
+    override fun fixes(diagnostic: Diagnostic, target: AnalysisTarget): List<QuickFix> {
+        if (com.shd.codestudio.lang.resolve.PermissionGuards.isMissingFromManifest(diagnostic.message)) return emptyList()
+        val analyzer = target.resolver as? KotlinSourceAnalyzer ?: return emptyList()
+        val (permissions, anyOf) = com.shd.codestudio.lang.resolve.PermissionGuards.permissionsNamedIn(diagnostic.message)
+        val fix = analyzer.permissionCheckFix(target.file, diagnostic.range.start, permissions, anyOf) ?: return emptyList()
+        return listOf(object : QuickFix {
+            override val title = fix.title
+            override val kind = CodeActionKind.QUICK_FIX
+            override suspend fun computeEdits(ctx: FixContext): WorkspaceEdit =
+                WorkspaceEdit.of(ctx.target.file, *fix.edits.toTypedArray())
+        })
+    }
+}
+
+/**
+ * Code-keyed quick fixes for the editor's own diagnostics: remove an unused import / variable / private member,
+ * `var` to `val` (and back for a reassigned `val`), drop a redundant `?.` / `!!` / cast / elvis / projection,
+ * safe call or `!!` on a nullable receiver, add or remove `override`, and complete a non-exhaustive `when`.
+ * See [com.shd.codestudio.lang.kotlin.KotlinQuickFixes].
+ */
+class KotlinDiagnosticFixProvider : QuickFixProvider {
+    override val forCodes = com.shd.codestudio.lang.kotlin.KotlinQuickFixes.CODES
+    override val languages = setOf(KOTLIN)
+
+    override fun fixes(diagnostic: Diagnostic, target: AnalysisTarget): List<QuickFix> {
+        val analyzer = target.resolver as? KotlinSourceAnalyzer ?: return emptyList()
+        val code = diagnostic.code ?: return emptyList()
+        val r = diagnostic.range
+        return analyzer.diagnosticFixes(target.file, code, r.start, r.end, diagnostic.message).map { fix ->
+            object : QuickFix {
+                override val title = fix.title
+                override val kind = CodeActionKind.QUICK_FIX
+                override suspend fun computeEdits(ctx: FixContext): WorkspaceEdit =
+                    WorkspaceEdit.of(ctx.target.file, *fix.edits.toTypedArray())
+            }
+        }
+    }
+}
+
+object KotlinAnalysisSupport {
+    val PLUGIN = PluginId("kotlin-analysis")
+
+    fun register(extensions: ExtensionRegistry, plugin: PluginId = PLUGIN) {
+        extensions.register(DIAGNOSTIC_PROVIDER_EP, KotlinDiagnosticProvider(), plugin)
+        extensions.register(ACTION_PROVIDER_EP, KotlinImportActionProvider(), plugin)
+        extensions.register(QUICK_FIX_PROVIDER_EP, KotlinImplementMembersFixProvider(), plugin)
+        extensions.register(QUICK_FIX_PROVIDER_EP, KotlinSuspendModifierFixProvider(), plugin)
+        extensions.register(QUICK_FIX_PROVIDER_EP, KotlinNewApiFixProvider(), plugin)
+        extensions.register(QUICK_FIX_PROVIDER_EP, KotlinPermissionFixProvider(), plugin)
+        extensions.register(QUICK_FIX_PROVIDER_EP, KotlinDiagnosticFixProvider(), plugin)
+        // Caret intentions (see KotlinEditorActions).
+        extensions.register(ACTION_PROVIDER_EP, KotlinSurroundActionProvider(), plugin)
+        extensions.register(ACTION_PROVIDER_EP, KotlinIntroduceVariableActionProvider(), plugin)
+        extensions.register(ACTION_PROVIDER_EP, KotlinImplementMembersActionProvider(), plugin)
+        extensions.register(ACTION_PROVIDER_EP, KotlinFunctionBodyActionProvider(), plugin)
+        extensions.register(ACTION_PROVIDER_EP, KotlinBracesActionProvider(), plugin)
+        extensions.register(ACTION_PROVIDER_EP, KotlinExplicitTypeActionProvider(), plugin)
+        extensions.register(ACTION_PROVIDER_EP, KotlinExtractFunctionActionProvider(), plugin)
+        extensions.register(ACTION_PROVIDER_EP, KotlinGenerateEqualsActionProvider(), plugin)
+        extensions.register(ACTION_PROVIDER_EP, KotlinGenerateToStringActionProvider(), plugin)
+    }
+}

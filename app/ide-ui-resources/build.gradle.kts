@@ -8,7 +8,7 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 // :ide-ui-editor, :ide-ui-screens, :ide-ui), and the Compose resources plugin generates one `Res` class
 // per module: leaving the resources inside any one of them would make the other three unable to read a
 // string. `packageOfResClass` is pinned to the package the accessors were always generated into, so every
-// `import dev.ide.ui.generated.resources.*` in the UI keeps resolving unchanged.
+// `import com.shd.codestudio.ui.generated.resources.*` in the UI keeps resolving unchanged.
 //
 // Unlike :vcs-ui and :agent-ui — self-contained modules that own both their resources and the UI reading
 // them, so their `Res` stays internal — this module's whole purpose is to be read from elsewhere, hence
@@ -30,7 +30,7 @@ kotlin {
     }
 
     android {
-        namespace = "dev.ide.ui.resources"
+        namespace = "com.shd.codestudio.ui.resources"
         compileSdk = 36
         minSdk = 24
         compilerOptions { jvmTarget.set(JvmTarget.JVM_17) }
@@ -57,6 +57,6 @@ kotlin {
 
 compose.resources {
     publicResClass = true
-    packageOfResClass = "dev.ide.ui.generated.resources"
+    packageOfResClass = "com.shd.codestudio.ui.generated.resources"
     generateResClass = always
 }

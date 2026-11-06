@@ -193,7 +193,7 @@ tasks.named<org.jetbrains.kotlin.gradle.tasks.KotlinCompile>("compileTestKotlinJ
 // the strict policy. `check` runs both. To filter WITHIN the compiler suite, name its task:
 // `:lang-kotlin:compilerTest --tests '*IncrementalKotlinCompilerTest*'` — a `--tests` filter on `jvmTest`
 // can never match those classes, since the exclusion below still applies.
-val compilerTestPattern = "dev.ide.lang.kotlin.compile.*"
+val compilerTestPattern = "com.shd.codestudio.lang.kotlin.compile.*"
 
 // `useJUnitPlatform` is NOT set here: the root build configures it for every Test task, WITH the
 // regression-tag filter, and calling it again plainly would drop that filter and let the slow benchmark

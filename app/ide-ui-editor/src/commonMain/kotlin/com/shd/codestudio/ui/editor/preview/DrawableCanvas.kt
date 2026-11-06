@@ -1,0 +1,296 @@
+package com.shd.codestudio.ui.editor.preview
+
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Rect
+import androidx.compose.ui.geometry.RoundRect
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.graphics.Path
+import androidx.compose.ui.graphics.PathEffect
+import androidx.compose.ui.graphics.PathMeasure
+import androidx.compose.ui.graphics.StrokeCap
+import androidx.compose.ui.graphics.StrokeJoin
+import androidx.compose.ui.graphics.drawscope.DrawScope
+import androidx.compose.ui.graphics.drawscope.Fill
+import androidx.compose.ui.graphics.drawscope.Stroke
+import androidx.compose.ui.graphics.drawscope.clipPath
+import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.drawscope.scale
+import androidx.compose.ui.graphics.drawscope.translate
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
+import androidx.compose.ui.unit.dp
+import com.shd.codestudio.ui.backend.UiDrawable
+import com.shd.codestudio.ui.backend.UiGradient
+import com.shd.codestudio.ui.backend.UiVectorGroup
+import com.shd.codestudio.ui.backend.UiVectorNode
+import com.shd.codestudio.ui.backend.UiVectorPath
+import kotlin.math.cos
+import kotlin.math.min
+import kotlin.math.roundToInt
+import kotlin.math.sin
+import kotlin.math.PI
+
+/** ARGB long (`0xAARRGGBB`) → Compose [Color] via the unambiguous Int (ARGB) constructor. */
+internal fun argbColor(v: Long): Color = Color(v.toInt())
+
+/**
+ * Draws a [UiDrawable] into the rectangle [topLeft]+[size]. Recursive (layer-list/inset/selector default).
+ * Bitmaps and unsupported nodes draw a labelled placeholder — the pane renders a *top-level* bitmap with a
+ * real decoded image instead (it needs async byte loading the canvas can't do).
+ *
+ * [images] resolves a nested bitmap layer to an already decoded image, for a caller that has loaded the
+ * bytes up front. Without it a bitmap draws the placeholder, which is right for a preview pane and wrong
+ * for an icon whose foreground IS an image: an adaptive icon with a `<bitmap>` foreground would rasterise
+ * to a dashed grey box.
+ *
+ * An animated drawable draws as it stands before it is started: an animation-list's first frame, an animated
+ * vector's own vector. To draw a moment of the animation, pass [DrawableAnimation.atTime]'s result instead.
+ * [parsePath] turns vector path data into a [Path]; the default shares parsed paths across callers, and a
+ * caller drawing a morphing path every frame passes its own so the transient shapes stay out of that cache.
+ */
+fun DrawScope.drawUiDrawable(
+    d: UiDrawable,
+    topLeft: Offset,
+    size: Size,
+    images: ((UiDrawable.Bitmap) -> ImageBitmap?)? = null,
+    parsePath: (String, Boolean) -> Path = AndroidPathParser::cached,
+) {
+    when (d) {
+        is UiDrawable.SolidColor -> drawRect(argbColor(d.color), topLeft, size)
+        is UiDrawable.Shape -> drawShape(d, topLeft, size)
+        is UiDrawable.Vector -> drawVector(d, topLeft, size, parsePath)
+        is UiDrawable.Layers -> for (layer in d.layers) {
+            val l = layer.insetLeftDp.dp.toPx(); val t = layer.insetTopDp.dp.toPx()
+            val r = layer.insetRightDp.dp.toPx(); val b = layer.insetBottomDp.dp.toPx()
+            drawUiDrawable(
+                layer.drawable,
+                Offset(topLeft.x + l, topLeft.y + t),
+                Size((size.width - l - r).coerceAtLeast(0f), (size.height - t - b).coerceAtLeast(0f)),
+                images,
+                parsePath,
+            )
+        }
+        is UiDrawable.States -> d.defaultLayer?.let { drawUiDrawable(it, topLeft, size, images, parsePath) }
+        is UiDrawable.Frames -> d.frames.firstOrNull()?.let { drawUiDrawable(it.drawable, topLeft, size, images, parsePath) }
+        is UiDrawable.AnimatedVector -> drawVector(d.vector, topLeft, size, parsePath)
+        is UiDrawable.Bitmap -> {
+            val image = images?.invoke(d)
+            if (image != null) drawContained(image, topLeft, size) else drawPlaceholder(topLeft, size)
+        }
+        is UiDrawable.Unsupported -> drawPlaceholder(topLeft, size)
+    }
+}
+
+private fun DrawScope.drawShape(s: UiDrawable.Shape, topLeft: Offset, size: Size) {
+    val sw = s.strokeWidthDp.dp.toPx()
+    val inset = sw / 2f
+    val rect = Rect(topLeft.x + inset, topLeft.y + inset, topLeft.x + size.width - inset, topLeft.y + size.height - inset)
+    val fillBrush: Brush? = when {
+        s.gradient != null -> gradientBrush(s.gradient!!, rect)
+        s.solidColor != null -> Brush.linearGradient(0f to argbColor(s.solidColor!!), 1f to argbColor(s.solidColor!!))
+        else -> null
+    }
+
+    when (s.shape) {
+        "oval" -> {
+            fillBrush?.let { drawOval(it, Offset(rect.left, rect.top), Size(rect.width, rect.height)) }
+            if (s.strokeColor != null && sw > 0) drawOval(
+                argbColor(s.strokeColor!!), Offset(rect.left, rect.top), Size(rect.width, rect.height),
+                style = strokeStyle(s, sw),
+            )
+        }
+        "line" -> {
+            val y = rect.center.y
+            val color = s.strokeColor ?: s.solidColor ?: 0xFF888888L
+            drawLine(argbColor(color), Offset(rect.left, y), Offset(rect.right, y), strokeWidth = if (sw > 0) sw else 2.dp.toPx())
+        }
+        "ring" -> {
+            val cx = rect.center.x; val cy = rect.center.y
+            val outer = min(rect.width, rect.height) / 2f
+            val thickness = outer * s.thicknessFraction.coerceIn(0.05f, 0.9f)
+            val color = s.solidColor ?: s.strokeColor ?: 0xFF888888L
+            drawCircle(argbColor(color), radius = outer - thickness / 2f, center = Offset(cx, cy), style = Stroke(width = thickness))
+        }
+        else -> { // rectangle (default), honouring per-corner radii
+            val path = roundRectPath(rect, s)
+            fillBrush?.let { drawPath(path, it, style = Fill) }
+            if (s.strokeColor != null && sw > 0) drawPath(path, argbColor(s.strokeColor!!), style = strokeStyle(s, sw))
+        }
+    }
+}
+
+private fun roundRectPath(rect: Rect, s: UiDrawable.Shape): Path = Path().apply {
+    addRoundRect(
+        RoundRect(
+            rect,
+            topLeft = CornerRadius(s.cornerTopLeftDp), topRight = CornerRadius(s.cornerTopRightDp),
+            bottomRight = CornerRadius(s.cornerBottomRightDp), bottomLeft = CornerRadius(s.cornerBottomLeftDp),
+        ),
+    )
+}
+
+private fun DrawScope.strokeStyle(s: UiDrawable.Shape, sw: Float): Stroke {
+    val effect = if (s.dashWidthDp > 0f) {
+        PathEffect.dashPathEffect(floatArrayOf(s.dashWidthDp.dp.toPx(), s.dashGapDp.dp.toPx()))
+    } else null
+    return Stroke(width = sw, pathEffect = effect)
+}
+
+private fun DrawScope.gradientBrush(g: UiGradient, rect: Rect): Brush {
+    val stops = buildList {
+        add(0f to argbColor(g.startColor))
+        if (g.centerColor != null) add(0.5f to argbColor(g.centerColor!!))
+        add(1f to argbColor(g.endColor))
+    }.toTypedArray()
+    val center = Offset(rect.left + rect.width * g.centerX, rect.top + rect.height * g.centerY)
+    return when (g.kind) {
+        "radial" -> Brush.radialGradient(*stops, center = center, radius = min(rect.width, rect.height) * g.radiusFraction)
+        "sweep" -> Brush.sweepGradient(*stops, center = center)
+        else -> {
+            val rad = g.angle * PI.toFloat() / 180f
+            val dx = cos(rad); val dy = -sin(rad)
+            val start = Offset(rect.center.x - dx * rect.width / 2f, rect.center.y - dy * rect.height / 2f)
+            val end = Offset(rect.center.x + dx * rect.width / 2f, rect.center.y + dy * rect.height / 2f)
+            Brush.linearGradient(*stops, start = start, end = end)
+        }
+    }
+}
+
+private fun DrawScope.drawVector(v: UiDrawable.Vector, topLeft: Offset, size: Size, parsePath: (String, Boolean) -> Path) {
+    if (v.viewportWidth <= 0f || v.viewportHeight <= 0f) return
+    // Fit the viewport into the bounds preserving aspect ratio, centred.
+    val scaleF = min(size.width / v.viewportWidth, size.height / v.viewportHeight)
+    val drawnW = v.viewportWidth * scaleF; val drawnH = v.viewportHeight * scaleF
+    val ox = topLeft.x + (size.width - drawnW) / 2f
+    val oy = topLeft.y + (size.height - drawnH) / 2f
+    translate(ox, oy) {
+        scale(scaleF, scaleF, pivot = Offset.Zero) {
+            drawVectorNodes(v.nodes, v.rootAlpha, parsePath)
+        }
+    }
+}
+
+/**
+ * Draws a `<vector>`'s node tree in viewport coordinates. The enclosing scope has already mapped the
+ * viewport onto the target bounds, so a group's translate/scale/rotate values apply as written.
+ */
+private fun DrawScope.drawVectorNodes(nodes: List<UiVectorNode>, rootAlpha: Float, parsePath: (String, Boolean) -> Path) {
+    for (node in nodes) when (node) {
+        is UiVectorPath -> drawVectorPath(node, rootAlpha, parsePath)
+        is UiVectorGroup -> drawVectorGroup(node, rootAlpha, parsePath)
+    }
+}
+
+private fun DrawScope.drawVectorPath(p: UiVectorPath, rootAlpha: Float, parsePath: (String, Boolean) -> Path) {
+    // Drawing only READS the path, so the shared cached one is safe here and saves a re-parse per
+    // path per frame — the icon grid redraws every visible tile on every scroll frame.
+    val parsed = parsePath(p.pathData, p.fillRule == "evenOdd")
+    // Like VectorDrawable, an offset alone does not trim: only a start or end short of the whole path does.
+    val path = if (p.trimPathStart != 0f || p.trimPathEnd != 1f) trimmed(parsed, p) else parsed
+    p.fillColor?.let {
+        drawPath(path, argbColor(it), alpha = (p.fillAlpha * rootAlpha).coerceIn(0f, 1f), style = Fill)
+    }
+    val stroke = p.strokeColor
+    if (stroke != null && p.strokeWidthVp > 0f) {
+        drawPath(
+            path, argbColor(stroke),
+            alpha = (p.strokeAlpha * rootAlpha).coerceIn(0f, 1f),
+            style = Stroke(
+                width = p.strokeWidthVp,
+                miter = p.strokeMiter,
+                cap = when (p.strokeCap) {
+                    "round" -> StrokeCap.Round
+                    "square" -> StrokeCap.Square
+                    else -> StrokeCap.Butt
+                },
+                join = when (p.strokeJoin) {
+                    "round" -> StrokeJoin.Round
+                    "bevel" -> StrokeJoin.Bevel
+                    else -> StrokeJoin.Miter
+                },
+            ),
+        )
+    }
+}
+
+/** Android composes a group's transform as scale, then rotate, then translate, all about the pivot. */
+private fun DrawScope.drawVectorGroup(g: UiVectorGroup, rootAlpha: Float, parsePath: (String, Boolean) -> Path) {
+    val pivot = Offset(g.pivotX, g.pivotY)
+    translate(g.translateX, g.translateY) {
+        rotate(g.rotation, pivot) {
+            scale(g.scaleX, g.scaleY, pivot) {
+                val clip = g.clipPathData
+                if (clip == null) drawVectorNodes(g.children, rootAlpha, parsePath)
+                else clipPath(parsePath(clip, false)) { drawVectorNodes(g.children, rootAlpha, parsePath) }
+            }
+        }
+    }
+}
+
+/**
+ * The part of [path] a `trimPathStart`/`End`/`Offset` leaves visible, computed as Android's VectorDrawable does:
+ * the window is shifted by the offset and wraps past the end of the path back to its start.
+ */
+private fun trimmed(path: Path, p: UiVectorPath): Path {
+    val measure = PathMeasure()
+    measure.setPath(path, false)
+    val length = measure.length
+    val out = Path().apply { fillType = path.fillType }
+    if (length <= 0f) return out
+    fun wrap(v: Float) = (v % 1f).let { if (it < 0f) it + 1f else it }
+    val start = wrap(p.trimPathStart + p.trimPathOffset) * length
+    val end = wrap(p.trimPathEnd + p.trimPathOffset) * length
+    if (start > end) {
+        measure.getSegment(start, length, out, true)
+        if (end > 0f) measure.getSegment(0f, end, out, true)
+    } else {
+        measure.getSegment(start, end, out, true)
+    }
+    return out
+}
+
+/** A light/dark checkerboard, the conventional "transparency" backdrop behind a previewed drawable/image. */
+fun DrawScope.drawCheckerboard(cell: Float = 10f) {
+    val light = Color(0xFFFFFFFF); val dark = Color(0xFFE0E0E0)
+    drawRect(light)
+    var y = 0f
+    var row = 0
+    while (y < size.height) {
+        var x = if (row % 2 == 0) 0f else cell
+        while (x < size.width) {
+            drawRect(dark, Offset(x, y), Size(min(cell, size.width - x), min(cell, size.height - y)))
+            x += 2 * cell
+        }
+        y += cell; row++
+    }
+}
+
+/**
+ * Draws [image] centred in the box, scaled to fit whole rather than cropped, which is how an icon layer's
+ * art is authored: a foreground that is cut off at the edges is worse than one with room around it.
+ */
+private fun DrawScope.drawContained(image: ImageBitmap, topLeft: Offset, size: Size) {
+    if (image.width <= 0 || image.height <= 0 || size.width <= 0f || size.height <= 0f) return
+    val scale = min(size.width / image.width, size.height / image.height)
+    val w = image.width * scale
+    val h = image.height * scale
+    drawImage(
+        image = image,
+        srcOffset = IntOffset.Zero,
+        srcSize = IntSize(image.width, image.height),
+        dstOffset = IntOffset(
+            (topLeft.x + (size.width - w) / 2f).roundToInt(),
+            (topLeft.y + (size.height - h) / 2f).roundToInt(),
+        ),
+        dstSize = IntSize(w.roundToInt(), h.roundToInt()),
+    )
+}
+
+private fun DrawScope.drawPlaceholder(topLeft: Offset, size: Size) {
+    drawRect(Color(0x22808080), topLeft, size)
+    drawRect(Color(0x44808080), topLeft, size, style = Stroke(width = 1.dp.toPx(), pathEffect = PathEffect.dashPathEffect(floatArrayOf(6f, 6f))))
+}

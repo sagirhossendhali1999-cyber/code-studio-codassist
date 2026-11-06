@@ -1,8 +1,8 @@
-name: Build a CodeAssist project
+name: Build a Code Studio project
 description: >-
-  Assemble an Android APK from a CodeAssist project using CodeAssist's own build system, the same one that
+  Assemble an Android APK from a Code Studio project using Code Studio's own build system, the same one that
   runs on the phone. No Gradle, no AGP.
-author: CodeAssist
+author: Code Studio
 branding:
   icon: smartphone
   color: green
@@ -27,7 +27,7 @@ inputs:
     default: ""
   cli-version:
     description: >-
-      Which CodeAssist CLI release to run — a release tag (`3.18.2`), or `latest` for the newest release.
+      Which Code Studio CLI release to run — a release tag (`3.18.2`), or `latest` for the newest release.
     required: false
     default: latest
   java-version:
@@ -59,7 +59,7 @@ inputs:
     required: false
     default: ""
   args:
-    description: Extra arguments appended to the `codeassist` invocation (e.g. `--quiet`).
+    description: Extra arguments appended to the `codestudio` invocation (e.g. `--quiet`).
     required: false
     default: ""
 
@@ -111,7 +111,7 @@ runs:
         packages: platforms;android-${{ inputs.android-api }} build-tools;${{ inputs.build-tools }}
 
     # Resolve `latest` to a concrete tag so the cache can be keyed on it (a moving key would never hit).
-    - name: Resolve CodeAssist CLI version
+    - name: Resolve Code Studio CLI version
       id: version
       shell: bash
       env:
@@ -122,26 +122,26 @@ runs:
         requested='${{ inputs.cli-version }}'
         if [ "$requested" = "latest" ]; then
           tag=$(curl -fsSL -H "Authorization: Bearer $GH_TOKEN" \
-            https://api.github.com/repos/tyron12233/CodeAssist/releases/latest | jq -r .tag_name)
+            https://api.github.com/repos/sagirhossendhali1999-cyber/Code Studio/releases/latest | jq -r .tag_name)
           if [ -z "$tag" ] || [ "$tag" = "null" ]; then
-            echo "::error::Could not resolve the latest CodeAssist release. Pin cli-version to a tag."
+            echo "::error::Could not resolve the latest Code Studio release. Pin cli-version to a tag."
             exit 1
           fi
         else
           tag="$requested"
         fi
         echo "tag=$tag" >> "$GITHUB_OUTPUT"
-        echo "dir=$HOME/.codeassist-cli/$tag" >> "$GITHUB_OUTPUT"
+        echo "dir=$HOME/.codestudio-cli/$tag" >> "$GITHUB_OUTPUT"
 
-    - name: Restore CodeAssist CLI
+    - name: Restore Code Studio CLI
       if: inputs.cache == 'true'
       id: cli-cache
       uses: actions/cache@v4
       with:
         path: ${{ steps.version.outputs.dir }}
-        key: codeassist-cli-${{ runner.os }}-${{ steps.version.outputs.tag }}
+        key: codestudio-cli-${{ runner.os }}-${{ steps.version.outputs.tag }}
 
-    - name: Download CodeAssist CLI
+    - name: Download Code Studio CLI
       if: steps.cli-cache.outputs.cache-hit != 'true'
       shell: bash
       run: |
@@ -149,11 +149,11 @@ runs:
         dir='${{ steps.version.outputs.dir }}'
         tag='${{ steps.version.outputs.tag }}'
         rm -rf "$dir" && mkdir -p "$dir"
-        url="https://github.com/tyron12233/CodeAssist/releases/download/$tag/codeassist-cli.zip"
+        url="https://github.com/sagirhossendhali1999-cyber/Code Studio/releases/download/$tag/codestudio-cli.zip"
         echo "Downloading $url"
-        curl -fsSL "$url" -o "$RUNNER_TEMP/codeassist-cli.zip"
-        unzip -q "$RUNNER_TEMP/codeassist-cli.zip" -d "$dir"
-        chmod +x "$dir"/codeassist/bin/codeassist
+        curl -fsSL "$url" -o "$RUNNER_TEMP/codestudio-cli.zip"
+        unzip -q "$RUNNER_TEMP/codestudio-cli.zip" -d "$dir"
+        chmod +x "$dir"/codestudio/bin/codestudio
 
     # The resolved-dependency cache is the expensive half of a cold build: it holds every jar and AAR the
     # project's coordinates pull. Keyed on the declarations, so it only misses when a dependency changes.
@@ -161,18 +161,18 @@ runs:
       if: inputs.cache == 'true'
       uses: actions/cache@v4
       with:
-        path: ~/.codeassist-cache
-        key: codeassist-deps-${{ runner.os }}-${{ hashFiles('**/module.toml', '**/libraries.json') }}
-        restore-keys: codeassist-deps-${{ runner.os }}-
+        path: ~/.codestudio-cache
+        key: codestudio-deps-${{ runner.os }}-${{ hashFiles('**/module.toml', '**/libraries.json') }}
+        restore-keys: codestudio-deps-${{ runner.os }}-
 
     - name: Build
       id: build
       shell: bash
       run: |
         set -euo pipefail
-        report="$RUNNER_TEMP/codeassist-build-report.json"
+        report="$RUNNER_TEMP/codestudio-build-report.json"
         echo "report=$report" >> "$GITHUB_OUTPUT"
-        args=(assemble --project '${{ inputs.project }}' --cache "$HOME/.codeassist-cache" --report "$report")
+        args=(assemble --project '${{ inputs.project }}' --cache "$HOME/.codestudio-cache" --report "$report")
         if [ -n '${{ inputs.task }}' ]; then
           args+=(--task '${{ inputs.task }}')
         else
@@ -182,7 +182,7 @@ runs:
         # Word-split on purpose: `args` is a free-form string of extra flags.
         # shellcheck disable=SC2206
         extra=(${{ inputs.args }})
-        '${{ steps.version.outputs.dir }}'/codeassist/bin/codeassist "${args[@]}" ${extra[@]+"${extra[@]}"}
+        '${{ steps.version.outputs.dir }}'/codestudio/bin/codestudio "${args[@]}" ${extra[@]+"${extra[@]}"}
 
     - name: Upload artifact
       if: inputs.artifact-name != '' && steps.build.outputs.outputs != ''

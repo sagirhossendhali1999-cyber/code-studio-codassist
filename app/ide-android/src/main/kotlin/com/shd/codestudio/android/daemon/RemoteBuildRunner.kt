@@ -1,0 +1,450 @@
+package com.shd.codestudio.android.daemon
+
+import android.app.ActivityManager
+import android.app.ApplicationExitInfo
+import android.content.Context
+import android.os.Build
+import com.shd.codestudio.core.applog.AppLogLevel
+import com.shd.codestudio.core.applog.AppLogSnapshot
+import com.shd.codestudio.core.build.BuildRunner
+import com.shd.codestudio.core.IdeServices
+import com.shd.codestudio.platform.DeviceMemory
+import com.shd.codestudio.platform.ProcessDeath
+import com.shd.codestudio.platform.log.Log
+import com.shd.codestudio.ui.backend.AppLogLineUi
+import com.shd.codestudio.ui.backend.AppLogUi
+import com.shd.codestudio.ui.backend.BuildDiagnosticUi
+import com.shd.codestudio.ui.backend.BuildLogLine
+import com.shd.codestudio.ui.backend.BuildState
+import com.shd.codestudio.ui.backend.BuildStepUi
+import com.shd.codestudio.ui.backend.UiSeverity
+import com.shd.codestudio.ui.backend.ConsoleChunk
+import com.shd.codestudio.ui.backend.ConsoleChunkKind
+import com.shd.codestudio.ui.backend.RunFrameUi
+import com.shd.codestudio.ui.backend.RunConsoleUi
+import com.shd.codestudio.ui.backend.RunPhase
+import com.shd.codestudio.ui.backend.RunStatus
+import com.shd.codestudio.ui.backend.RunTaskOption
+import com.shd.codestudio.ui.backend.StepStatus
+import com.shd.codestudio.ui.backend.UiLogLevel
+import com.shd.codestudio.ui.backend.UiPermissionDecision
+import com.shd.codestudio.ui.backend.UiPermissionRequest
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.Job
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.stateIn
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.isActive
+import kotlinx.coroutines.launch
+import java.util.concurrent.atomic.AtomicInteger
+
+/**
+ * Routes a project's build/run to the `:build` daemon process (build-process isolation,
+ * docs/build-process-isolation.md). Implements [BuildRunner], so it drops into ide-core's BuildBackend
+ * selection seam in place of the in-process runner.
+ *
+ * The task LIST is served LOCALLY from [services] (a cheap model query — the UI process already has the
+ * model); EXECUTION (runBuild / runTask / stopBuild) goes to the daemon, whose streamed deltas are
+ * reassembled here into the [StateFlow]s the console renders. A build OOM now kills only the daemon —
+ * surfaced via [BuildDaemonClient]'s death recipient as a Failed state, IDE intact.
+ *
+ * Build AND interactive run both route here: the program runs in the daemon, and its stdio ([runConsole]),
+ * stdin, and the run-sandbox [permissionRequest] prompts stream over the same channel (Phase 4).
+ */
+class RemoteBuildRunner(context: Context, private val services: IdeServices) : BuildRunner {
+    private val log = Log.logger("ide.daemon")
+    private val appContext = context.applicationContext
+    private val workspaceRoot = services.workspaceRoot.toString()
+
+    private val _buildState = MutableStateFlow(BuildState())
+    private val _runConsole = MutableStateFlow<RunConsoleUi?>(null)
+    private val _permissionRequest = MutableStateFlow<UiPermissionRequest?>(null)
+    override val buildState: StateFlow<BuildState> = _buildState.asStateFlow()
+    override val runConsole: StateFlow<RunConsoleUi?> = _runConsole.asStateFlow()
+    override val permissionRequest: StateFlow<UiPermissionRequest?> = _permissionRequest.asStateFlow()
+    // App-log (Logcat tab): read the UI-process channel DIRECTLY (declared after `scope`, below). Capture is
+    // configured on project open and fed straight by the sink, so it works whether the app was launched from
+    // the IDE or the device launcher, and no longer depends on the build daemon (the old relay is gone).
+
+    @Volatile
+    private var connected = false
+
+    /** The build queued behind an in-flight daemon open, tagged with its open request's id so a reply to a
+     *  SUPERSEDED open (a retry raced the first cold open) can't fire the newer request's action against an
+     *  engine that request never opened. */
+    private class PendingRun(val id: Int, val action: () -> Unit)
+
+    @Volatile
+    private var pending: PendingRun? = null
+    private val pendingLock = Any()
+    private val requestSeq = AtomicInteger()
+
+    /** Atomically claim [pending] iff it belongs to [requestId] — the reply-to-request pairing. Touched from
+     *  the UI thread (execute/stop), binder threads (onOpened), and the watchdog, so check-then-clear must be
+     *  one step; the action itself runs outside the lock (it's a binder call). */
+    private fun takePending(requestId: Int): PendingRun? = synchronized(pendingLock) {
+        val p = pending
+        if (p != null && p.id == requestId) {
+            pending = null
+            p
+        } else null
+    }
+
+    /** Wall-clock of the last daemon sign of life (any delta/reply) — the watchdog's silence baseline. */
+    @Volatile
+    private var lastActivityMs = 0L
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
+
+    // The UI-process app-log channel, mapped to the UI DTO. `services` is the UI engine, whose channel the sink
+    // feeds and which is watch()ed on project open — so this reflects a running app's logs regardless of how it
+    // was launched or whether the build ran in the :build daemon.
+    override val appLog: StateFlow<AppLogUi> =
+        services.appLogState.map { it.toAppLogUi() }.stateIn(scope, SharingStarted.Eagerly, AppLogUi())
+    override fun clearAppLog() { runCatching { services.clearAppLog() } }
+
+    private fun AppLogSnapshot.toAppLogUi(): AppLogUi = AppLogUi(
+        lines = entries.map { e ->
+            AppLogLineUi(
+                message = e.message,
+                level = when (e.level) {
+                    AppLogLevel.VERBOSE, AppLogLevel.DEBUG -> UiLogLevel.Debug
+                    AppLogLevel.INFO -> UiLogLevel.Info
+                    AppLogLevel.WARN -> UiLogLevel.Warn
+                    AppLogLevel.ERROR -> UiLogLevel.Error
+                },
+                tag = e.tag, pid = e.pid, tid = e.tid,
+                timeLabel = appLogTimeLabel(e.timestampMs), timestampMs = e.timestampMs,
+            )
+        },
+        connected = connected, packageName = packageName,
+    )
+
+    @Volatile
+    private var watchdog: Job? = null
+
+    private fun noteActivity() {
+        lastActivityMs = System.currentTimeMillis()
+    }
+
+    private val client = BuildDaemonClient(
+        context,
+        onOpened = { requestId, ok, err ->
+            noteActivity()
+            // Only the reply matching the CURRENT request may consume it; a stale reply is dropped (its
+            // requester was superseded, and the newer open gets its own reply — the daemon serializes them).
+            val p = takePending(requestId)
+            if (p != null) {
+                if (ok) {
+                    p.action()
+                } else {
+                    watchdog?.cancel()
+                    _buildState.update { it.copy(status = RunStatus.Failed, log = it.log + line("Build process couldn't open the project: $err")) }
+                }
+            }
+        },
+        onStatus = { status, module, elapsed ->
+            noteActivity()
+            _buildState.update {
+                it.copy(status = runStatusOf(status, it.status), moduleName = module.ifEmpty { it.moduleName }, elapsedMs = elapsed)
+            }
+        },
+        onStep = { name, status ->
+            noteActivity()
+            _buildState.update { it.withStep(name, stepStatusOf(status)) }
+        },
+        onLog = { msg ->
+            noteActivity()
+            _buildState.update { it.copy(log = it.log + line(msg)) }
+        },
+        onDiagnostic = { severity, message, kind, source, file, lineNo, column, detail, task ->
+            noteActivity()
+            _buildState.update {
+                it.copy(diagnostics = it.diagnostics + BuildDiagnosticUi(severityOf(severity), message, kind, source, file, lineNo, column, detail, task))
+            }
+        },
+        onRunConsole = { runId, module, mainClass, phase, acceptsInput, hasExit, exitCode ->
+            if (runId < 0) {
+                _runConsole.value = null
+            } else {
+                _runConsole.update { cur ->
+                    val exit = if (hasExit) exitCode else null
+                    if (cur == null || cur.id != runId) {
+                        RunConsoleUi(runId, module, mainClass, runPhaseOf(phase), emptyList(), acceptsInput, exit)
+                    } else {
+                        cur.copy(moduleName = module, mainClass = mainClass, phase = runPhaseOf(phase), acceptsInput = acceptsInput, exitCode = exit)
+                    }
+                }
+            }
+        },
+        onConsoleChunk = { runId, text, kind ->
+            _runConsole.update { cur ->
+                if (cur == null || cur.id != runId) return@update cur
+                cur.copy(transcript = appendConsoleChunk(cur.transcript, text, chunkKindOf(kind)))
+            }
+        },
+        onRunFrame = { runId, path, width, height, seq ->
+            _runConsole.update { cur ->
+                if (cur == null || cur.id != runId) return@update cur
+                cur.copy(frame = RunFrameUi(path, width, height, seq))
+            }
+        },
+        onPermission = { reqId, category, detail ->
+            _permissionRequest.value = if (reqId < 0) null else UiPermissionRequest(reqId, category, detail)
+        },
+        onLaunchPackage = { pkg ->
+            // The daemon installed the APK in :build; launch it here in the UI process (it has a foreground
+            // activity, so the activity launch isn't blocked) and surface the outcome in the build console.
+            // Held while a full-screen ad is up, so the app doesn't open under it.
+            if (pkg.isNotEmpty()) com.shd.codestudio.android.FullScreenAdGate.runWhenClear {
+                com.shd.codestudio.android.ApkLauncher.launch(appContext, pkg) { msg -> _buildState.update { it.copy(log = it.log + line(msg)) } }
+            }
+        },
+        onInstallConfirm = { confirm ->
+            com.shd.codestudio.android.FullScreenAdGate.runWhenClear {
+                runCatching { appContext.startActivity(confirm.addFlags(android.content.Intent.FLAG_ACTIVITY_NEW_TASK)) }
+            }
+        },
+        // App-log deltas are no longer streamed from the daemon — the UI channel is fed directly by the sink and
+        // read via `services` above (BuildDaemonClient's onAppLog/onAppLogState default to no-ops).
+        onConnected = ::onDaemonConnected,
+        onDeath = { pid ->
+            var failedBuild = false
+            _buildState.update {
+                if (it.status == RunStatus.Running) {
+                    failedBuild = true
+                    it.copy(status = RunStatus.Failed, log = it.log + line("Build process stopped (out of memory?). The IDE is unaffected — press Run to retry."))
+                } else {
+                    it
+                }
+            }
+            connected = false // the binding auto-restarts the service; onConnected re-drives any pending build
+            if (failedBuild) explainDeath(pid)
+        },
+    )
+
+    init {
+        // Bind eagerly when the project opens, so the daemon is up before the first build. A low-memory device
+        // binds on the first Run instead: an idle :build process is a whole second runtime the system would
+        // otherwise have to find room for while the user is only editing.
+        if (!DeviceMemory.isLow) client.bind {}
+    }
+
+    /**
+     * Follow a build-killing daemon death with the reason the OS recorded for it: the low-memory killer, an
+     * uncaught error (a Java OutOfMemoryError among them) or a native crash. The line the death recipient writes
+     * cannot tell those apart, and they call for different remedies. The record is filed shortly after the
+     * process is gone, so it is polled for briefly; nothing is added when it never appears (API < 30, or a ROM
+     * that keeps no history), and nothing once another build has started.
+     */
+    private fun explainDeath(pid: Int) {
+        if (pid <= 0 || Build.VERSION.SDK_INT < Build.VERSION_CODES.R) return
+        val buildAtDeath = requestSeq.get()
+        val am = appContext.getSystemService(Context.ACTIVITY_SERVICE) as? ActivityManager ?: return
+        scope.launch(Dispatchers.IO) {
+            var exit: ApplicationExitInfo? = null
+            for (attempt in 0 until DEATH_RECORD_POLLS) {
+                exit = runCatching { am.getHistoricalProcessExitReasons(appContext.packageName, pid, 1).firstOrNull() }.getOrNull()
+                if (exit != null) break
+                delay(DEATH_RECORD_POLL_MS)
+            }
+            val e = exit ?: return@launch
+            log.warn(
+                "ui: daemon(pid=$pid) exit record: reason=${e.reason} status=${e.status} " +
+                    "description=${e.description} pss=${e.pss}KB rss=${e.rss}KB",
+            )
+            val heapLimitMb = Runtime.getRuntime().maxMemory() / (1024 * 1024)
+            val cause = ProcessDeath.describeBuildProcessExit(e.reason, e.status, e.description, e.rss, heapLimitMb)
+            // A Java crash's record does not say which error it was; the daemon left that behind itself.
+            val error = if (e.reason == ApplicationExitInfo.REASON_CRASH) {
+                DaemonCrashNote.readSince(appContext, e.timestamp - CRASH_NOTE_SLACK_MS)?.let { "Error: $it" }
+            } else null
+            if (requestSeq.get() != buildAtDeath) return@launch
+            _buildState.update {
+                if (it.status == RunStatus.Failed) it.copy(log = it.log + listOfNotNull(cause, error).map(::line)) else it
+            }
+        }
+    }
+
+    /** Set when the project wants the daemon's compiler warm; sent on the next connect, then cleared, so a
+     *  daemon restarted after running out of memory is not immediately loaded up again. */
+    @Volatile
+    private var warmPending = false
+
+    override fun warmCompiler() {
+        if (DeviceMemory.isLow || !client.isBound) return
+        scope.launch(Dispatchers.IO) {
+            if (!services.hasKotlinSources()) return@launch
+            warmPending = true
+            if (connected) sendWarm()
+        }
+    }
+
+    private fun sendWarm() {
+        if (!warmPending) return
+        warmPending = false
+        client.warmCompiler()
+    }
+
+    /** Task list is a pure model query — answer it locally; only execution crosses to the daemon. */
+    override fun runTasks(): List<RunTaskOption> = runCatching { services.buildRunner.runTasks() }.getOrDefault(emptyList())
+
+    override fun runBuild() = execute { client.runBuild() }
+    override fun runTask(id: String) = execute { client.runTask(id) }
+
+    override fun stopBuild() {
+        // Drop a build still queued behind the daemon-open handshake — Stop must never let it fire later.
+        synchronized(pendingLock) { pending = null }
+        watchdog?.cancel()
+        runCatching { client.stopBuild() }
+        // If the daemon never acknowledged this build (still in the handshake — no steps yet), no terminal
+        // status will ever stream back; resolve the optimistic Running locally so Stop visibly stops and the
+        // next Run isn't blocked by the run-conflict gate. A real in-flight build (steps present) terminates
+        // through the daemon's own Stopped/Failed delta instead.
+        // Either way it reads as stopped: the daemon's terminal Failed arrives as a copy of this state, flag kept.
+        _buildState.update {
+            when {
+                it.status != RunStatus.Running -> it
+                it.steps.isEmpty() -> it.copy(status = RunStatus.Failed, stopped = true, log = it.log + line("Stopped."))
+                else -> it.copy(stopped = true)
+            }
+        }
+    }
+
+    override fun sendRunInput(text: String) { runCatching { client.sendRunInput(text) } }
+    override fun closeRunInput() { runCatching { client.closeRunInput() } }
+
+    override fun sendRunPointer(action: Int, x: Float, y: Float) { runCatching { client.sendRunPointer(action, x, y) } }
+
+    override fun sendRunKey(action: Int, keyCode: Int, keyChar: Char) { runCatching { client.sendRunKey(action, keyCode, keyChar) } }
+
+    override fun sendRunScroll(x: Float, y: Float, notches: Int) { runCatching { client.sendRunScroll(x, y, notches) } }
+
+    override fun setRunSurfaceSize(widthPx: Int, heightPx: Int) { runCatching { client.setRunSurfaceSize(widthPx, heightPx) } }
+    override fun answerPermission(id: Int, decision: UiPermissionDecision) { runCatching { client.answerPermission(id, decision.ordinal) } }
+
+    /** Fires on first connect AND on every auto-restart after a daemon death — (re)drive a pending build so a
+     *  retry queued while the daemon was down isn't lost. (A method, not a constructor lambda, so it can
+     *  reference [client] — which isn't yet assigned inside its own initializer.) */
+    private fun onDaemonConnected() {
+        connected = true
+        sendWarm()
+        pending?.let { p -> runCatching { client.open(workspaceRoot, services.modelGeneration, p.id) } }
+    }
+
+    /** Show Running immediately, then ensure the daemon has THIS project open (idempotent) and run [action].
+     *  If the daemon isn't connected yet (or is mid-restart after a death), [onDaemonConnected] drives it once
+     *  the binding (re)connects — so a build/retry queued while disconnected isn't lost. */
+    private fun execute(action: () -> Unit) {
+        // Persist the UI process's live editor buffers to disk FIRST. The daemon is a separate process with no
+        // editor overlay of its own, so its `flushOpenDocuments()` is a no-op — without this it compiles
+        // whatever was last saved and runs stale code on an unsaved edit. The in-process runner flushes inside
+        // BuildService.runTask; the remote runner must flush here, in the process that actually holds the edits.
+        runCatching { services.flushOpenDocuments() }
+        val id = requestSeq.incrementAndGet()
+        _buildState.value = BuildState(
+            status = RunStatus.Running,
+            log = listOf(line("Starting the build in the background build process…")),
+        )
+        synchronized(pendingLock) { pending = PendingRun(id, action) }
+        noteActivity()
+        // Not bound yet (a low-memory device defers the bind to the first Run): binding now connects, and
+        // onDaemonConnected drives the pending build.
+        if (!client.isBound) client.bind {}
+        // Pass the current model revision: if the UI committed a config change (e.g. minifyEnabled) since the
+        // daemon last opened, this differs and the daemon reloads module.toml before building — otherwise the
+        // build would run against the daemon's stale, frozen-at-first-open model.
+        if (connected) runCatching { client.open(workspaceRoot, services.modelGeneration, id) } // → daemon onOpened → runs `pending`
+        armWatchdog()
+    }
+
+    /** Guard the handshake window (execute → daemon open → first build deltas): if the daemon goes silent for
+     *  [WATCHDOG_SILENCE_MS] before ANY step arrives, fail the build visibly instead of spinning forever —
+     *  the historical stuck state ("Running…" + an empty Steps tab) that only a project re-open cleared.
+     *  Once steps stream (or the status resolves) the build is live and the watchdog stands down. */
+    private fun armWatchdog() {
+        watchdog?.cancel()
+        watchdog = scope.launch {
+            while (isActive) {
+                delay(WATCHDOG_POLL_MS)
+                val st = _buildState.value
+                if (st.status != RunStatus.Running || st.steps.isNotEmpty()) return@launch
+                if (System.currentTimeMillis() - lastActivityMs > WATCHDOG_SILENCE_MS) {
+                    synchronized(pendingLock) { pending = null }
+                    _buildState.update {
+                        if (it.status == RunStatus.Running && it.steps.isEmpty()) {
+                            it.copy(
+                                status = RunStatus.Failed,
+                                log = it.log + line("The build process didn't respond for ${WATCHDOG_SILENCE_MS / 1000}s — press Run to try again."),
+                            )
+                        } else it
+                    }
+                    return@launch
+                }
+            }
+        }
+    }
+
+    /** Append a streamed console fragment, coalescing into the trailing same-kind chunk (bounded per chunk)
+     *  and capping the total transcript — mirrors the in-process [com.shd.codestudio.core.services.BuildService] so the
+     *  daemon-backed transcript has the same shape and can't grow without limit on a chatty program. */
+    private fun appendConsoleChunk(chunks: List<ConsoleChunk>, text: String, kind: ConsoleChunkKind): List<ConsoleChunk> {
+        if (text.isEmpty()) return chunks
+        val last = chunks.lastOrNull()
+        val merged = if (last != null && last.kind == kind && last.text.length < CONSOLE_CHUNK_MAX) {
+            chunks.dropLast(1) + ConsoleChunk(last.text + text, kind)
+        } else {
+            chunks + ConsoleChunk(text, kind)
+        }
+        var total = merged.sumOf { it.text.length }
+        if (total <= CONSOLE_TRANSCRIPT_MAX) return merged
+        val out = ArrayDeque(merged)
+        while (total > CONSOLE_TRANSCRIPT_MAX && out.size > 1) total -= out.removeFirst().text.length
+        return out.toList()
+    }
+
+    private fun line(msg: String) = BuildLogLine(msg)
+
+    /** Local time-of-day (HH:mm:ss.SSS) for an app-log line — formatted UI-side (the daemon sends only the epoch ms). */
+    private fun appLogTimeLabel(ms: Long): String = runCatching {
+        java.time.Instant.ofEpochMilli(ms).atZone(java.time.ZoneId.systemDefault()).toLocalTime()
+            .format(java.time.format.DateTimeFormatter.ofPattern("HH:mm:ss.SSS"))
+    }.getOrDefault("")
+    private fun runStatusOf(name: String, fallback: RunStatus) = runCatching { RunStatus.valueOf(name) }.getOrDefault(fallback)
+    private fun stepStatusOf(name: String) = runCatching { StepStatus.valueOf(name) }.getOrDefault(StepStatus.Pending)
+    private fun runPhaseOf(ordinal: Int) = RunPhase.entries.getOrNull(ordinal) ?: RunPhase.Running
+    private fun chunkKindOf(ordinal: Int) = ConsoleChunkKind.entries.getOrNull(ordinal) ?: ConsoleChunkKind.OUTPUT
+    private fun severityOf(name: String) = runCatching { UiSeverity.valueOf(name) }.getOrDefault(UiSeverity.Error)
+
+    private fun BuildState.withStep(name: String, status: StepStatus): BuildState {
+        val idx = steps.indexOfFirst { it.name == name }
+        val next = if (idx >= 0) steps.toMutableList().also { it[idx] = BuildStepUi(name, status) } else steps + BuildStepUi(name, status)
+        return copy(steps = next)
+    }
+
+    private companion object {
+        const val CONSOLE_CHUNK_MAX = 8192
+        const val CONSOLE_TRANSCRIPT_MAX = 1_000_000
+
+        // Handshake watchdog: how often to check, and how long the daemon may stay silent before the first
+        // step arrives. Generous — a cold daemon open (model load + engine init, no index) is well under
+        // this even on a slow phone, and the daemon logs "loading project…" at open start, resetting the clock.
+        const val WATCHDOG_POLL_MS = 15_000L
+        const val WATCHDOG_SILENCE_MS = 120_000L
+
+        // The OS files a dead process's exit record a moment after its binder dies: poll for it this often, this
+        // many times (about 3s) before giving up.
+        const val DEATH_RECORD_POLL_MS = 250L
+        const val DEATH_RECORD_POLLS = 12
+
+        // How far before the OS's death timestamp the daemon's own crash note may be written and still belong
+        // to that death (the note is written first, and the two clocks are read at different moments).
+        const val CRASH_NOTE_SLACK_MS = 30_000L
+    }
+}

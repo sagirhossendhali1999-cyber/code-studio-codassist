@@ -1,0 +1,423 @@
+package com.shd.codestudio.ui.screens
+
+import androidx.compose.foundation.background
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.gestures.snapping.rememberSnapFlingBehavior
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import com.shd.codestudio.ui.backend.AdPlacement
+import com.shd.codestudio.ui.backend.IdeBackend
+import com.shd.codestudio.ui.backend.UiStoreItem
+import com.shd.codestudio.ui.backend.UiStoreItemKind
+import com.shd.codestudio.ui.backend.UiStoreSection
+import com.shd.codestudio.ui.components.inFlight
+import com.shd.codestudio.ui.components.installActionLabel
+import com.shd.codestudio.ui.components.AdSlot
+import com.shd.codestudio.ui.components.CategoryTile
+import com.shd.codestudio.ui.components.ComingSoon
+import com.shd.codestudio.ui.components.FeaturedHeroCard
+import com.shd.codestudio.ui.components.StoreListRow
+import com.shd.codestudio.ui.components.formatRating
+import com.shd.codestudio.ui.components.formatSizeShort
+import com.shd.codestudio.ui.components.TrendingSearches
+import com.shd.codestudio.ui.components.motifFor
+import com.shd.codestudio.ui.generated.resources.Res
+import com.shd.codestudio.ui.generated.resources.store_browse_by_kind
+import com.shd.codestudio.ui.generated.resources.store_search_placeholder
+import com.shd.codestudio.ui.generated.resources.store_see_all
+import com.shd.codestudio.ui.generated.resources.store_title
+import com.shd.codestudio.ui.generated.resources.store_unavailable
+import com.shd.codestudio.ui.generated.resources.store_unavailable_content
+import com.shd.codestudio.ui.icons.CaIcons
+import com.shd.codestudio.ui.icons.CaSymbols
+import com.shd.codestudio.ui.itemsIndexedKeyed
+import com.shd.codestudio.ui.joinMeta
+import com.shd.codestudio.ui.theme.Symbol
+import com.shd.codestudio.ui.theme.cardShape
+import com.shd.codestudio.ui.theme.tileShape
+import com.shd.codestudio.ui.theme.tonalPair
+import org.jetbrains.compose.resources.stringResource
+
+/**
+ * The home screen's **Explore** tab — the Projects Store.
+ *
+ * Browse mode is a single [LazyColumn] so the header scrolls with the content: title, a search entry that
+ * is a *button* rather than a live field, the trending ticker, the featured carousel, the "browse by kind"
+ * grid, then one list per catalog section. Tapping the search entry swaps the whole screen into search
+ * mode, which owns the real text field — the same split the design uses, implemented as one screen with
+ * two modes rather than two nav destinations, so the tab keeps its scroll position on the way back.
+ *
+ * Every card's tint and silhouette come from its position in its run, not from the item, so a catalog with
+ * no artwork of its own still renders as a varied shelf.
+ */
+@Composable
+fun ProjectsStoreScreen(
+    backend: IdeBackend,
+    onOpenItem: (UiStoreItem) -> Unit,
+    modifier: Modifier = Modifier,
+    onOpenHub: (() -> Unit)? = null,
+) {
+    val available = remember { backend.store.storeAvailable() }
+    if (!available) {
+        ComingSoon(
+            icon = CaIcons.grid,
+            title = stringResource(Res.string.store_unavailable),
+            description = stringResource(Res.string.store_unavailable_content),
+            modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background),
+        )
+        return
+    }
+
+    val state = rememberProjectsStoreState(backend)
+    var searching by rememberSaveable { mutableStateOf(false) }
+    var searchCategory by rememberSaveable { mutableStateOf<String?>(null) }
+    var searchQuery by rememberSaveable { mutableStateOf<String?>(null) }
+
+    Box(modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.TopCenter) {
+        Box(Modifier.widthIn(max = 820.dp).fillMaxSize()) {
+            if (searching) {
+                // The same search the Explore feed opens, over the same catalogue, paged the same way.
+                StoreSearchScreen(
+                    backend = backend,
+                    onOpenItem = onOpenItem,
+                    onClose = { searching = false },
+                    initialCategory = searchCategory,
+                    initialQuery = searchQuery,
+                )
+            } else {
+                StoreBrowse(
+                    state = state,
+                    onOpenItem = onOpenItem,
+                    onOpenSearch = { category ->
+                        searchCategory = category
+                        searchQuery = null
+                        searching = true
+                    },
+                    onSearchTerm = { term ->
+                        searchCategory = null
+                        searchQuery = term
+                        searching = true
+                    },
+                )
+            }
+        }
+    }
+}
+
+@Composable
+private fun StoreBrowse(
+    state: ProjectsStoreState,
+    onOpenItem: (UiStoreItem) -> Unit,
+    onOpenSearch: (String?) -> Unit,
+    onSearchTerm: (String) -> Unit,
+) {
+    val catalog = state.catalog
+    val allItems = remember(catalog) { catalog.sections.flatMap { it.items } }
+    val ticker = remember(catalog) { tickerLabels(catalog.sections, catalog.categories) }
+
+    LazyColumn(
+        Modifier.fillMaxSize(),
+        contentPadding = PaddingValues(bottom = 24.dp),
+    ) {
+        item("header") {
+            Column(Modifier.padding(start = 20.dp, end = 20.dp, top = 14.dp, bottom = 12.dp)) {
+                Text(
+                    stringResource(Res.string.store_title),
+                    style = MaterialTheme.typography.headlineMedium,
+                    color = MaterialTheme.colorScheme.onSurface,
+                )
+                SearchEntry(onClick = { onOpenSearch(null) }, modifier = Modifier.padding(top = 14.dp))
+            }
+        }
+
+        if (ticker.isNotEmpty()) {
+            item("ticker") {
+                TrendingSearches(
+                    terms = ticker,
+                    onTerm = onSearchTerm,
+                    modifier = Modifier.padding(bottom = 6.dp),
+                )
+            }
+        }
+
+        if (catalog.featured.isNotEmpty()) {
+            item("featured") {
+                val listState = rememberLazyListState()
+                LazyRow(
+                    state = listState,
+                    flingBehavior = rememberSnapFlingBehavior(listState),
+                    contentPadding = PaddingValues(horizontal = 20.dp, vertical = 14.dp),
+                    horizontalArrangement = Arrangement.spacedBy(14.dp),
+                ) {
+                    itemsIndexedKeyed(catalog.featured, key = { _, it -> it.id }) { i, item ->
+                        FeaturedHeroCard(
+                            title = item.title,
+                            badge = kindLabel(item.kind),
+                            subtitle = listOfNotNull(item.author, item.language).joinMeta()
+                                .ifBlank { item.category },
+                            pair = tonalPair(i),
+                            motif = remember(item.id) { motifFor(item.id) },
+                            rating = item.rating,
+                            installs = item.installs,
+                            iconId = item.iconId,
+                            shots = if (hasSamplePreview(item.previewKey)) {
+                                listOf { m -> SamplePreview(item.previewKey!!, m) }
+                            } else emptyList(),
+                            onClick = { onOpenItem(item) },
+                        )
+                    }
+                }
+            }
+        }
+
+        if (catalog.categories.isNotEmpty()) {
+            item("categoriesHeader") {
+                SectionHeader(stringResource(Res.string.store_browse_by_kind))
+            }
+            // A LazyVerticalGrid cannot nest inside a LazyColumn, so the two-column grid is emitted as
+            // chunked rows instead.
+            val rows = catalog.categories.chunked(2)
+            itemsIndexedKeyed(rows, key = { i, _ -> "catRow$i" }) { rowIndex, row ->
+                Row(
+                    Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(bottom = 12.dp),
+                    horizontalArrangement = Arrangement.spacedBy(12.dp),
+                ) {
+                    row.forEachIndexed { colIndex, cat ->
+                        val i = rowIndex * 2 + colIndex
+                        CategoryTile(
+                            name = cat,
+                            count = allItems.count { it.category == cat },
+                            glyph = symbolForCategory(cat),
+                            pair = tonalPair(i),
+                            shape = cardShape(i),
+                            onClick = { onOpenSearch(cat) },
+                            modifier = Modifier.weight(1f),
+                        )
+                    }
+                    // Keep a lone tile on an odd final row at one column's width rather than full bleed.
+                    if (row.size == 1) Spacer(Modifier.weight(1f))
+                }
+            }
+        }
+
+        catalog.sections.filter { it.items.isNotEmpty() }.forEachIndexed { sectionIndex, section ->
+            item("head_${section.id}") {
+                // "See all" drops into search filtered to that shelf's category, which is the closest the
+                // backend can answer: sections are by kind, and search filters by category.
+                SectionHeader(
+                    title = section.title,
+                    subtitle = section.subtitle,
+                    onSeeAll = { onOpenSearch(section.items.firstOrNull()?.category) },
+                )
+            }
+            storeRows(section, onOpenItem, state.backend)
+            // One native ad between shelves — browse time between topics, never over the hero carousel.
+            // Padded to the same 20 dp gutter as the rows so it sits in the list rather than beside it.
+            if (sectionIndex == 0) {
+                item("ad_${section.id}") {
+                    AdSlot(AdPlacement.STORE, Modifier.padding(horizontal = 20.dp).padding(top = 16.dp))
+                }
+            }
+        }
+    }
+}
+
+/** One catalog section rendered as list rows. */
+private fun LazyListScope.storeRows(
+    section: UiStoreSection,
+    onOpenItem: (UiStoreItem) -> Unit,
+    backend: IdeBackend,
+) {
+    itemsIndexedKeyed(section.items, key = { _, it -> "${section.id}_${it.id}" }) { i, item ->
+        StoreItemRow(item, i, onOpenItem, backend = backend)
+    }
+}
+
+@Composable
+internal fun StoreItemRow(
+    item: UiStoreItem,
+    index: Int,
+    onOpenItem: (UiStoreItem) -> Unit,
+    onAction: ((UiStoreItem) -> Unit)? = null,
+    /** This item's in-flight install, if any. Turns the action into live progress. */
+    progress: com.shd.codestudio.ui.backend.UiInstallProgress? = null,
+    /** Where a published app icon is fetched from. Null (the bundled catalogue) keeps the glyph tile. */
+    backend: com.shd.codestudio.ui.backend.IdeBackend? = null,
+    /**
+     * Replaces the publisher line. A publisher's own page passes the project's blurb, since naming the
+     * publisher under every row of their own page says nothing.
+     */
+    subtitle: String? = null,
+    /** Replaces the stat line, for a page that ranks by different figures than the store's shelves. */
+    meta: String? = null,
+) {
+    val message = progress?.message
+    StoreListRow(
+        title = item.title,
+        // A failure replaces the publisher line: the row is where the tap happened, so it is where the
+        // reason belongs.
+        subtitle = message ?: subtitle ?: item.author.orEmpty().ifBlank { item.category },
+        iconId = item.iconId,
+        pair = tonalPair(index),
+        tileShape = tileShape(index),
+        // A template routes straight into the Create-Project flow, so its action reads "Use", not "Install".
+        actionLabel = installActionLabel(item, progress),
+        actionFilled = item.available,
+        // Suppressed while a failure is showing: the row is already saying something more important.
+        meta = if (message != null) "" else meta ?: storeItemMeta(item),
+        onOpen = { onOpenItem(item) },
+        onAction = { if (!progress.inFlight) (onAction ?: onOpenItem)(item) },
+        icon = rememberItemIcon(backend, item),
+    )
+}
+
+/**
+ * The row's one stat line: `Kotlin · 4.5 ★ · 6.8 MB`.
+ *
+ * Only the parts that are actually known. An unrated project says nothing about its rating rather than
+ * claiming a zero, and a bundled template has no size to report, so the line shortens instead of showing
+ * placeholders.
+ */
+@Composable
+internal fun storeItemMeta(item: UiStoreItem): String = listOfNotNull(
+    item.language,
+    item.rating.takeIf { it >= 0f && item.ratingCount > 0 }?.let { "${formatRating(it)} ★" },
+    item.downloadBytes.takeIf { it > 0 }?.let { formatSizeShort(it) },
+).joinMeta()
+
+/**
+ * The non-editable search entry on the browse screen.
+ *
+ * A button that looks like a field, not a field: the real text input lives on the search screen, and a live
+ * field here would put focus (and the soft keyboard) on the browse tab every time it recomposed.
+ */
+@Composable
+internal fun SearchEntry(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val c = MaterialTheme.colorScheme
+    Surface(
+        onClick = onClick,
+        shape = CircleShape,
+        color = c.surfaceContainer,
+        contentColor = c.onSurfaceVariant,
+        modifier = modifier.fillMaxWidth().height(52.dp),
+    ) {
+        Row(
+            Modifier.padding(horizontal = 18.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Symbol(CaSymbols.search, contentDescription = null, size = 22.dp)
+            Text(
+                stringResource(Res.string.store_search_placeholder),
+                style = MaterialTheme.typography.bodyLarge,
+                color = c.onSurfaceVariant,
+            )
+        }
+    }
+}
+
+@Composable
+internal fun SectionHeader(title: String, subtitle: String? = null, onSeeAll: (() -> Unit)? = null) {
+    Column(Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 26.dp, bottom = 8.dp)) {
+        Row(verticalAlignment = Alignment.Bottom, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+            Text(
+                title,
+                style = MaterialTheme.typography.headlineSmall,
+                color = MaterialTheme.colorScheme.onSurface,
+                modifier = Modifier.weight(1f),
+            )
+            if (onSeeAll != null) {
+                Text(
+                    stringResource(Res.string.store_see_all),
+                    style = MaterialTheme.typography.labelLarge,
+                    color = MaterialTheme.colorScheme.primary,
+                    modifier = Modifier.clickable(onClick = onSeeAll).padding(vertical = 4.dp),
+                )
+            }
+        }
+        if (subtitle != null) {
+            Text(
+                subtitle,
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                maxLines = 2,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.padding(top = 2.dp),
+            )
+        }
+    }
+}
+
+private fun kindLabel(kind: UiStoreItemKind): String = when (kind) {
+    UiStoreItemKind.Template -> "Template"
+    UiStoreItemKind.Sample -> "Sample"
+    UiStoreItemKind.Community -> "Community"
+}
+
+/**
+ * The ticker's labels, taken from the catalog's own tags rather than invented.
+ *
+ * The most-used tags are the honest answer to "what is trending here"; a catalog with no tags falls back
+ * to its category names, and one with neither shows no ticker at all rather than a placeholder.
+ */
+private fun tickerLabels(sections: List<UiStoreSection>, categories: List<String>): List<String> {
+    val tags = sections.flatMap { it.items }.flatMap { it.tags }
+    val ranked = tags.groupingBy { it }.eachCount().entries
+        .sortedWith(compareByDescending<Map.Entry<String, Int>> { it.value }.thenBy { it.key })
+        .map { it.key }
+    return (if (ranked.size >= 4) ranked else categories).take(8)
+}
+
+/** A store category name mapped onto a Material Symbol. Unknown categories fall back to a package glyph. */
+private fun symbolForCategory(category: String): Char = when (category.lowercase()) {
+    "kotlin" -> CaSymbols.bolt
+    "java" -> CaSymbols.coffee
+    "android" -> CaSymbols.phoneAndroid
+    "compose", "multiplatform" -> CaSymbols.hub
+    "games" -> CaSymbols.palette
+    "web", "server", "backend" -> CaSymbols.dns
+    "build", "plugins", "build plugins" -> CaSymbols.extension
+    "snippets", "snippet packs" -> CaSymbols.codeBlocks
+    "community" -> CaSymbols.apartment
+    "console", "cli" -> CaSymbols.terminal
+    else -> CaSymbols.extension
+}
+
+/**
+ * A store item's glyph: whatever the backend named, else something derived from its category.
+ *
+ * Catalog rows carry `iconId` in the line-icon vocabulary (or, once the remote catalog lands, a Material
+ * Symbols name directly), so a name that resolves is used as-is and everything else falls back.
+ */
+private fun symbolForStoreItem(item: UiStoreItem): Char =
+    CaSymbols.forIconId(item.iconId, fallback = symbolForCategory(item.category))

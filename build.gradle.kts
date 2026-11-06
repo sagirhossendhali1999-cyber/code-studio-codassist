@@ -17,7 +17,7 @@ plugins {
 }
 
 subprojects {
-    group = "dev.ide"
+    group = "com.shd.codestudio"
     version = "3.4.0"
 
     // Applies to EVERY test task in every module — including the multiplatform modules' `desktopTest`, which
@@ -54,7 +54,7 @@ subprojects {
             "testImplementation"(libs.junit.jupiter)
             "testImplementation"(libs.kotlin.test)
             "testRuntimeOnly"(libs.junit.platform.launcher)
-            // Shared test infrastructure (dev.ide.testkit): temp dirs, source seeding, VFS/document stubs,
+            // Shared test infrastructure (com.shd.codestudio.testkit): temp dirs, source seeding, VFS/document stubs,
             // classpath/jar builders, compilation contexts, fake index, workspace helpers. Auto-wired into
             // every framework module so tests never re-implement scaffolding. It is only ever a
             // `testImplementation` dependency, so a module in :test-support's own main-dependency chain
@@ -155,13 +155,13 @@ subprojects {
 }
 
 // ---------------------------------------------------------------------------------------------------
-// Self-hosting: export this build for CodeAssist's own build system.
+// Self-hosting: export this build for Code Studio's own build system.
 //
 // Gradle is the only thing that can evaluate these scripts, so it exports what it configured and the IDE
 // imports the result (`.platform/gradle-model.json` -> `GradleModelImporter`). Run it after a change to any
 // module's dependencies or source layout; see docs/self-hosting.md.
 // ---------------------------------------------------------------------------------------------------
-tasks.register<dev.ide.build.nativemodel.GenerateNativeModel>("generateNativeModel") {
+tasks.register<com.shd.codestudio.build.nativemodel.GenerateNativeModel>("generateNativeModel") {
     target.set(providers.gradleProperty("nativeModel.target").orElse("android"))
     outputFile.set(layout.projectDirectory.file(".platform/gradle-model.json"))
 }

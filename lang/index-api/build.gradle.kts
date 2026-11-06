@@ -1,7 +1,7 @@
 plugins {
     alias(libs.plugins.kotlin.jvm)
     // Published for plugin authors to compile against; see the convention plugin for the coordinate.
-    id("dev.ide.spi-publish")
+    id("com.shd.codestudio.spi-publish")
 }
 
 // index-api — the SPI for the on-device indexing subsystem.
@@ -15,6 +15,6 @@ dependencies {
     api(project(":language-api"))
     // The half an index IMPLEMENTS (IndexExtension, Externalizer, IndexInput, the value types) lives there,
     // in common code. What stays here is the half that RUNS them, which memory-maps segments and walks a
-    // project tree. Packages are unchanged, so every `import dev.ide.index.IndexExtension` still resolves.
+    // project tree. Packages are unchanged, so every `import com.shd.codestudio.index.IndexExtension` still resolves.
     api(project(":model-api"))
 }

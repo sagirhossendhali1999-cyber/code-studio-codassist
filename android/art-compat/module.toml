@@ -4,4 +4,4 @@ version = 2
 type = "java-lib"
 name = "art-compat"
 languageLevel = "JAVA_17"
-output = "build/codeassist/classes"
+output = "build/codestudio/classes"

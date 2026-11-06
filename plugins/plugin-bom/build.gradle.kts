@@ -1,6 +1,6 @@
 plugins {
     `java-platform`
-    id("dev.ide.spi-pom")
+    id("com.shd.codestudio.spi-pom")
 }
 
 // plugin-bom — every version a plugin has to get right, as one coordinate.
@@ -12,9 +12,9 @@ plugins {
 // With this, they are one number:
 //
 //     dependencies {
-//         compileOnly(platform("io.github.tyron12233:plugin-bom:<version>"))
-//         compileOnly("io.github.tyron12233:plugin-api")
-//         compileOnly("io.github.tyron12233:plugin-ui-api")
+//         compileOnly(platform("io.github.sagirhossendhali1999-cyber:plugin-bom:<version>"))
+//         compileOnly("io.github.sagirhossendhali1999-cyber:plugin-api")
+//         compileOnly("io.github.sagirhossendhali1999-cyber:plugin-ui-api")
 //         compileOnly("androidx.compose.runtime:runtime")
 //     }
 //
@@ -27,7 +27,7 @@ plugins {
 
 /** What the Create-Project template pins a scaffolded plugin to, read from the template itself. */
 val templateSource = rootProject
-    .file("app/ide-core/src/main/kotlin/dev/ide/core/templates/PluginTemplate.kt")
+    .file("app/ide-core/src/main/kotlin/com/shd/codestudio/core/templates/PluginTemplate.kt")
     .readText()
 
 fun templatePin(constant: String): String {

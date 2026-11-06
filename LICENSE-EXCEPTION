@@ -1,25 +1,25 @@
-CodeAssist plugin SPI linking exception
+Code Studio plugin SPI linking exception
 =======================================
 
-CodeAssist as a whole is licensed under the GNU General Public License, version 3
+Code Studio as a whole is licensed under the GNU General Public License, version 3
 or later, as stated in LICENSE. This file adds a linking exception that applies to
 the plugin SPI only, so that a plugin does not have to adopt the IDE's license.
 
 The exception covers exactly these two modules, and nothing else in this
 repository:
 
-  * plugin-api    (published as io.github.tyron12233:plugin-api)
-  * platform-core (published as io.github.tyron12233:platform-core)
+  * plugin-api    (published as io.github.sagirhossendhali1999-cyber:plugin-api)
+  * platform-core (published as io.github.sagirhossendhali1999-cyber:platform-core)
 
 Every source file covered by the exception carries the SPDX identifier
 
   GPL-3.0-or-later WITH Classpath-exception-2.0
 
 and the exception is the standard Classpath exception, version 2.0, reproduced
-below. In practical terms: a CodeAssist plugin that compiles against these two
+below. In practical terms: a Code Studio plugin that compiles against these two
 modules and is loaded into the IDE may be released under any license, including a
 proprietary one. Modifying the two modules themselves is still governed by the
-GPL, as is the rest of CodeAssist.
+GPL, as is the rest of Code Studio.
 
 Classpath-exception-2.0
 -----------------------

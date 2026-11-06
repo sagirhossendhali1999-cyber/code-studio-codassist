@@ -41,7 +41,7 @@
     <string name="chat_usage_cached">已缓存</string>
     <string name="chat_antigravity_warning">实验性功能。通过 Antigravity 端点使用 Google 账号，这违反 Google 服务条款，并已导致账号被封禁。请粘贴 OAuth 刷新令牌或访问令牌（可选格式 token|projectId）。</string>
     <string name="chat_antigravity_signin">使用 Google 登录</string>
-    <string name="chat_antigravity_waiting">正在等待浏览器 — 授权后请返回 CodeAssist</string>
+    <string name="chat_antigravity_waiting">正在等待浏览器 — 授权后请返回 Code Studio</string>
     <string name="chat_cancel">取消</string>
     <string name="chat_attach">附加</string>
     <string name="chat_attach_image">图片</string>
@@ -113,7 +113,7 @@
     <string name="chat_models_all">全部模型</string>
     <string name="chat_models_none">没有匹配的模型。</string>
     <string name="chat_models_favorite">收藏</string>
-    <string name="free_ai_pitch">CodeAssist 用户可免费使用 Claude，无需 API 密钥。登录即可获得奖励积分，每天还有免费积分。</string>
+    <string name="free_ai_pitch">Code Studio 用户可免费使用 Claude，无需 API 密钥。登录即可获得奖励积分，每天还有免费积分。</string>
     <string name="free_ai_sign_in_github">使用 GitHub 登录</string>
     <string name="free_ai_sign_in_google">使用 Google 登录</string>
     <string name="free_ai_signing_in">请在浏览器中完成登录，然后回到这里。</string>
@@ -125,7 +125,7 @@
     <string name="free_ai_ad_loading">正在加载广告…</string>
     <string name="free_ai_ad_failed">暂时没有可用的广告，请稍后再试。</string>
     <string name="free_ai_ad_pending">谢谢！积分马上到账。</string>
-    <string name="free_ai_paused">CodeAssist Free AI 本月剩余时间已暂停。你仍可使用自己的 API 密钥。</string>
+    <string name="free_ai_paused">Code Studio Free AI 本月剩余时间已暂停。你仍可使用自己的 API 密钥。</string>
     <string name="free_ai_cost_hint">1 积分 = 0.001 美元的 AI 用量。在 Claude Haiku 5.5 上，智能体每一步约消耗 1 积分。</string>
     <string name="free_ai_strip_points">%1$d AI 积分</string>
     <string name="free_ai_strip_sign_in">登录即可免费使用 AI</string>
@@ -152,11 +152,11 @@
     <string name="free_ai_usage_ago_m">%1$d 分钟前</string>
     <string name="free_ai_usage_ago_h">%1$d 小时前</string>
     <string name="free_ai_usage_ago_d">%1$d 天前</string>
-    <string name="free_ai_card_title">CodeAssist Free AI</string>
+    <string name="free_ai_card_title">Code Studio Free AI</string>
     <string name="free_ai_card_pitch">无需 API 密钥即可使用 Claude。用积分支付：每天有免费积分，看广告还能再赚。</string>
     <string name="free_ai_in_use">使用中</string>
     <string name="free_ai_section_byok">使用自己的 API 密钥</string>
-    <string name="free_ai_use_this">使用 CodeAssist Free AI</string>
+    <string name="free_ai_use_this">使用 Code Studio Free AI</string>
     <string name="chat_status_thinking">思考中…</string>
     <string name="chat_status_writing">正在输出…</string>
     <string name="chat_status_running">正在运行 %1$s</string>
@@ -233,7 +233,7 @@
     <string name="aihome_pick_none">没有匹配的项目</string>
     <string name="aihome_kind_android">Android 应用</string>
     <string name="aihome_kind_project">项目</string>
-    <string name="aihome_title">CodeAssist AI</string>
+    <string name="aihome_title">Code Studio AI</string>
     <string name="aihome_greeting">你好</string>
     <string name="aihome_greeting_name">你好，%1$s</string>
     <string name="aihome_headline_project">想对 %1$s 做些什么？</string>

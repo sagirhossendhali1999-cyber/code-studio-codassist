@@ -1,0 +1,1637 @@
+package com.shd.codestudio.ui.screens
+
+import com.shd.codestudio.ui.components.HalloweenBackdrop
+import com.shd.codestudio.ui.components.HauntedGhost
+import com.shd.codestudio.ui.components.SeasonalEmptyArt
+import com.shd.codestudio.ui.theme.LocalSeason
+import com.shd.codestudio.ui.theme.Season
+import androidx.compose.foundation.layout.BoxWithConstraints
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.text.BasicTextField
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.collectIsHoveredAsState
+import androidx.compose.material3.Button
+import androidx.compose.material3.OutlinedButton
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.draw.alpha
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.SolidColor
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextAlign
+import com.shd.codestudio.ui.joinMeta
+import com.shd.codestudio.ui.platform.touchInput
+import com.shd.codestudio.ui.generated.resources.home_account
+import com.shd.codestudio.ui.generated.resources.home_search_projects
+import com.shd.codestudio.ui.generated.resources.home_no_match
+import com.shd.codestudio.ui.generated.resources.home_sort
+import com.shd.codestudio.ui.generated.resources.home_sort_recent
+import com.shd.codestudio.ui.generated.resources.home_sort_name
+import com.shd.codestudio.ui.generated.resources.home_clear_search
+import androidx.compose.foundation.Image
+import androidx.compose.foundation.background
+import androidx.compose.foundation.border
+import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.lazy.LazyColumn
+import androidx.compose.foundation.lazy.itemsIndexed
+import androidx.compose.foundation.lazy.LazyRow
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material3.Icon
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.pulltorefresh.PullToRefreshBox
+import androidx.compose.material3.pulltorefresh.PullToRefreshDefaults
+import androidx.compose.material3.pulltorefresh.rememberPullToRefreshState
+import androidx.compose.material3.Surface
+import androidx.compose.material3.Text
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.Stable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.clipToBounds
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.Dp
+import androidx.compose.ui.unit.dp
+import com.shd.codestudio.ui.backend.AdPlacement
+import com.shd.codestudio.ui.backend.ProjectInfo
+import androidx.compose.ui.graphics.ImageBitmap
+import androidx.compose.ui.layout.ContentScale
+import com.shd.codestudio.ui.backend.UiProjectIcon
+import com.shd.codestudio.ui.editor.preview.ProjectIconRaster
+import com.shd.codestudio.ui.itemsIndexedKeyed
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import com.shd.codestudio.ui.components.AdSlot
+import com.shd.codestudio.ui.components.CountFilterChip
+import com.shd.codestudio.ui.components.dashedBorder
+import com.shd.codestudio.ui.components.Eyebrow
+import com.shd.codestudio.ui.components.MonoChip
+import com.shd.codestudio.ui.components.PrimaryActionButton
+import com.shd.codestudio.ui.components.SquareToneButton
+import com.shd.codestudio.ui.components.SupportingOnContainer
+import com.shd.codestudio.ui.components.TonalTile
+import com.shd.codestudio.ui.components.IconButtonCa
+import com.shd.codestudio.ui.components.WatermarkGlyph
+import com.shd.codestudio.ui.components.pressScale
+import com.shd.codestudio.ui.generated.resources.Res
+import com.shd.codestudio.ui.generated.resources.home_account_title
+import com.shd.codestudio.ui.generated.resources.home_backup
+import com.shd.codestudio.ui.generated.resources.home_clone_repository
+import com.shd.codestudio.ui.generated.resources.home_delete
+import com.shd.codestudio.ui.generated.resources.home_dismiss
+import com.shd.codestudio.ui.generated.resources.home_feedback
+import com.shd.codestudio.ui.generated.resources.home_import_project
+import com.shd.codestudio.ui.generated.resources.home_legacy_recovery
+import com.shd.codestudio.ui.generated.resources.home_open_in_files
+import com.shd.codestudio.ui.generated.resources.home_settings_tools
+import com.shd.codestudio.ui.generated.resources.home_share
+import com.shd.codestudio.ui.generated.resources.home_sponsor
+import com.shd.codestudio.ui.generated.resources.home_star_github
+import com.shd.codestudio.ui.generated.resources.join_the_community
+import com.shd.codestudio.ui.generated.resources.home_get_plugins_content
+import com.shd.codestudio.ui.generated.resources.home_get_plugins
+import com.shd.codestudio.ui.generated.resources.join_the_community_content
+import com.shd.codestudio.ui.generated.resources.project_opened_days
+import com.shd.codestudio.ui.generated.resources.project_opened_hours
+import com.shd.codestudio.ui.generated.resources.modules
+import com.shd.codestudio.ui.generated.resources.project_age_just_now
+import com.shd.codestudio.ui.generated.resources.project_kind_android
+import com.shd.codestudio.ui.generated.resources.project_kind_codestudio
+import com.shd.codestudio.ui.generated.resources.project_kind_files
+import com.shd.codestudio.ui.generated.resources.project_kind_gradle
+import com.shd.codestudio.ui.generated.resources.project_age_minutes
+import com.shd.codestudio.ui.generated.resources.project_age_hours
+import com.shd.codestudio.ui.generated.resources.project_age_days
+import com.shd.codestudio.ui.generated.resources.project_age_weeks
+import com.shd.codestudio.ui.generated.resources.project_opened_just_now
+import com.shd.codestudio.ui.generated.resources.project_opened_minutes
+import com.shd.codestudio.ui.generated.resources.project_opened_weeks
+import com.shd.codestudio.ui.generated.resources.home_empty_list
+import com.shd.codestudio.ui.generated.resources.home_good_afternoon
+import com.shd.codestudio.ui.generated.resources.home_good_evening
+import com.shd.codestudio.ui.generated.resources.home_good_morning
+import com.shd.codestudio.ui.generated.resources.home_new_project
+import com.shd.codestudio.ui.generated.resources.home_open
+import com.shd.codestudio.ui.generated.resources.home_open_named
+import com.shd.codestudio.ui.generated.resources.home_resume_title
+import com.shd.codestudio.ui.generated.resources.home_seg_projects
+import com.shd.codestudio.ui.generated.resources.home_seg_saved
+import com.shd.codestudio.ui.generated.resources.home_seg_updates
+import com.shd.codestudio.ui.generated.resources.home_your_projects
+import com.shd.codestudio.ui.generated.resources.import_gradle_subtitle
+import com.shd.codestudio.ui.generated.resources.import_gradle_title
+import com.shd.codestudio.ui.icons.CaIcons
+import com.shd.codestudio.ui.icons.CaSymbols
+import com.shd.codestudio.ui.platform.localHourOfDay
+import com.shd.codestudio.ui.platform.nowMillis
+import com.shd.codestudio.ui.theme.CaShapes
+import com.shd.codestudio.ui.theme.Symbol
+import com.shd.codestudio.ui.theme.cardShape
+import com.shd.codestudio.ui.theme.tileShape
+import com.shd.codestudio.ui.theme.tonalPair
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
+import org.jetbrains.compose.resources.pluralStringResource
+import androidx.compose.material3.AlertDialog
+import androidx.compose.foundation.text.KeyboardActions
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.material3.OutlinedTextField
+import androidx.compose.ui.focus.FocusRequester
+import androidx.compose.ui.focus.focusRequester
+import androidx.compose.ui.text.TextRange
+import androidx.compose.ui.text.input.ImeAction
+import androidx.compose.ui.text.input.TextFieldValue
+import com.shd.codestudio.ui.generated.resources.home_rename
+import com.shd.codestudio.ui.generated.resources.home_rename_label
+import com.shd.codestudio.ui.generated.resources.home_rename_title
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.TextButton
+import com.shd.codestudio.ui.generated.resources.home_cancel
+import com.shd.codestudio.ui.generated.resources.home_delete_confirm_action
+import com.shd.codestudio.ui.generated.resources.home_delete_confirm_body
+import com.shd.codestudio.ui.generated.resources.home_delete_confirm_title
+import com.shd.codestudio.ui.generated.resources.home_more_actions
+import org.jetbrains.compose.resources.stringResource
+import com.shd.codestudio.ui.backend.UiStoreUpdate
+import com.shd.codestudio.ui.generated.resources.store_update_versions
+import com.shd.codestudio.ui.generated.resources.home_update_review
+
+/** Which list the Home screen's segment chips are showing. */
+enum class HomeSegment { Projects, Updates, Saved }
+
+/**
+ * The home screen's **Projects** tab: the project manager.
+ *
+ * Replaces the older project picker. The layout is the Material 3 Expressive design: a time-of-day
+ * eyebrow over a display-weight title, a 44 dp account tile, the asymmetric New-project / Clone pair,
+ * segment chips carrying counts, the project cards, and a Resume card at the foot.
+ *
+ * Two segments are structurally present but empty until their backends land: **Updates** needs installed
+ * items compared against the remote catalog's versions, and **Saved** needs store favorites. They render
+ * the same dashed empty state a user with no projects sees, rather than being hidden — the chips carry
+ * their real counts, so a zero is a fact rather than a missing feature.
+ *
+ * Everything the old picker reached that this design has no slot for (Settings & Tools, backup, storage
+ * location, the community links) moved into the account sheet behind the avatar tile; import and clone
+ * moved into the New-project sheet.
+ */
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+fun ProjectsHomeScreen(
+    projects: List<ProjectInfo>,
+    onOpen: (ProjectInfo) -> Unit,
+    onNewProject: () -> Unit,
+    modifier: Modifier = Modifier,
+    onDeleteProject: ((ProjectInfo) -> Unit)? = null,
+    /** Give a project a new display name. Null hides Rename (a host that can't write the model). */
+    onRenameProject: ((ProjectInfo, String) -> Unit)? = null,
+    onImportProject: (() -> Unit)? = null,
+    onCloneRepository: (() -> Unit)? = null,
+    onExportProject: ((ProjectInfo) -> Unit)? = null,
+    onBackup: (() -> Unit)? = null,
+    onOpenHub: (() -> Unit)? = null,
+    onSubmitSuggestions: (() -> Unit)? = null,
+    onJoinDiscord: (() -> Unit)? = null,
+    /** Open the Plugins screen on its download tab. Null hides the card (a host that cannot open links). */
+    onGetPlugins: (() -> Unit)? = null,
+    onSponsor: (() -> Unit)? = null,
+    onStarOnGitHub: (() -> Unit)? = null,
+    storagePath: String? = null,
+    onOpenInFiles: (() -> Unit)? = null,
+    showLegacyRecovery: Boolean = false,
+    onDismissLegacyRecovery: () -> Unit = {},
+    /** Re-read the project list from disk. Null hides the pull-to-refresh gesture entirely. */
+    onRefresh: (() -> Unit)? = null,
+    /**
+     * The notification bell for the header. Passed in rather than built here so this screen keeps taking
+     * plain data and stays renderable in a snapshot test with no backend.
+     */
+    bell: (@Composable () -> Unit)? = null,
+    /**
+     * The project's launcher icon, when the host can resolve one. Null keeps the glyph tiles, which is
+     * what a snapshot test with no backend renders.
+     */
+    loadIcon: (suspend (ProjectInfo) -> UiProjectIcon?)? = null,
+    /**
+     * Reads an image file the icon references, by absolute path.
+     *
+     * Needed alongside [loadIcon] rather than folded into it: an adaptive icon's foreground is very often
+     * a `<bitmap>`, and without this those layers render as a placeholder instead of the artwork.
+     */
+    loadIconImage: (suspend (String) -> ByteArray?)? = null,
+    /**
+     * Set by the wide home's sidebar to open the account sheet here (it lives on this tab); the screen
+     * opens it and calls [onAccountRequestHandled] so the request is consumed once.
+     */
+    accountRequested: Boolean = false,
+    onAccountRequestHandled: () -> Unit = {},
+    /**
+     * A seasonal card (Halloween's), shown above the project list. A slot rather than data so this screen does
+     * not need to know which season it is or what dressing up changes; null shows nothing.
+     */
+    seasonalCard: (@Composable (Modifier) -> Unit)? = null,
+    /**
+     * False while the host is still reading the project list from disk (it does that off the main thread).
+     * The empty "no projects yet" state is held back until then, so a user with projects does not see it
+     * flash on launch.
+     */
+    projectsLoaded: Boolean = true,
+    /** Store projects installed here that have a newer version: the Updates segment. */
+    updates: List<UiStoreUpdate> = emptyList(),
+    /** Opens an update's listing, where the update is applied (or offered as a copy). */
+    onOpenUpdate: (UiStoreUpdate) -> Unit = {},
+) {
+    var segment by remember { mutableStateOf(HomeSegment.Projects) }
+    // Deleting wipes the project from disk and nothing else in this flow asks first.
+    var pendingDelete by remember { mutableStateOf<ProjectInfo?>(null) }
+    var pendingRename by remember { mutableStateOf<ProjectInfo?>(null) }
+    var sheet by remember { mutableStateOf<HomeSheet?>(null) }
+    val now = remember(projects) { nowMillis() }
+    val ordered = remember(projects) { projects.sortedByDescending { it.lastOpened } }
+    // Rendered icons by project root. Held for the screen rather than per card: a card is recomposed every
+    // time it scrolls back into view, and resolving an icon means parsing a manifest and a drawable.
+    val icons = remember { ProjectIconCache() }
+    val mostRecent = ordered.firstOrNull { it.lastOpened > 0L }
+
+    // Pull-to-refresh re-reads the project list. The read is synchronous, so the spinner is held up for a
+    // short beat afterwards purely so the gesture registers as having done something.
+    val refreshScope = rememberCoroutineScope()
+    var isRefreshing by remember { mutableStateOf(false) }
+    val refreshState = rememberPullToRefreshState()
+
+    LaunchedEffect(accountRequested) {
+        if (accountRequested) {
+            sheet = HomeSheet.Account
+            onAccountRequestHandled()
+        }
+    }
+
+    BoxWithConstraints(modifier.fillMaxSize()) {
+    if (maxWidth >= ProjectsWideBreakpoint) {
+        WideProjectsHome(
+            projects = ordered,
+            projectsLoaded = projectsLoaded,
+            now = now,
+            icons = icons,
+            loadIcon = loadIcon,
+            loadIconImage = loadIconImage,
+            onOpen = onOpen,
+            onNewProject = onNewProject,
+            onImportProject = onImportProject,
+            onCloneRepository = onCloneRepository,
+            onExportProject = onExportProject,
+            onRequestDelete = onDeleteProject?.let { { project: ProjectInfo -> pendingDelete = project } },
+            onRequestRename = onRenameProject?.let { { project: ProjectInfo -> pendingRename = project } },
+            showLegacyRecovery = showLegacyRecovery,
+            onDismissLegacyRecovery = onDismissLegacyRecovery,
+            seasonalCard = seasonalCard,
+            bell = bell,
+            onOpenAccount = { sheet = HomeSheet.Account },
+            onJoinDiscord = onJoinDiscord,
+            onGetPlugins = onGetPlugins,
+        )
+    } else
+    Box(Modifier.fillMaxSize().background(MaterialTheme.colorScheme.background), contentAlignment = Alignment.TopCenter) {
+      // Behind everything, so the list scrolls over it; draws nothing outside the Halloween season.
+      HalloweenBackdrop()
+      PullToRefreshBox(
+        isRefreshing = isRefreshing,
+        onRefresh = {
+            if (onRefresh != null) {
+                refreshScope.launch {
+                    isRefreshing = true
+                    // A refresh is also how an icon changed in the app-icon studio gets picked up here.
+                    icons.clear()
+                    onRefresh()
+                    delay(600)
+                    isRefreshing = false
+                }
+            }
+        },
+        state = refreshState,
+        indicator = {
+            // The design's own indicator: a filled primaryContainer disc with a sync glyph, rather than
+            // the default arrow-in-a-circle, so the gesture matches the rest of the screen's tonal language.
+            PullToRefreshDefaults.Indicator(
+                state = refreshState,
+                isRefreshing = isRefreshing,
+                containerColor = MaterialTheme.colorScheme.primaryContainer,
+                color = MaterialTheme.colorScheme.onPrimaryContainer,
+                modifier = Modifier.align(Alignment.TopCenter),
+            )
+        },
+        modifier = Modifier.widthIn(max = 720.dp).fillMaxSize(),
+      ) {
+        LazyColumn(
+            Modifier.fillMaxSize(),
+            contentPadding = PaddingValues(bottom = 24.dp),
+        ) {
+            item("header") { HomeHeader(onOpenAccount = { sheet = HomeSheet.Account }, bell = bell) }
+            item("actions") {
+                HomeActions(
+                    onNewProject = onNewProject,
+                    onClone = onCloneRepository,
+                    // Null on a host with no picker: the overflow then offers cloning alone rather than a
+                    // row that cannot do anything.
+                    onImportProject = onImportProject ?: {},
+                    canImport = onImportProject != null,
+                )
+            }
+            if (onJoinDiscord != null) {
+                item("community") {
+                    CommunityCard(onJoinDiscord, Modifier.padding(horizontal = 20.dp).padding(top = 16.dp))
+                }
+            }
+            if (onGetPlugins != null) {
+                item("plugins") {
+                    GetPluginsCard(onGetPlugins, Modifier.padding(horizontal = 20.dp).padding(top = 12.dp))
+                }
+            }
+            item("segments") {
+                SegmentRow(
+                    segment = segment,
+                    projectCount = ordered.size,
+                    // Saved is still 0 until favorites reach Home; see the KDoc above.
+                    updateCount = updates.size,
+                    savedCount = 0,
+                    onSelect = { segment = it },
+                )
+            }
+
+            if (seasonalCard != null) {
+                item("seasonal") { seasonalCard(Modifier.padding(horizontal = PhoneListInset).padding(top = 16.dp)) }
+            }
+
+            if (showLegacyRecovery) {
+                item("legacy") { LegacyRecoveryNotice(onDismissLegacyRecovery) }
+            }
+
+            if (segment == HomeSegment.Updates && updates.isNotEmpty()) {
+                itemsIndexedKeyed(updates, key = { _, u -> "update_${u.item.id}" }) { _, u ->
+                    UpdateRow(u, onOpen = { onOpenUpdate(u) })
+                }
+            } else if (segment == HomeSegment.Projects && ordered.isNotEmpty()) {
+                itemsIndexedKeyed(ordered, key = { _, p -> p.rootPath }) { i, project ->
+                    LocalProjectCard(
+                        project = project,
+                        index = i,
+                        now = now,
+                        icon = projectIconImage(project, icons, loadIcon, loadIconImage),
+                        onOpen = { onOpen(project) },
+                        onSecondary = onExportProject?.let { export -> { export(project) } }
+                            ?: onDeleteProject?.let { del -> { del(project) } },
+                        secondaryIsDelete = onExportProject == null && onDeleteProject != null,
+                        // Only when export took the visible slot; otherwise delete IS the secondary button.
+                        onDelete = if (onExportProject != null && onDeleteProject != null) {
+                            { pendingDelete = project }
+                        } else {
+                            null
+                        },
+                        onRename = onRenameProject?.let { { pendingRename = project } },
+                    )
+                }
+            } else {
+                if (projectsLoaded) item("empty") { EmptyList() }
+            }
+
+            // A native ad below the project list — an idle "between tasks" spot, never over the actions.
+            // Renders nothing unless ads are active (host available, enabled, not a supporter). Padded to
+            // the same 20 dp gutter as the cards, so it sits in the list rather than bleeding past it.
+            item("ad") { AdSlot(AdPlacement.PROJECTS, Modifier.padding(horizontal = 20.dp, vertical = 14.dp)) }
+
+            if (mostRecent != null) {
+                item("resume") { ResumeCard(mostRecent, now) { onOpen(mostRecent) } }
+            }
+        }
+      }
+    }
+    }
+
+    when (sheet) {
+        HomeSheet.Account -> AccountSheet(
+            onDismiss = { sheet = null },
+            storagePath = storagePath,
+            onOpenHub = onOpenHub?.let { { sheet = null; it() } },
+            onOpenInFiles = onOpenInFiles?.let { { sheet = null; it() } },
+            onBackup = onBackup?.let { { sheet = null; it() } },
+            onSubmitSuggestions = onSubmitSuggestions?.let { { sheet = null; it() } },
+            onJoinDiscord = onJoinDiscord?.let { { sheet = null; it() } },
+            onSponsor = onSponsor?.let { { sheet = null; it() } },
+            onStarOnGitHub = onStarOnGitHub?.let { { sheet = null; it() } },
+        )
+        null -> Unit
+    }
+
+    // Deleting is irreversible and removes files from disk, so it asks. The project's name is in the
+    // question rather than a generic "this project", because the wrong one is the mistake worth preventing.
+    pendingDelete?.let { target ->
+        AlertDialog(
+            onDismissRequest = { pendingDelete = null },
+            title = { Text(stringResource(Res.string.home_delete_confirm_title, target.name)) },
+            text = { Text(stringResource(Res.string.home_delete_confirm_body)) },
+            confirmButton = {
+                TextButton(
+                    onClick = {
+                        pendingDelete = null
+                        onDeleteProject?.invoke(target)
+                    },
+                ) {
+                    Text(
+                        stringResource(Res.string.home_delete_confirm_action),
+                        color = MaterialTheme.colorScheme.error,
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = { pendingDelete = null }) {
+                    Text(stringResource(Res.string.home_cancel))
+                }
+            },
+        )
+    }
+
+    pendingRename?.let { target ->
+        RenameProjectDialog(
+            project = target,
+            onDismiss = { pendingRename = null },
+            onRename = { name ->
+                pendingRename = null
+                onRenameProject?.invoke(target, name)
+            },
+        )
+    }
+}
+
+/**
+ * Asks for a project's new display name. The field starts on the current name, all of it selected, so typing
+ * replaces it and a small edit is one tap away. Rename stays off until the name is non-blank and different.
+ */
+@Composable
+private fun RenameProjectDialog(project: ProjectInfo, onDismiss: () -> Unit, onRename: (String) -> Unit) {
+    var value by remember(project.rootPath) {
+        mutableStateOf(TextFieldValue(project.name, selection = TextRange(0, project.name.length)))
+    }
+    val newName = value.text.trim()
+    val canRename = newName.isNotEmpty() && newName != project.name
+    val focus = remember { FocusRequester() }
+    LaunchedEffect(Unit) { focus.requestFocus() }
+    AlertDialog(
+        onDismissRequest = onDismiss,
+        title = { Text(stringResource(Res.string.home_rename_title)) },
+        text = {
+            OutlinedTextField(
+                value = value,
+                onValueChange = { value = it },
+                label = { Text(stringResource(Res.string.home_rename_label)) },
+                singleLine = true,
+                keyboardOptions = KeyboardOptions(imeAction = ImeAction.Done),
+                keyboardActions = KeyboardActions(onDone = { if (canRename) onRename(newName) }),
+                modifier = Modifier.fillMaxWidth().focusRequester(focus),
+            )
+        },
+        confirmButton = {
+            TextButton(onClick = { onRename(newName) }, enabled = canRename) {
+                Text(stringResource(Res.string.home_rename))
+            }
+        },
+        dismissButton = {
+            TextButton(onClick = onDismiss) { Text(stringResource(Res.string.home_cancel)) }
+        },
+    )
+}
+
+private enum class HomeSheet { Account }
+
+@Composable
+private fun HomeHeader(
+    onOpenAccount: () -> Unit,
+    /** The notification bell, supplied by the host so this screen needs no backend of its own. */
+    bell: (@Composable () -> Unit)? = null,
+) {
+    val c = MaterialTheme.colorScheme
+    Row(
+        Modifier.fillMaxWidth().padding(start = 20.dp, end = 20.dp, top = 14.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
+    ) {
+        // No greeting eyebrow. "GOOD MORNING" above the largest text in the app spent the top of the
+        // first screen on something that says nothing about the user's projects.
+        Text(
+            stringResource(Res.string.home_your_projects),
+            style = MaterialTheme.typography.titleLarge,
+            color = c.onSurface,
+            modifier = Modifier.weight(1f).padding(top = 6.dp),
+        )
+        bell?.invoke()
+        // No account exists yet, so this is a glyph rather than a letter tile: initials would have to be
+        // invented. It becomes the real avatar once store sign-in lands.
+        // A neutral circle, the same account affordance the store header carries. It used to be a purple
+        // squircle, which made it the one saturated shape on an otherwise neutral page and did not match
+        // the equivalent control one tab away.
+        SquareToneButton(
+            glyph = CaSymbols.accountCircle,
+            contentDescription = stringResource(Res.string.home_seg_projects),
+            onClick = onOpenAccount,
+            shape = CircleShape,
+            size = 44.dp,
+            modifier = Modifier.padding(top = 2.dp),
+        )
+    }
+}
+
+/**
+ * The one way to start.
+ *
+ * There used to be three side by side: this button, an unlabelled cloud-download square, and a separate
+ * import card carrying a two-line description. Three affordances for one intention, and two of them
+ * unreadable at a glance. Cloning and importing are now the overflow beside it, so the primary action is
+ * unambiguous and the other two are named rather than guessed at from a glyph.
+ */
+@Composable
+private fun HomeActions(
+    onNewProject: () -> Unit,
+    onClone: (() -> Unit)?,
+    onImportProject: () -> Unit,
+    canImport: Boolean,
+) {
+    var menuOpen by remember { mutableStateOf(false) }
+    Row(
+        Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 14.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        PrimaryActionButton(
+            label = stringResource(Res.string.home_new_project),
+            glyph = CaSymbols.add,
+            onClick = onNewProject,
+            modifier = Modifier.weight(1f),
+        )
+        Box {
+            SquareToneButton(
+                glyph = CaSymbols.moreVert,
+                contentDescription = stringResource(Res.string.home_more_actions),
+                onClick = { menuOpen = true },
+            )
+            DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                if (canImport) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.home_import_project)) },
+                        onClick = { menuOpen = false; onImportProject() },
+                    )
+                }
+                if (onClone != null) {
+                    DropdownMenuItem(
+                        text = { Text(stringResource(Res.string.home_clone_repository)) },
+                        onClick = { menuOpen = false; onClone() },
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun SegmentRow(
+    segment: HomeSegment,
+    projectCount: Int,
+    updateCount: Int,
+    savedCount: Int,
+    onSelect: (HomeSegment) -> Unit,
+) {
+    LazyRow(
+        Modifier.fillMaxWidth().padding(top = 20.dp),
+        contentPadding = PaddingValues(horizontal = 20.dp),
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        item("projects") {
+            CountFilterChip(
+                label = stringResource(Res.string.home_seg_projects),
+                count = projectCount,
+                selected = segment == HomeSegment.Projects,
+                onClick = { onSelect(HomeSegment.Projects) },
+            )
+        }
+        // A filter with nothing behind it is not a filter. Both used to render as chips reading "0", which
+        // is three controls where one of them works. They come back the moment they have something in them,
+        // and stay while selected so the row cannot vanish under the user's own tap.
+        if (updateCount > 0 || segment == HomeSegment.Updates) {
+            item("updates") {
+                CountFilterChip(
+                    label = stringResource(Res.string.home_seg_updates),
+                    count = updateCount,
+                    selected = segment == HomeSegment.Updates,
+                    onClick = { onSelect(HomeSegment.Updates) },
+                )
+            }
+        }
+        if (savedCount > 0 || segment == HomeSegment.Saved) {
+            item("saved") {
+                CountFilterChip(
+                    label = stringResource(Res.string.home_seg_saved),
+                    count = savedCount,
+                    selected = segment == HomeSegment.Saved,
+                    onClick = { onSelect(HomeSegment.Saved) },
+                )
+            }
+        }
+    }
+}
+
+/**
+ * The home list's rendered project icons, keyed by project root.
+ *
+ * Kept for the whole screen rather than per card, because a card is recomposed every time it scrolls back
+ * into view and resolving an icon means reading a manifest and parsing a drawable.
+ *
+ * [generation] is why this is a class and not a bare map. Emptying the cache has to reach the cards that
+ * are *currently composed*, and those cards only re-resolve if something they key on changes — so the
+ * counter is part of the same operation as the clear, and a caller cannot do one without the other. When
+ * [clear] only emptied a map, a refresh blanked every icon on screen and each one came back alone, later,
+ * when a scroll had taken its card out of composition and brought it back.
+ */
+@Stable
+internal class ProjectIconCache {
+    private val byRoot = mutableStateMapOf<String, ImageBitmap?>()
+
+    /** Bumped by [clear]; a card's loader keys on it, so a cleared cache re-resolves what is on screen. */
+    var generation by mutableIntStateOf(0)
+        private set
+
+    /** The rendered icon for [rootPath]: null both while it is being resolved and when it has none. */
+    operator fun get(rootPath: String): ImageBitmap? = byRoot[rootPath]
+
+    /** Whether [rootPath] has an answer already — including the answer "this project has no icon". */
+    fun isResolved(rootPath: String): Boolean = byRoot.containsKey(rootPath)
+
+    /** Record [rootPath]'s icon, [image] being null for a project that has none. */
+    fun put(rootPath: String, image: ImageBitmap?) {
+        byRoot[rootPath] = image
+    }
+
+    /** Drop every rendered icon and open a new generation, so composed cards resolve theirs again. */
+    fun clear() {
+        byRoot.clear()
+        generation++
+    }
+}
+
+/**
+ * [project]'s launcher icon, rendered once and remembered in [cache].
+ *
+ * Null until it has been resolved, and null forever for a project that has no icon to show, which is the
+ * same answer the card needs: draw the glyph tile. The work is off the main thread because resolving one
+ * means reading a manifest and parsing a drawable, and this runs for every row in the list.
+ */
+@Composable
+private fun projectIconImage(
+    project: ProjectInfo,
+    cache: ProjectIconCache,
+    loadIcon: (suspend (ProjectInfo) -> UiProjectIcon?)?,
+    loadImage: (suspend (String) -> ByteArray?)?,
+): ImageBitmap? {
+    if (loadIcon == null) return null
+    // Keyed on the cache's generation as well as the project: a refresh empties the cache, and this is what
+    // makes a card that never left the screen ask for its icon again instead of sitting blank.
+    LaunchedEffect(project.rootPath, cache.generation, loadIcon) {
+        if (cache.isResolved(project.rootPath)) return@LaunchedEffect
+        // Recorded even when it is null, so a project with no icon is asked about once rather than on
+        // every scroll.
+        cache.put(
+            project.rootPath,
+            runCatching {
+                val resolved = loadIcon(project) ?: return@runCatching null
+                withContext(Dispatchers.Default) {
+                    ProjectIconRaster.toImage(resolved, TILE_ICON_PIXELS) { path -> loadImage?.invoke(path) }
+                }
+            }.getOrNull(),
+        )
+    }
+    return cache[project.rootPath]
+}
+
+/** Comfortably above a 46 dp tile on a 3x screen, and cheap to render at. */
+private const val TILE_ICON_PIXELS = 192
+
+/**
+ * One local project.
+ *
+ * The card's tint comes from its icon tile, not its background — the background stays a neutral container
+ * so a long list does not turn into a colour chart, and the rotation shows up in the tiles and the faint
+ * watermark instead.
+ */
+@Composable
+private fun LocalProjectCard(
+    project: ProjectInfo,
+    index: Int,
+    now: Long,
+    /** The project's own launcher icon, or null to draw the glyph tile it has always drawn. */
+    icon: ImageBitmap? = null,
+    onOpen: () -> Unit,
+    onSecondary: (() -> Unit)?,
+    secondaryIsDelete: Boolean,
+    /**
+     * Deleting the project. Its own control rather than sharing the secondary slot: the card had one slot
+     * and export always filled it, so delete was unreachable — there was no way to remove a project from
+     * the app at all.
+     */
+    onDelete: (() -> Unit)? = null,
+    onRename: (() -> Unit)? = null,
+) {
+    var menuOpen by remember(project.rootPath) { mutableStateOf(false) }
+    val c = MaterialTheme.colorScheme
+    val pair = tonalPair(index)
+    val glyph = symbolForProject(project)
+    val interaction = remember { MutableInteractionSource() }
+    Surface(
+        onClick = onOpen,
+        shape = cardShape(index),
+        color = c.surfaceContainerLow,
+        contentColor = c.onSurface,
+        interactionSource = interaction,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 10.dp)
+            .pressScale(interaction),
+    ) {
+        Row(
+            Modifier.padding(start = 14.dp, end = 8.dp, top = 12.dp, bottom = 12.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            if (icon != null) {
+                // On the tonal tile rather than bare: a launcher icon is very often transparent outside
+                // its shape, and the tile is what gives the row its edge either way.
+                Box(
+                    Modifier.size(46.dp).clip(tileShape(index)).background(pair.container),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Image(icon, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+                }
+            } else {
+                TonalTile(glyph, pair, tileShape(index), size = 46.dp)
+            }
+            Column(Modifier.weight(1f)) {
+                Text(
+                    project.name,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = c.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                // One line, not three rows. The card used to carry the path, two chips, the opened-ago
+                // text, a chevron AND two buttons; the chevron and the Open button did the same thing,
+                // which is the "which do I tap" problem users reported. Kind, then size, then age: what the
+                // project is comes before how big it is.
+                Text(
+                    listOfNotNull(
+                        kindLabel(project),
+                        moduleLabel(project.moduleCount),
+                        relativeAge(project.lastOpened, now),
+                    ).joinMeta(),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = c.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 1.dp),
+                )
+            }
+            // Everything that is not "open this project" lives behind one control. Tapping the row opens.
+            if (onDelete != null || onSecondary != null || onRename != null) {
+                Box {
+                    IconButtonCa(
+                        CaIcons.ellipsis,
+                        stringResource(Res.string.home_more_actions),
+                        onClick = { menuOpen = true },
+                        iconSize = 20,
+                        boxSize = 40,
+                    )
+                    DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                        if (onSecondary != null) {
+                            DropdownMenuItem(
+                                text = {
+                                    Text(
+                                        stringResource(
+                                            if (secondaryIsDelete) Res.string.home_delete else Res.string.home_share,
+                                        ),
+                                        color = if (secondaryIsDelete) c.error else c.onSurface,
+                                    )
+                                },
+                                onClick = { menuOpen = false; onSecondary() },
+                            )
+                        }
+                        if (onRename != null) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(Res.string.home_rename)) },
+                                onClick = { menuOpen = false; onRename() },
+                            )
+                        }
+                        if (onDelete != null) {
+                            DropdownMenuItem(
+                                text = { Text(stringResource(Res.string.home_delete), color = c.error) },
+                                onClick = { menuOpen = false; onDelete() },
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The import route, back on the surface.
+ *
+ * The design has no slot for it, but it is the only way into an existing **Code Studio folder or Gradle
+ * build**, and burying that a sheet deep made the second-most-common way to start invisible. Styled as a
+ * tonal row so it reads as a secondary action beside the New-project button, not a third project card.
+ */
+@Composable
+private fun ImportCard(onClick: () -> Unit) {
+    val c = MaterialTheme.colorScheme
+    val interaction = remember { MutableInteractionSource() }
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(topStart = 12.dp, topEnd = 26.dp, bottomEnd = 12.dp, bottomStart = 26.dp),
+        color = c.surfaceContainerLow,
+        contentColor = c.onSurface,
+        interactionSource = interaction,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 10.dp)
+            .pressScale(interaction),
+    ) {
+        Row(
+            Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Box(
+                Modifier.size(44.dp).background(c.surfaceContainerHighest, RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Symbol(CaSymbols.folderOpen, contentDescription = null, size = 22.dp, tint = c.onSurfaceVariant)
+            }
+            Column(Modifier.weight(1f)) {
+                Text(
+                    stringResource(Res.string.import_gradle_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = c.onSurface,
+                )
+                Text(
+                    stringResource(Res.string.import_gradle_subtitle),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = c.onSurfaceVariant,
+                )
+            }
+            Symbol(CaSymbols.chevronRight, contentDescription = null, size = 20.dp, tint = c.onSurfaceVariant)
+        }
+    }
+}
+
+/** The dashed empty state: shown for an empty Projects list and for the two not-yet-backed segments. */
+@Composable
+private fun EmptyList(inset: Dp = PhoneListInset, top: Dp = 24.dp) {
+    val c = MaterialTheme.colorScheme
+    Column(
+        Modifier.fillMaxWidth().padding(start = inset, end = inset, top = top, bottom = 24.dp)
+            .dashedBorder(c.outlineVariant, cornerRadius = 28.dp)
+            .padding(horizontal = 24.dp, vertical = 40.dp),
+        horizontalAlignment = Alignment.CenterHorizontally,
+    ) {
+        SeasonalEmptyArt(size = 56.dp) {
+            Symbol(CaSymbols.folderOpen, contentDescription = null, size = 40.dp, tint = c.outlineVariant)
+        }
+        Text(
+            stringResource(Res.string.home_empty_list),
+            style = MaterialTheme.typography.bodyLarge,
+            color = c.onSurfaceVariant,
+            modifier = Modifier.padding(top = 8.dp),
+        )
+    }
+}
+
+/**
+ * One installed store project with a newer version: its name, the versions, and the way to it. The update
+ * itself happens on the listing, which is where the user can see what changed and where a project they have
+ * edited is offered as a copy instead.
+ */
+@Composable
+private fun UpdateRow(update: UiStoreUpdate, onOpen: () -> Unit) {
+    val c = MaterialTheme.colorScheme
+    Surface(
+        onClick = onOpen,
+        shape = RoundedCornerShape(24.dp),
+        color = c.surfaceContainer,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = PhoneListInset).padding(top = 12.dp),
+    ) {
+        Row(
+            Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Box(
+                Modifier.size(46.dp).clip(RoundedCornerShape(14.dp)).background(c.primaryContainer),
+                contentAlignment = Alignment.Center,
+            ) {
+                Symbol(CaSymbols.update, contentDescription = null, size = 22.dp, tint = c.onPrimaryContainer)
+            }
+            Column(Modifier.weight(1f)) {
+                Text(
+                    update.item.title,
+                    style = MaterialTheme.typography.titleMedium,
+                    color = c.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                )
+                Text(
+                    stringResource(
+                        Res.string.store_update_versions,
+                        update.installedVersion ?: "?",
+                        update.availableVersion ?: "?",
+                    ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color = c.onSurfaceVariant,
+                )
+            }
+            Text(stringResource(Res.string.home_update_review), style = MaterialTheme.typography.labelLarge, color = c.primary)
+        }
+    }
+}
+
+/**
+ * "Pick up where you left off".
+ *
+ * Names the most recently opened project rather than a file: which file was last open is persisted per
+ * project and only readable once a project is loaded, so the Home screen genuinely does not know it yet.
+ */
+@Composable
+private fun ResumeCard(project: ProjectInfo, now: Long, onOpen: () -> Unit) {
+    val c = MaterialTheme.colorScheme
+    Surface(
+        shape = RoundedCornerShape(28.dp),
+        color = c.tertiaryContainer,
+        contentColor = c.onTertiaryContainer,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = 20.dp).padding(top = 22.dp),
+    ) {
+        Column(Modifier.padding(18.dp)) {
+            Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+                Symbol(CaSymbols.bolt, contentDescription = null, size = 22.dp, tint = c.onTertiaryContainer)
+                Text(
+                    stringResource(Res.string.home_resume_title),
+                    style = MaterialTheme.typography.titleSmall,
+                    color = c.onTertiaryContainer,
+                )
+            }
+            SupportingOnContainer(
+                text = listOfNotNull(
+                    project.name,
+                    moduleLabel(project.moduleCount),
+                    relativeOpened(project.lastOpened, now),
+                ).joinMeta(),
+                onContainer = c.onTertiaryContainer,
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.padding(top = 6.dp),
+            )
+            // Inverted against the card: the container's on-colour becomes the button's background. It is
+            // the only fully saturated element here, so it reads as the single next action.
+            Surface(
+                onClick = onOpen,
+                shape = CircleShape,
+                color = c.onTertiaryContainer,
+                contentColor = c.tertiaryContainer,
+                modifier = Modifier.padding(top = 14.dp).height(40.dp),
+            ) {
+                Box(Modifier.padding(horizontal = 20.dp), contentAlignment = Alignment.Center) {
+                    Text(
+                        stringResource(Res.string.home_open_named, project.name),
+                        style = MaterialTheme.typography.labelLarge,
+                        maxLines = 1,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
+            }
+        }
+    }
+}
+
+// ---- sheets ----
+
+@Composable
+private fun AccountSheet(
+    onDismiss: () -> Unit,
+    storagePath: String?,
+    onOpenHub: (() -> Unit)?,
+    onOpenInFiles: (() -> Unit)?,
+    onBackup: (() -> Unit)?,
+    onSubmitSuggestions: (() -> Unit)?,
+    onJoinDiscord: (() -> Unit)?,
+    onSponsor: (() -> Unit)?,
+    onStarOnGitHub: (() -> Unit)?,
+) {
+    SheetScaffold(onDismiss, stringResource(Res.string.home_account_title), subtitle = storagePath) {
+        if (onOpenHub != null) SheetAction(CaSymbols.settings, stringResource(Res.string.home_settings_tools), onOpenHub)
+        if (onOpenInFiles != null) SheetAction(CaSymbols.folderOpen, stringResource(Res.string.home_open_in_files), onOpenInFiles)
+        if (onBackup != null) SheetAction(CaSymbols.storage, stringResource(Res.string.home_backup), onBackup)
+        if (onStarOnGitHub != null) SheetAction(CaSymbols.star, stringResource(Res.string.home_star_github), onStarOnGitHub)
+        if (onJoinDiscord != null) SheetAction(CaSymbols.apartment, stringResource(Res.string.join_the_community), onJoinDiscord)
+        if (onSponsor != null) SheetAction(CaSymbols.bolt, stringResource(Res.string.home_sponsor), onSponsor)
+        if (onSubmitSuggestions != null) SheetAction(CaSymbols.rateReview, stringResource(Res.string.home_feedback), onSubmitSuggestions)
+    }
+}
+
+@OptIn(androidx.compose.material3.ExperimentalMaterial3Api::class)
+@Composable
+private fun SheetScaffold(
+    onDismiss: () -> Unit,
+    title: String,
+    subtitle: String? = null,
+    /** The account sheet's subtitle is a filesystem path and reads as monospace; prose does not. */
+    subtitleMono: Boolean = true,
+    content: @Composable () -> Unit,
+) {
+    val state = rememberModalBottomSheetState()
+    ModalBottomSheet(
+        onDismissRequest = onDismiss,
+        sheetState = state,
+        shape = CaShapes.Sheet,
+        containerColor = MaterialTheme.colorScheme.surfaceContainer,
+    ) {
+        Column(Modifier.fillMaxWidth().padding(start = 24.dp, end = 24.dp, bottom = 28.dp)) {
+            Text(title, style = MaterialTheme.typography.headlineMedium, color = MaterialTheme.colorScheme.onSurface)
+            if (subtitle != null) {
+                Text(
+                    subtitle,
+                    style = if (subtitleMono) {
+                        MaterialTheme.typography.bodySmall.copy(fontFamily = com.shd.codestudio.ui.theme.Ca.type.codeFamily)
+                    } else {
+                        MaterialTheme.typography.bodyMedium
+                    },
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 2,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.padding(top = 6.dp),
+                )
+            }
+            Spacer(Modifier.height(18.dp))
+            content()
+        }
+    }
+}
+
+/** One row in the account sheet: a tonal disc holding the glyph, then the label. */
+@Composable
+private fun SheetAction(glyph: Char, label: String, onClick: () -> Unit) {
+    val c = MaterialTheme.colorScheme
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(20.dp),
+        color = androidx.compose.ui.graphics.Color.Transparent,
+        contentColor = c.onSurface,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Row(
+            Modifier.padding(vertical = 10.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(16.dp),
+        ) {
+            Box(
+                Modifier.size(40.dp).background(c.surfaceContainerHighest, CircleShape),
+                contentAlignment = Alignment.Center,
+            ) {
+                Symbol(glyph, contentDescription = null, size = 20.dp, tint = c.onSurfaceVariant)
+            }
+            Text(label, style = MaterialTheme.typography.titleSmall, color = c.onSurface)
+        }
+    }
+}
+
+@Composable
+private fun LegacyRecoveryNotice(onDismiss: () -> Unit, inset: Dp = PhoneListInset, top: Dp = 16.dp) {
+    val c = MaterialTheme.colorScheme
+    Surface(
+        shape = RoundedCornerShape(24.dp),
+        color = c.secondaryContainer,
+        contentColor = c.onSecondaryContainer,
+        modifier = Modifier.fillMaxWidth().padding(horizontal = inset).padding(top = top),
+    ) {
+        Row(
+            Modifier.padding(16.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(12.dp),
+        ) {
+            Symbol(CaSymbols.info, contentDescription = null, size = 22.dp)
+            Text(
+                stringResource(Res.string.home_legacy_recovery),
+                style = MaterialTheme.typography.bodyMedium,
+                modifier = Modifier.weight(1f),
+            )
+            Surface(
+                onClick = onDismiss,
+                shape = CircleShape,
+                color = c.onSecondaryContainer,
+                contentColor = c.secondaryContainer,
+                modifier = Modifier.height(34.dp),
+            ) {
+                Box(Modifier.padding(horizontal = 14.dp), contentAlignment = Alignment.Center) {
+                    Text(stringResource(Res.string.home_dismiss), style = MaterialTheme.typography.labelMedium)
+                }
+            }
+        }
+    }
+}
+
+/**
+ * The side inset the phone list gives a full-width block that is not a row (the recovery notice, the empty
+ * state). The wide layout passes 0: its column already pads, and adding this on top set those blocks in
+ * from the header, the community card and the search row above them.
+ */
+private val PhoneListInset = 20.dp
+
+/** Discord's brand colour, used only for the community card's tile and edge. */
+private val DiscordBlurple = Color(0xFF5865F2)
+
+/** The invitation to the community Discord, kept in sight on the home rather than only in the account sheet. */
+@Composable
+private fun CommunityCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val c = MaterialTheme.colorScheme
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(24.dp),
+        color = c.surfaceContainerLow,
+        contentColor = c.onSurface,
+        border = androidx.compose.foundation.BorderStroke(1.dp, DiscordBlurple.copy(alpha = 0.35f)),
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Row(
+            Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Box(
+                Modifier.size(44.dp).background(DiscordBlurple, RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Icon(CaIcons.discord, contentDescription = null, modifier = Modifier.size(24.dp), tint = Color.White)
+            }
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(Res.string.join_the_community), style = MaterialTheme.typography.titleMedium, color = c.onSurface)
+                Text(
+                    stringResource(Res.string.join_the_community_content),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = c.onSurfaceVariant,
+                )
+            }
+            Symbol(CaSymbols.chevronRight, contentDescription = null, size = 22.dp, tint = c.onSurfaceVariant)
+        }
+    }
+}
+
+/** Home's way to more languages and tools: the Plugins screen, on its download tab. */
+@Composable
+private fun GetPluginsCard(onClick: () -> Unit, modifier: Modifier = Modifier) {
+    val c = MaterialTheme.colorScheme
+    Surface(
+        onClick = onClick,
+        shape = RoundedCornerShape(24.dp),
+        color = c.surfaceContainerLow,
+        contentColor = c.onSurface,
+        border = androidx.compose.foundation.BorderStroke(1.dp, c.primary.copy(alpha = 0.35f)),
+        modifier = modifier.fillMaxWidth(),
+    ) {
+        Row(
+            Modifier.padding(14.dp),
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(14.dp),
+        ) {
+            Box(
+                Modifier.size(44.dp).background(c.primary, RoundedCornerShape(14.dp)),
+                contentAlignment = Alignment.Center,
+            ) {
+                Symbol(CaSymbols.extension, contentDescription = null, size = 24.dp, tint = c.onPrimary, filled = true)
+            }
+            Column(Modifier.weight(1f)) {
+                Text(stringResource(Res.string.home_get_plugins), style = MaterialTheme.typography.titleMedium, color = c.onSurface)
+                Text(
+                    stringResource(Res.string.home_get_plugins_content),
+                    style = MaterialTheme.typography.bodyMedium,
+                    color = c.onSurfaceVariant,
+                )
+            }
+            Symbol(CaSymbols.chevronRight, contentDescription = null, size = 22.dp, tint = c.onSurfaceVariant)
+        }
+    }
+}
+
+// ---- helpers ----
+
+@Composable
+private fun greeting(): String = when (localHourOfDay()) {
+    in 0..11 -> stringResource(Res.string.home_good_morning)
+    in 12..17 -> stringResource(Res.string.home_good_afternoon)
+    else -> stringResource(Res.string.home_good_evening)
+}
+
+private fun symbolForProject(project: ProjectInfo): Char = when {
+    project.isAndroid -> CaSymbols.phoneAndroid
+    project.compatibility -> CaSymbols.construction
+    project.unrecognized -> CaSymbols.folder
+    project.moduleCount > 1 -> CaSymbols.hub
+    else -> CaSymbols.folder
+}
+
+@Composable
+private fun kindLabel(project: ProjectInfo): String = stringResource(
+    when {
+        project.isAndroid -> Res.string.project_kind_android
+        project.compatibility -> Res.string.project_kind_gradle
+        // A cloned folder nothing recognized is listed so the user can reach it, but calling it a Code Studio
+        // project would be the same claim that made a clone confusing in the first place.
+        project.unrecognized -> Res.string.project_kind_files
+        else -> Res.string.project_kind_codestudio
+    },
+)
+
+@Composable
+private fun moduleLabel(count: Int): String = pluralStringResource(Res.plurals.modules, count, count)
+
+/** Drop the leading path components so the project folder — the identifying part — always survives. */
+private fun shortenPath(path: String, maxSegments: Int = 2): String {
+    val parts = path.trimEnd('/').split('/').filter { it.isNotEmpty() }
+    if (parts.size <= maxSegments) return path
+    return "…/" + parts.takeLast(maxSegments).joinToString("/")
+}
+
+/**
+ * "Opened 2h ago", bucketed to the largest unit that still reads as a duration.
+ *
+ * Moved here from the project picker this screen replaces; the lesson-track and export screens do not use
+ * it, so it stays private to Home.
+ */
+@Composable
+private fun relativeAge(lastOpened: Long, now: Long): String? {
+    if (lastOpened <= 0L) return null
+    val diff = (now - lastOpened).coerceAtLeast(0L)
+    val minutes = (diff / 60_000L).toInt()
+    val hours = (diff / 3_600_000L).toInt()
+    val days = (diff / 86_400_000L).toInt()
+    val weeks = (diff / 604_800_000L).toInt()
+    return when {
+        minutes < 1 -> stringResource(Res.string.project_age_just_now)
+        hours < 1 -> pluralStringResource(Res.plurals.project_age_minutes, minutes, minutes)
+        days < 1 -> pluralStringResource(Res.plurals.project_age_hours, hours, hours)
+        weeks < 1 -> pluralStringResource(Res.plurals.project_age_days, days, days)
+        else -> pluralStringResource(Res.plurals.project_age_weeks, weeks, weeks)
+    }
+}
+
+@Composable
+private fun relativeOpened(lastOpened: Long, now: Long): String? {
+    if (lastOpened <= 0L) return null
+    val diff = (now - lastOpened).coerceAtLeast(0L)
+    val minutes = (diff / 60_000L).toInt()
+    val hours = (diff / 3_600_000L).toInt()
+    val days = (diff / 86_400_000L).toInt()
+    val weeks = (diff / 604_800_000L).toInt()
+    return when {
+        minutes < 1 -> stringResource(Res.string.project_opened_just_now)
+        hours < 1 -> pluralStringResource(Res.plurals.project_opened_minutes, minutes, minutes)
+        days < 1 -> pluralStringResource(Res.plurals.project_opened_hours, hours, hours)
+        weeks < 1 -> pluralStringResource(Res.plurals.project_opened_days, days, days)
+        else -> pluralStringResource(Res.plurals.project_opened_weeks, weeks, weeks)
+    }
+}
+
+/** From this width the Projects tab is the dense, searchable desktop list rather than the phone's cards. */
+private val ProjectsWideBreakpoint = 600.dp
+
+/** The wide list's maximum width: past this, rows only spread their columns further apart. */
+private val ProjectsWideMaxWidth = 1120.dp
+
+/** From this width the wide rows also show the kind and module count as a column of their own. */
+private val ProjectsKindColumnBreakpoint = 760.dp
+
+private enum class ProjectSort { Recent, Name }
+
+/**
+ * The Projects tab on a tablet or desktop window, after IntelliJ's welcome screen: the title with Import,
+ * Clone and New project as buttons in the header, a search field and a sort over a dense list of two-line
+ * rows (name over path), and the per-project actions on hover. There is no resume card: the list is sorted
+ * by last opened, so its first row is already the project to continue. The inbox and account buttons stay
+ * in the header only when no home sidebar is offering them ([LocalHomeSidebarShown]).
+ */
+@Composable
+private fun WideProjectsHome(
+    projects: List<ProjectInfo>,
+    projectsLoaded: Boolean,
+    now: Long,
+    icons: ProjectIconCache,
+    loadIcon: (suspend (ProjectInfo) -> UiProjectIcon?)?,
+    loadIconImage: (suspend (String) -> ByteArray?)?,
+    onOpen: (ProjectInfo) -> Unit,
+    onNewProject: () -> Unit,
+    onImportProject: (() -> Unit)?,
+    onCloneRepository: (() -> Unit)?,
+    onExportProject: ((ProjectInfo) -> Unit)?,
+    onRequestDelete: ((ProjectInfo) -> Unit)?,
+    onRequestRename: ((ProjectInfo) -> Unit)?,
+    showLegacyRecovery: Boolean,
+    onDismissLegacyRecovery: () -> Unit,
+    seasonalCard: (@Composable (Modifier) -> Unit)?,
+    bell: (@Composable () -> Unit)?,
+    onOpenAccount: () -> Unit,
+    onJoinDiscord: (() -> Unit)?,
+    onGetPlugins: (() -> Unit)? = null,
+) {
+    val c = MaterialTheme.colorScheme
+    var query by rememberSaveable { mutableStateOf("") }
+    var sort by rememberSaveable { mutableStateOf(ProjectSort.Recent) }
+    val shown = remember(projects, query, sort) {
+        val q = query.trim()
+        projects
+            .filter { q.isEmpty() || it.name.contains(q, ignoreCase = true) || it.rootPath.contains(q, ignoreCase = true) }
+            .let { list -> if (sort == ProjectSort.Name) list.sortedBy { it.name.lowercase() } else list }
+    }
+    val sidebarShown = LocalHomeSidebarShown.current
+    BoxWithConstraints(Modifier.fillMaxSize().background(c.background)) {
+        HalloweenBackdrop()
+        val showKind = maxWidth >= ProjectsKindColumnBreakpoint
+        Column(Modifier.widthIn(max = ProjectsWideMaxWidth).fillMaxSize().padding(horizontal = 28.dp)) {
+            Row(
+                Modifier.fillMaxWidth().padding(top = 24.dp, bottom = 16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                Text(
+                    stringResource(Res.string.home_your_projects),
+                    style = MaterialTheme.typography.titleLarge,
+                    color = c.onSurface,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis,
+                    modifier = Modifier.weight(1f),
+                )
+                if (onImportProject != null) {
+                    HeaderButton(CaSymbols.folderOpen, stringResource(Res.string.home_import_project), primary = false, onClick = onImportProject)
+                }
+                if (onCloneRepository != null) {
+                    HeaderButton(CaSymbols.forkRight, stringResource(Res.string.home_clone_repository), primary = false, onClick = onCloneRepository)
+                }
+                HeaderButton(CaSymbols.add, stringResource(Res.string.home_new_project), primary = true, onClick = onNewProject)
+                if (!sidebarShown) {
+                    bell?.invoke()
+                    SquareToneButton(
+                        glyph = CaSymbols.accountCircle,
+                        contentDescription = stringResource(Res.string.home_account),
+                        onClick = onOpenAccount,
+                        shape = CircleShape,
+                        size = 44.dp,
+                    )
+                }
+            }
+            if (onJoinDiscord != null) CommunityCard(onJoinDiscord, Modifier.padding(bottom = 12.dp))
+            if (onGetPlugins != null) GetPluginsCard(onGetPlugins, Modifier.padding(bottom = 16.dp))
+            Row(
+                Modifier.fillMaxWidth().padding(bottom = 8.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.spacedBy(10.dp),
+            ) {
+                // The field caps its width; the box takes the rest, so the sort sits at the right edge, under
+                // the header's buttons, rather than wherever the capped field happens to end.
+                Box(Modifier.weight(1f)) {
+                    SearchPill(
+                        query, { query = it }, stringResource(Res.string.home_search_projects),
+                        Modifier.widthIn(max = 380.dp).fillMaxWidth(),
+                    )
+                }
+                SortChooser(sort) { sort = it }
+            }
+            // Every gap down the wide column is 16dp: the search row already leaves 8 below itself.
+            seasonalCard?.invoke(Modifier.padding(top = 8.dp, bottom = 8.dp))
+            if (showLegacyRecovery) LegacyRecoveryNotice(onDismissLegacyRecovery, inset = 0.dp, top = 8.dp)
+            LazyColumn(
+                Modifier.weight(1f).fillMaxWidth(),
+                contentPadding = PaddingValues(bottom = 24.dp),
+            ) {
+                if (shown.isEmpty() && projectsLoaded) {
+                    item("empty") {
+                        if (projects.isEmpty()) {
+                            EmptyList(inset = 0.dp, top = if (showLegacyRecovery) 16.dp else 8.dp)
+                        } else {
+                            Row(
+                                Modifier.padding(horizontal = 12.dp, vertical = 24.dp),
+                                verticalAlignment = Alignment.CenterVertically,
+                                horizontalArrangement = Arrangement.spacedBy(12.dp),
+                            ) {
+                                if (LocalSeason.current == Season.Halloween) HauntedGhost(44.dp)
+                                Text(
+                                    stringResource(Res.string.home_no_match, query.trim()),
+                                    style = MaterialTheme.typography.bodyMedium,
+                                    color = c.onSurfaceVariant,
+                                )
+                            }
+                        }
+                    }
+                }
+                itemsIndexedKeyed(shown, key = { _, p -> p.rootPath }) { i, project ->
+                    DenseProjectRow(
+                        project = project,
+                        index = i,
+                        now = now,
+                        icon = projectIconImage(project, icons, loadIcon, loadIconImage),
+                        showKind = showKind,
+                        onOpen = { onOpen(project) },
+                        onShare = onExportProject?.let { export -> { export(project) } },
+                        onDelete = onRequestDelete?.let { request -> { request(project) } },
+                        onRename = onRequestRename?.let { request -> { request(project) } },
+                    )
+                }
+                item("ad") { AdSlot(AdPlacement.PROJECTS, Modifier.padding(top = 16.dp)) }
+            }
+        }
+    }
+}
+
+/** A compact header button: filled for the primary action, outlined for the others. */
+@Composable
+private fun HeaderButton(glyph: Char, label: String, primary: Boolean, onClick: () -> Unit) {
+    val content: @Composable RowScope.() -> Unit = {
+        Symbol(glyph, contentDescription = null, size = 18.dp)
+        Spacer(Modifier.width(8.dp))
+        Text(label, maxLines = 1, style = MaterialTheme.typography.labelLarge)
+    }
+    val padding = PaddingValues(start = 14.dp, end = 18.dp)
+    if (primary) {
+        Button(onClick = onClick, contentPadding = padding, modifier = Modifier.height(40.dp), content = content)
+    } else {
+        OutlinedButton(onClick = onClick, contentPadding = padding, modifier = Modifier.height(40.dp), content = content)
+    }
+}
+
+/** A rounded search field: the project list's filter, and the template gallery's. */
+@Composable
+internal fun SearchPill(query: String, onQuery: (String) -> Unit, placeholder: String, modifier: Modifier = Modifier) {
+    val c = MaterialTheme.colorScheme
+    Row(
+        modifier.height(40.dp).clip(RoundedCornerShape(50)).background(c.surfaceContainerHigh).padding(horizontal = 14.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(10.dp),
+    ) {
+        Symbol(CaSymbols.search, contentDescription = null, size = 18.dp, tint = c.onSurfaceVariant)
+        BasicTextField(
+            value = query,
+            onValueChange = onQuery,
+            singleLine = true,
+            textStyle = MaterialTheme.typography.bodyMedium.copy(color = c.onSurface),
+            cursorBrush = SolidColor(c.primary),
+            modifier = Modifier.weight(1f),
+            decorationBox = { inner ->
+                Box(contentAlignment = Alignment.CenterStart) {
+                    if (query.isEmpty()) {
+                        Text(placeholder, style = MaterialTheme.typography.bodyMedium, color = c.outline, maxLines = 1)
+                    }
+                    inner()
+                }
+            },
+        )
+        if (query.isNotEmpty()) {
+            IconButtonCa(CaIcons.close, stringResource(Res.string.home_clear_search), { onQuery("") }, iconSize = 14, boxSize = 24)
+        }
+    }
+}
+
+/** Recent (the default, most recently opened first) or alphabetical. */
+@Composable
+private fun SortChooser(sort: ProjectSort, onSort: (ProjectSort) -> Unit) {
+    var open by remember { mutableStateOf(false) }
+    val label: @Composable (ProjectSort) -> String = {
+        stringResource(if (it == ProjectSort.Recent) Res.string.home_sort_recent else Res.string.home_sort_name)
+    }
+    Box {
+        TextButton(onClick = { open = true }, contentPadding = PaddingValues(horizontal = 12.dp)) {
+            Symbol(CaSymbols.sort, contentDescription = stringResource(Res.string.home_sort), size = 18.dp)
+            Spacer(Modifier.width(6.dp))
+            Text(label(sort), style = MaterialTheme.typography.labelLarge)
+        }
+        DropdownMenu(expanded = open, onDismissRequest = { open = false }) {
+            ProjectSort.entries.forEach { option ->
+                DropdownMenuItem(text = { Text(label(option)) }, onClick = { open = false; onSort(option) })
+            }
+        }
+    }
+}
+
+/**
+ * One project in the wide list: icon, name over path, then (when there is room) kind and module count, the
+ * last-opened time, and the actions menu. The row highlights on hover and opens on click; the menu shows on
+ * hover, while its menu is open, and always on touch, where there is no hover to reveal it.
+ */
+@Composable
+private fun DenseProjectRow(
+    project: ProjectInfo,
+    index: Int,
+    now: Long,
+    icon: ImageBitmap?,
+    showKind: Boolean,
+    onOpen: () -> Unit,
+    onShare: (() -> Unit)?,
+    onDelete: (() -> Unit)?,
+    onRename: (() -> Unit)?,
+) {
+    val c = MaterialTheme.colorScheme
+    val interaction = remember { MutableInteractionSource() }
+    val hovered by interaction.collectIsHoveredAsState()
+    var menuOpen by remember(project.rootPath) { mutableStateOf(false) }
+    Row(
+        Modifier.fillMaxWidth().height(56.dp).clip(RoundedCornerShape(12.dp))
+            .background(if (hovered || menuOpen) c.surfaceContainerHigh else Color.Transparent)
+            .clickable(interaction, indication = null, onClick = onOpen)
+            .padding(start = 12.dp, end = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(14.dp),
+    ) {
+        if (icon != null) {
+            Box(Modifier.size(34.dp).clip(tileShape(index)).background(tonalPair(index).container)) {
+                Image(icon, null, Modifier.fillMaxSize(), contentScale = ContentScale.Crop)
+            }
+        } else {
+            TonalTile(symbolForProject(project), tonalPair(index), tileShape(index), size = 34.dp)
+        }
+        Column(Modifier.weight(1f)) {
+            Text(
+                project.name,
+                style = MaterialTheme.typography.bodyLarge,
+                fontWeight = FontWeight.Medium,
+                color = c.onSurface,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+            // Shortened from the front, so the project's own folder at the end of the path always shows
+            // (TextOverflow.StartEllipsis is not honoured on every target, so the cut is done here).
+            Text(
+                shortenPath(project.rootPath, maxSegments = 4),
+                style = MaterialTheme.typography.bodySmall,
+                color = c.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+            )
+        }
+        if (showKind) {
+            Text(
+                listOf(kindLabel(project), moduleLabel(project.moduleCount)).joinMeta(),
+                style = MaterialTheme.typography.bodySmall,
+                color = c.onSurfaceVariant,
+                maxLines = 1,
+                overflow = TextOverflow.Ellipsis,
+                modifier = Modifier.width(170.dp),
+            )
+        }
+        Text(
+            relativeAge(project.lastOpened, now).orEmpty(),
+            style = MaterialTheme.typography.bodySmall,
+            color = c.outline,
+            maxLines = 1,
+            textAlign = TextAlign.End,
+            modifier = Modifier.width(110.dp),
+        )
+        if (onShare != null || onDelete != null || onRename != null) {
+            Box(Modifier.alpha(if (hovered || menuOpen || touchInput) 1f else 0f)) {
+                IconButtonCa(CaIcons.ellipsis, stringResource(Res.string.home_more_actions), { menuOpen = true }, iconSize = 18, boxSize = 36)
+                DropdownMenu(expanded = menuOpen, onDismissRequest = { menuOpen = false }) {
+                    if (onShare != null) {
+                        DropdownMenuItem(text = { Text(stringResource(Res.string.home_share)) }, onClick = { menuOpen = false; onShare() })
+                    }
+                    if (onRename != null) {
+                        DropdownMenuItem(text = { Text(stringResource(Res.string.home_rename)) }, onClick = { menuOpen = false; onRename() })
+                    }
+                    if (onDelete != null) {
+                        DropdownMenuItem(
+                            text = { Text(stringResource(Res.string.home_delete), color = c.error) },
+                            onClick = { menuOpen = false; onDelete() },
+                        )
+                    }
+                }
+            }
+        } else {
+            Spacer(Modifier.width(36.dp))
+        }
+    }
+}
