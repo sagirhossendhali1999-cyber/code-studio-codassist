@@ -968,8 +968,6 @@ tasks.matching { it.name.matches(Regex("merge(Debug|Profile|Release|Minified)Ass
 }
 
 // The stock Eclipse jars we relocate for ART (ecj, core.runtime, equinox.common) reach the app's runtime
-// classpath through several project dependencies: :ide-core (excluded inline below), but also :android-support
-// and :layout-preview-impl, which depend on :lang-jdt without that exclude. Dexing both the stock jar and its
 // ART-relocated copy is a duplicate-class (checkDuplicateClasses) and duplicate-resource (mergeJavaResource)
 // failure, so strip the three stock modules from every runtime classpath; only :art-compat's relocated copies
 // get dexed. Scoped to *RuntimeClasspath so the androidTest compile classpath still resolves lang-jdt's
@@ -1029,8 +1027,6 @@ dependencies {
         exclude(group = "org.eclipse.jdt", module = "ecj")
         // Drop the stock core.runtime / equinox.common: the StackWalker-relocated copies arrive from
         // :art-compat (relocateCoreRuntimeForArt / relocateEquinoxCommonForArt). This handles the :ide-core
-        // path; the runtime-classpath exclude above catches the same jars arriving via :android-support and
-        // :layout-preview-impl.
         exclude(group = "org.eclipse.platform", module = "org.eclipse.core.runtime")
         exclude(group = "org.eclipse.platform", module = "org.eclipse.equinox.common")
     }
@@ -1052,9 +1048,6 @@ dependencies {
     implementation(libs.eclipse.jobs) { isTransitive = false }
     // Layout-preview live custom-view runtime: the Bridge classes + DexClassLoader factory live here and
     // need the contracts (api), the CustomViewRuntime/StyledAttrResolver seam (impl), and D8InProcessDexer.
-    implementation(project(":layout-preview-api"))
-    implementation(project(":layout-preview-impl"))
-    implementation(project(":android-support"))
     // Opt-in usage analytics engine: DefaultAnalyticsService + the Supabase sink + the crash reporter. The
     // analytics-api types reach here transitively via :ide-core (which exposes them as `api`).
     implementation(project(":analytics-impl"))
@@ -1097,14 +1090,10 @@ dependencies {
     // to the app classloader on ART. Non-transitive (only its own classes; the compiler is dexed via :lang-kotlin).
     implementation(libs.kotlin.parcelize.compiler.plugin.ide) { isTransitive = false }
 
-    // build-engine's ProgramInterpreter port + jvm-build's VmProgramInterpreter (kept `implementation` in
     // :ide-core, so not transitive): :ide-android constructs the interpreter with a dexing peer factory so a
     // Java/Kotlin console `run` executes on the bytecode VM on ART.
-    implementation(project(":build-engine"))
-    implementation(project(":jvm-build"))
 
     // On-device build tools, statically linked + run IN-PROCESS (ART has no `java -jar` to fork): D8/R8
-    // (the dexer/shrinker) and apksig (APK v1/v2/v3 signing). android-support keeps these compileOnly+test;
     // the device app is the one place they're actually bundled and dexed. The native aapt2/zipalign are not
     // here — they ship as jniLibs prebuilts (see fetchAndroidBuildTools below).
     implementation(libs.android.r8)

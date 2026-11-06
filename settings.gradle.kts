@@ -58,8 +58,6 @@ include(
     ":vfs-api",
     ":project-model-api",
     ":project-model-impl",
-    ":android-support",
-    ":android-sdk-metadata",
     ":applog-runtime",
     ":language-api",
     ":index-api",
@@ -101,8 +99,6 @@ include(
     ":agent-api",
     ":agent-impl",
     ":agent-mcp",
-    ":layout-preview-api",
-    ":layout-preview-impl",
     ":model-api",
     ":project-templates",
     ":kotlin-classfile",
@@ -145,8 +141,6 @@ val layers = mapOf(
     ),
     "run" to listOf("interp-api", "interp-core", "interp-impl", "interp-compose", "jvm-interp", "jvm-vm", "jvm-vm-fixtures", "awt-toolkit"),
     "android" to listOf(
-        "android-support", "android-sdk-metadata", "art-compat",
-        "layout-preview-api", "layout-preview-impl", "applog-runtime",
     ),
     "services" to listOf(
         "deps-api", "deps-impl", "vcs-api", "vcs-impl", "vcs-ui",

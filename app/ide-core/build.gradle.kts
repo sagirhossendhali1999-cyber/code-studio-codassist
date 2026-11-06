@@ -3,7 +3,6 @@ plugins {
 }
 
 // ide-core — the host-agnostic backend that wires the whole framework together (platform-core +
-// project-model-impl + lang-jdt + index-impl + analysis-impl + build-engine) and adapts it to the UI's
 // `IdeBackend` port. Extracted from :ide-desktop so BOTH launchers share it: :ide-desktop adds only its
 // Compose-window `main()`, and :ide-android adds its Activity + on-device bootstrap (android.jar SDK).
 // Pure JVM/Kotlin so the Android app can dex it directly (see android-jdt-port notes).
@@ -40,12 +39,6 @@ dependencies {
     implementation(project(":block-impl")) // projectional (block) editor — DOM→BlockTree + surgical edits
     implementation(project(":plugin-api")) // UI action SPI (IdeAction/ActionGroup + places)
     implementation(project(":plugin-impl")) // ActionManager: resolves the action EPs for the UI surfaces
-    implementation(project(":build-api"))
-    implementation(project(":build-engine"))
-    implementation(project(":jvm-build")) // JavaBuildSystem: composes lang-jdt/lang-kotlin compile tasks over build-engine
-    implementation(project(":android-support")) // android-app/-lib module types + AndroidFacet codec
-    api(project(":layout-preview-api")) // owned XML-layout preview contracts; `api` because IdeServicesBackend implements LayoutPreviewBackend (public supertype, must be on consumers' classpath)
-    implementation(project(":layout-preview-impl")) // the preview engine (inflater + resolver + chrome)
     implementation(project(":deps-api"))
     implementation(project(":deps-impl")) // Maven dependency resolver (download/transitive/conflict)
     implementation(project(":agent-impl")) // the AI coding agent engine (providers, loop, tools)

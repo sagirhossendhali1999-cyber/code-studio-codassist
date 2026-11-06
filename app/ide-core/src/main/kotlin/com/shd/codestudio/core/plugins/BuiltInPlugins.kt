@@ -515,7 +515,7 @@ private class KspSupportPlugin(private val env: ApplicationEnvironment) : Plugin
 
 /**
  * The android-support plugin: module types + the AndroidFacet codec + tree icons + templates + Compose sample
- * games (via the [AndroidSupport] facades, which attribute to `PluginId("android-support")`), the static
+ * games (via the [AndroidSupport] facades, which attribute to `PluginId("ide-core")`), the static
  * synthetic classes (BuildConfig, ViewBinding), and the light synthetic `R`, which reads the engine's shared
  * resource repositories through the workspace-scoped [ANDROID_RESOURCE_REPOSITORY] this plugin publishes.
  */

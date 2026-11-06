@@ -580,7 +580,7 @@ internal class IconManagerService(private val ctx: EngineContext) {
     private fun isRaster(path: Path): Boolean = path.extension.lowercase() != "xml"
 
     companion object {
-        private val BUILT_IN = PluginId("android-support")
+        private val BUILT_IN = PluginId("ide-core")
         private const val MAIN_SOURCE_SET = "main"
 
         /** Android resource file names are restricted to `[a-z0-9_.]` starting with a letter. */
