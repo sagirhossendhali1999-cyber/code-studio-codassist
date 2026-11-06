@@ -1,4 +1,4 @@
-package dev.ide.build.kotlinc
+package com.shd.codestudio.build.kotlinc
 
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
@@ -22,7 +22,7 @@ class VarHandleArtPassTest {
     private val targetInternal = "com/intellij/concurrency/ConcurrentHashMap"
     private val nodeType = "com/intellij/concurrency/ConcurrentHashMap\$Node"
     private val varHandle = "java/lang/invoke/VarHandle"
-    private val shim = "dev/ide/lang/jdt/compat/VarHandleCompat"
+    private val shim = "com/shd/codestudio/lang/jdt/compat/VarHandleCompat"
 
     @Test
     fun handlesTheConcurrencyClassesAndTheirInnerClasses() {

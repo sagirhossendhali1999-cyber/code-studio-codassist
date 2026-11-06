@@ -1,4 +1,4 @@
-package dev.ide.build.kotlinc
+package com.shd.codestudio.build.kotlinc
 
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.MethodVisitor
@@ -29,7 +29,7 @@ import org.objectweb.asm.Type
  *    `Thread` field is never reflected. `StripedBuffer`'s OWN field offset (`tableBusy`) and its runtime CAS are
  *    left untouched — those are ART-safe (a non-hidden field + classic `Unsafe.compareAndSwapInt`).
  *
- * Like the other passes it rides the `dev.ide.kotlinc-art` AGP instrumentation (scope = ALL), which reaches the
+ * Like the other passes it rides the `com.shd.codestudio.kotlinc-art` AGP instrumentation (scope = ALL), which reaches the
  * separate caffeine jar; desktop keeps the real `StripedBuffer`.
  */
 class CaffeineStripedBufferArtPass : ArtPatchPass {
@@ -139,7 +139,7 @@ class CaffeineStripedBufferArtPass : ArtPatchPass {
 
     private companion object {
         const val TARGET = "com.github.benmanes.caffeine.cache.StripedBuffer"
-        const val SHIM = "dev/ide/lang/jdt/compat/CaffeineThreadProbe"
+        const val SHIM = "com/shd/codestudio/lang/jdt/compat/CaffeineThreadProbe"
         const val THREAD = "java/lang/Thread"
         const val PROBE_FIELD = "threadLocalRandomProbe"
         const val UNSAFE_ACCESS = "com/github/benmanes/caffeine/cache/UnsafeAccess"

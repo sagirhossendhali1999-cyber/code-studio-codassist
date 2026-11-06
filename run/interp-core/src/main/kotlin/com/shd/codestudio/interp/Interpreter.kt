@@ -1,20 +1,20 @@
-package dev.ide.interp
+package com.shd.codestudio.interp
 
-import dev.ide.lang.kotlin.interp.Binding
-import dev.ide.lang.kotlin.interp.CallSiteKey
-import dev.ide.lang.kotlin.interp.ClassFlavor
-import dev.ide.lang.kotlin.interp.children
-import dev.ide.lang.kotlin.interp.DispatchKind
-import dev.ide.lang.kotlin.interp.RArg
-import dev.ide.lang.kotlin.interp.RNode
-import dev.ide.lang.kotlin.interp.RParam
-import dev.ide.lang.kotlin.interp.RTypeArg
-import dev.ide.lang.kotlin.interp.ResolvedCallable
-import dev.ide.lang.kotlin.interp.ResolvedClass
-import dev.ide.lang.kotlin.interp.ResolvedFunction
-import dev.ide.lang.kotlin.interp.SecondaryCtor
-import dev.ide.lang.kotlin.interp.SlotId
-import dev.ide.lang.kotlin.interp.SourceSpan
+import com.shd.codestudio.lang.kotlin.interp.Binding
+import com.shd.codestudio.lang.kotlin.interp.CallSiteKey
+import com.shd.codestudio.lang.kotlin.interp.ClassFlavor
+import com.shd.codestudio.lang.kotlin.interp.children
+import com.shd.codestudio.lang.kotlin.interp.DispatchKind
+import com.shd.codestudio.lang.kotlin.interp.RArg
+import com.shd.codestudio.lang.kotlin.interp.RNode
+import com.shd.codestudio.lang.kotlin.interp.RParam
+import com.shd.codestudio.lang.kotlin.interp.RTypeArg
+import com.shd.codestudio.lang.kotlin.interp.ResolvedCallable
+import com.shd.codestudio.lang.kotlin.interp.ResolvedClass
+import com.shd.codestudio.lang.kotlin.interp.ResolvedFunction
+import com.shd.codestudio.lang.kotlin.interp.SecondaryCtor
+import com.shd.codestudio.lang.kotlin.interp.SlotId
+import com.shd.codestudio.lang.kotlin.interp.SourceSpan
 
 /**
  * A tree-walking interpreter over the [ResolvedFunction] / [RNode] contract from `:lang-kotlin` (see
@@ -2590,7 +2590,7 @@ class Interpreter(
      *  with its `name`/`ordinal`. */
     private fun enumEntryInstance(
         cls: ResolvedClass,
-        entry: dev.ide.lang.kotlin.interp.REnumEntry
+        entry: com.shd.codestudio.lang.kotlin.interp.REnumEntry
     ): SourceObject =
         singletons.getOrPut("${cls.fqn}#${entry.name}") {
             instantiate(cls, entry.args.map { eval(it.value, Env()) }).also {

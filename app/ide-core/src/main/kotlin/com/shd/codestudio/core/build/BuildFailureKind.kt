@@ -1,9 +1,9 @@
-package dev.ide.core.build
+package com.shd.codestudio.core.build
 
-import dev.ide.ui.backend.BuildDiagnosticUi
-import dev.ide.ui.backend.BuildLogLine
-import dev.ide.ui.backend.UiLogLevel
-import dev.ide.ui.backend.UiSeverity
+import com.shd.codestudio.ui.backend.BuildDiagnosticUi
+import com.shd.codestudio.ui.backend.BuildLogLine
+import com.shd.codestudio.ui.backend.UiLogLevel
+import com.shd.codestudio.ui.backend.UiSeverity
 
 /**
  * Categorizes a FAILED build into a coarse, privacy-safe bucket for analytics (see `docs/analytics.md`).

@@ -1,4 +1,4 @@
-package dev.ide.build.kotlinc
+package com.shd.codestudio.build.kotlinc
 
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
@@ -21,7 +21,7 @@ class FastutilInterfaceDispatchArtPassTest {
     private val pass = FastutilInterfaceDispatchArtPass()
     private val target = "com.intellij.lang.impl.MarkerOptionalData"
     private val targetInternal = "com/intellij/lang/impl/MarkerOptionalData"
-    private val shim = "dev/ide/psi/compat/FastutilDirectCalls"
+    private val shim = "com/shd/codestudio/psi/compat/FastutilDirectCalls"
     private val intSet = "it/unimi/dsi/fastutil/ints/IntSet"
     private val int2Object = "it/unimi/dsi/fastutil/ints/Int2ObjectMap"
 

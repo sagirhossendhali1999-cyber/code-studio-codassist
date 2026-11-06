@@ -1,4 +1,4 @@
-package dev.ide.build.nativemodel
+package com.shd.codestudio.build.nativemodel
 
 import org.gradle.api.Project
 import org.gradle.api.plugins.ExtensionAware
@@ -263,7 +263,7 @@ internal object NativeModelExtractor {
         val defaultConfig = source?.readProperty("getDefaultConfig")
         fun level(getter: String): Int? = defaultConfig?.readInt(getter) ?: source?.readInt(getter)
         val facet = linkedMapOf<String, Any?>(
-            "namespace" to (source?.readString("getNamespace") ?: "dev.ide.${p.name.replace('-', '.')}"),
+            "namespace" to (source?.readString("getNamespace") ?: "com.shd.codestudio.${p.name.replace('-', '.')}"),
             "compileSdk" to (source?.readInt("getCompileSdk") ?: DEFAULT_COMPILE_SDK),
             "minSdk" to (level("getMinSdk") ?: DEFAULT_MIN_SDK),
             "targetSdk" to (level("getTargetSdk") ?: level("getMinSdk") ?: DEFAULT_MIN_SDK),

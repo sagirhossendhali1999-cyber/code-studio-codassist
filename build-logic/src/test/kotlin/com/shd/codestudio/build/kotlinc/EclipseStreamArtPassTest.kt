@@ -1,4 +1,4 @@
-package dev.ide.build.kotlinc
+package com.shd.codestudio.build.kotlinc
 
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
@@ -23,7 +23,7 @@ class EclipseStreamArtPassTest {
     private val pass = EclipseStreamArtPass()
     private val caller = "org.eclipse.jgit.util.IO"
     private val callerInternal = "org/eclipse/jgit/util/IO"
-    private val shim = "dev/ide/lang/jdt/compat/InputStreamCompat"
+    private val shim = "com/shd/codestudio/lang/jdt/compat/InputStreamCompat"
     private val inputStream = "java/io/InputStream"
     private val outputStream = "java/io/OutputStream"
     private val silent = "org/eclipse/jgit/util/io/SilentFileInputStream"
@@ -33,7 +33,7 @@ class EclipseStreamArtPassTest {
     fun handlesTheEclipseJarsOnly() {
         assertTrue(pass.handles("org.eclipse.jgit.util.IO"))
         assertTrue(pass.handles("org.eclipse.jdt.internal.compiler.util.Util"))
-        assertFalse(pass.handles("dev.ide.core.backend.VcsBackend"))
+        assertFalse(pass.handles("com.shd.codestudio.core.backend.VcsBackend"))
         assertFalse(pass.handles("java.io.InputStream"))
     }
 

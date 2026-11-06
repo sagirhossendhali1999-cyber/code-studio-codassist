@@ -1,4 +1,4 @@
-package dev.ide.build.nativemodel
+package com.shd.codestudio.build.nativemodel
 
 /**
  * A minimal JSON writer for the native-model dump. buildSrc has no JSON dependency and the dump is written

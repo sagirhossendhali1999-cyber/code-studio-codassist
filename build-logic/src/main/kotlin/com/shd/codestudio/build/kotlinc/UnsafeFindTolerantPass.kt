@@ -1,4 +1,4 @@
-package dev.ide.build.kotlinc
+package com.shd.codestudio.build.kotlinc
 
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.Opcodes

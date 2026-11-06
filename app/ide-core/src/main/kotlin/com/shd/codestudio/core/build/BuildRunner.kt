@@ -1,16 +1,16 @@
-package dev.ide.core.build
+package com.shd.codestudio.core.build
 
-import dev.ide.ui.backend.AppLogUi
-import dev.ide.ui.backend.BuildState
-import dev.ide.ui.backend.RunConsoleUi
-import dev.ide.ui.backend.RunTaskOption
-import dev.ide.ui.backend.UiPermissionDecision
-import dev.ide.ui.backend.UiPermissionRequest
+import com.shd.codestudio.ui.backend.AppLogUi
+import com.shd.codestudio.ui.backend.BuildState
+import com.shd.codestudio.ui.backend.RunConsoleUi
+import com.shd.codestudio.ui.backend.RunTaskOption
+import com.shd.codestudio.ui.backend.UiPermissionDecision
+import com.shd.codestudio.ui.backend.UiPermissionRequest
 import kotlinx.coroutines.flow.StateFlow
 
 /**
  * The swappable seam between the UI and the actual build/run engine. Mirrors the build/run subset of
- * [dev.ide.ui.backend.BuildService] exactly, so the backend ([dev.ide.core.backend.BuildBackend]) routes
+ * [com.shd.codestudio.ui.backend.BuildService] exactly, so the backend ([com.shd.codestudio.core.backend.BuildBackend]) routes
  * every build/run call through it without knowing where the work runs.
  *
  * Today only [InProcessBuildRunner] exists — build/run in the IDE's own process. A future RemoteBuildRunner
@@ -46,7 +46,7 @@ interface BuildRunner {
  * [BuildRunner].
  */
 internal class InProcessBuildRunner(
-    private val build: dev.ide.core.services.BuildService,
+    private val build: com.shd.codestudio.core.services.BuildService,
     private val warm: () -> Unit = {},
 ) : BuildRunner {
     override fun warmCompiler() = warm()

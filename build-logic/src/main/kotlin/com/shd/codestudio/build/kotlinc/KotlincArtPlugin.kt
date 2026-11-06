@@ -1,4 +1,4 @@
-package dev.ide.build.kotlinc
+package com.shd.codestudio.build.kotlinc
 
 import com.android.build.api.instrumentation.FramesComputationMode
 import com.android.build.api.instrumentation.InstrumentationScope
@@ -12,7 +12,7 @@ import org.gradle.api.Project
  * rewrites reach the bundled `kotlin-compiler-embeddable` classes (and, being the same dexed classes, the
  * editor parse-host) during dexing.
  *
- * Apply with `id("dev.ide.kotlinc-art")`. Plugin-application order is irrelevant: it hooks
+ * Apply with `id("com.shd.codestudio.kotlinc-art")`. Plugin-application order is irrelevant: it hooks
  * `com.android.application` lazily, so it configures whenever AGP is present.
  */
 class KotlincArtPlugin : Plugin<Project> {

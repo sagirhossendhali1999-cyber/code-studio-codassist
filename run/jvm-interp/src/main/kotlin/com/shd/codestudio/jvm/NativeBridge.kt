@@ -1,4 +1,4 @@
-package dev.ide.jvm
+package com.shd.codestudio.jvm
 
 import java.lang.reflect.Constructor
 import java.lang.reflect.Field

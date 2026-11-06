@@ -1,4 +1,4 @@
-package dev.ide.build
+package com.shd.codestudio.build
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.GradleException
@@ -35,7 +35,7 @@ import java.util.zip.ZipOutputStream
  * supports). That class exists on the JVM but **not** on Android's ART (it is absent from android.jar
  * and the runtime) and cannot be stubbed because app classes may not live in `java.*`. On ART the
  * reference surfaces as an uncatchable [LinkageError] that disables editor analysis. Relocating ecj's
- * reference to a shim we ship (`dev.ide.lang.jdt.compat.RuntimeVersion`) removes the blocker.
+ * reference to a shim we ship (`com.shd.codestudio.lang.jdt.compat.RuntimeVersion`) removes the blocker.
  */
 @CacheableTask
 abstract class RelocateTypesInJar : DefaultTask() {
@@ -49,7 +49,7 @@ abstract class RelocateTypesInJar : DefaultTask() {
 
     /**
      * Old internal name -> new internal name, e.g.
-     * `"java/lang/Runtime$Version"` -> `"dev/ide/lang/jdt/compat/RuntimeVersion"`.
+     * `"java/lang/Runtime$Version"` -> `"com/shd/codestudio/lang/jdt/compat/RuntimeVersion"`.
      * Names use `/` separators and `$` for nested types (JVM internal form), not dotted names.
      */
     @get:Input

@@ -1,57 +1,57 @@
-package dev.ide.lang.kotlin.symbols
+package com.shd.codestudio.lang.kotlin.symbols
 
-import dev.ide.index.ClassNameIndex
-import dev.ide.index.ClassNameValue
-import dev.ide.index.IndexId
-import dev.ide.index.IndexOrigin
-import dev.ide.index.IndexQueries
-import dev.ide.index.JavaSourceMemberCodec
-import dev.ide.index.MemberValue
-import dev.ide.index.PackageTypesIndex
-import dev.ide.index.PackagesIndex
-import dev.ide.index.SubtypeIndex
-import dev.ide.index.SubtypeValue
-import dev.ide.index.exactAll
-import dev.ide.index.fuzzyAll
-import dev.ide.index.prefixAll
-import dev.ide.kotlin.syntax.psi.KtDeclaration
-import dev.ide.kotlin.syntax.psi.KtExpression
-import dev.ide.kotlin.syntax.psi.KtNamedFunction
-import dev.ide.kotlin.syntax.psi.KtProperty
-import dev.ide.lang.completion.PrefixMatcher
-import dev.ide.lang.dom.DomNode
-import dev.ide.lang.kotlin.KotlinPerf
-import dev.ide.lang.kotlin.index.CallableShape
-import dev.ide.lang.kotlin.index.KotlinBuiltinCallableIndex
-import dev.ide.lang.kotlin.index.KotlinCallableIndex
-import dev.ide.lang.kotlin.index.KotlinPackageDeclIndex
-import dev.ide.lang.kotlin.index.KotlinSourceCallableIndex
-import dev.ide.lang.kotlin.index.PkgDecl
-import dev.ide.lang.kotlin.parse.KotlinDomNode
-import dev.ide.lang.kotlin.resolve.KotlinResolver
-import dev.ide.lang.kotlin.resolve.approximateEscapingLocalType
-import dev.ide.lang.kotlin.resolve.delegatedValueType
-import dev.ide.lang.kotlin.resolve.inferType
-import dev.ide.lang.resolve.ApiLevel
-import dev.ide.lang.resolve.Modifier
-import dev.ide.lang.resolve.ApiLevelContext
-import dev.ide.lang.resolve.ApiPlatform
-import dev.ide.lang.resolve.SourceDocProvider
-import dev.ide.lang.resolve.Symbol
-import dev.ide.lang.resolve.SymbolKind
-import dev.ide.lang.resolve.SymbolOrigin
-import dev.ide.lang.resolve.TypeRef
-import dev.ide.lang.synthetic.SyntheticClass
-import dev.ide.lang.synthetic.SyntheticField
-import dev.ide.lang.synthetic.SyntheticMethod
-import dev.ide.lang.synthetic.SyntheticModifier
-import dev.ide.lang.synthetic.SyntheticTypeKind
-import dev.ide.platform.ConcurrentMap
-import dev.ide.platform.DeviceMemory
-import dev.ide.platform.EngineCanceledException
-import dev.ide.platform.Lock
-import dev.ide.platform.ThreadLocalValue
-import dev.ide.vfs.VirtualFile
+import com.shd.codestudio.index.ClassNameIndex
+import com.shd.codestudio.index.ClassNameValue
+import com.shd.codestudio.index.IndexId
+import com.shd.codestudio.index.IndexOrigin
+import com.shd.codestudio.index.IndexQueries
+import com.shd.codestudio.index.JavaSourceMemberCodec
+import com.shd.codestudio.index.MemberValue
+import com.shd.codestudio.index.PackageTypesIndex
+import com.shd.codestudio.index.PackagesIndex
+import com.shd.codestudio.index.SubtypeIndex
+import com.shd.codestudio.index.SubtypeValue
+import com.shd.codestudio.index.exactAll
+import com.shd.codestudio.index.fuzzyAll
+import com.shd.codestudio.index.prefixAll
+import com.shd.codestudio.kotlin.syntax.psi.KtDeclaration
+import com.shd.codestudio.kotlin.syntax.psi.KtExpression
+import com.shd.codestudio.kotlin.syntax.psi.KtNamedFunction
+import com.shd.codestudio.kotlin.syntax.psi.KtProperty
+import com.shd.codestudio.lang.completion.PrefixMatcher
+import com.shd.codestudio.lang.dom.DomNode
+import com.shd.codestudio.lang.kotlin.KotlinPerf
+import com.shd.codestudio.lang.kotlin.index.CallableShape
+import com.shd.codestudio.lang.kotlin.index.KotlinBuiltinCallableIndex
+import com.shd.codestudio.lang.kotlin.index.KotlinCallableIndex
+import com.shd.codestudio.lang.kotlin.index.KotlinPackageDeclIndex
+import com.shd.codestudio.lang.kotlin.index.KotlinSourceCallableIndex
+import com.shd.codestudio.lang.kotlin.index.PkgDecl
+import com.shd.codestudio.lang.kotlin.parse.KotlinDomNode
+import com.shd.codestudio.lang.kotlin.resolve.KotlinResolver
+import com.shd.codestudio.lang.kotlin.resolve.approximateEscapingLocalType
+import com.shd.codestudio.lang.kotlin.resolve.delegatedValueType
+import com.shd.codestudio.lang.kotlin.resolve.inferType
+import com.shd.codestudio.lang.resolve.ApiLevel
+import com.shd.codestudio.lang.resolve.Modifier
+import com.shd.codestudio.lang.resolve.ApiLevelContext
+import com.shd.codestudio.lang.resolve.ApiPlatform
+import com.shd.codestudio.lang.resolve.SourceDocProvider
+import com.shd.codestudio.lang.resolve.Symbol
+import com.shd.codestudio.lang.resolve.SymbolKind
+import com.shd.codestudio.lang.resolve.SymbolOrigin
+import com.shd.codestudio.lang.resolve.TypeRef
+import com.shd.codestudio.lang.synthetic.SyntheticClass
+import com.shd.codestudio.lang.synthetic.SyntheticField
+import com.shd.codestudio.lang.synthetic.SyntheticMethod
+import com.shd.codestudio.lang.synthetic.SyntheticModifier
+import com.shd.codestudio.lang.synthetic.SyntheticTypeKind
+import com.shd.codestudio.platform.ConcurrentMap
+import com.shd.codestudio.platform.DeviceMemory
+import com.shd.codestudio.platform.EngineCanceledException
+import com.shd.codestudio.platform.Lock
+import com.shd.codestudio.platform.ThreadLocalValue
+import com.shd.codestudio.vfs.VirtualFile
 import kotlin.concurrent.Volatile
 import kotlin.time.Duration.Companion.seconds
 import kotlin.time.TimeSource
@@ -94,7 +94,7 @@ class KotlinSymbolService(
      *  [KotlinSyntheticMemberProvider]. */
     private val syntheticMemberProviders: () -> List<KotlinSyntheticMemberProvider> = { emptyList() },
     /** Optional: members of a currently-OPEN Java SOURCE class ([MemberValue]s keyed by owner FQN, encoded
-     *  via [dev.ide.index.JavaSourceMemberCodec]), parsed from its live editor buffer. Non-null return =
+     *  via [com.shd.codestudio.index.JavaSourceMemberCodec]), parsed from its live editor buffer. Non-null return =
      *  "this fqn is a same-project Java source class, use these members" (an UNSAVED edit is visible before it
      *  is saved + reindexed); null = not an open Java buffer, so the save-driven `java.membersByOwner` index
      *  answers instead. A same-project Java source class is never pinned in the session-stable classpath memos:
@@ -532,7 +532,7 @@ class KotlinSymbolService(
             optInScanOf(owner)?.let { scan ->
                 candidates += scan.classAnnotations
                 scan.methodAnnotations[target.name]?.let { candidates += it }
-                if (target.kind == dev.ide.lang.resolve.SymbolKind.FIELD) {
+                if (target.kind == com.shd.codestudio.lang.resolve.SymbolKind.FIELD) {
                     scan.methodAnnotations["get" + target.name.replaceFirstChar { c -> if (c.isLowerCase()) c.titlecase() else c.toString() }]
                         ?.let { candidates += it }
                 }

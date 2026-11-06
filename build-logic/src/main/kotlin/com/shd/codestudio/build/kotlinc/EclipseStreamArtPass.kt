@@ -1,4 +1,4 @@
-package dev.ide.build.kotlinc
+package com.shd.codestudio.build.kotlinc
 
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.Handle
@@ -24,7 +24,7 @@ import org.objectweb.asm.Opcodes
  * The methods cannot be relocated by name like ecj's `Runtime$Version` (see buildSrc `RelocateTypesInJar`):
  * they are calls on `java.io.InputStream`, and a `java.*` type cannot be stubbed on ART. Instead this pass
  * rewrites the call sites: each `INVOKEVIRTUAL java/io/InputStream.readAllBytes ()[B` becomes
- * `INVOKESTATIC dev/ide/lang/jdt/compat/InputStreamCompat.readAllBytes (Ljava/io/InputStream;)[B`, and so on
+ * `INVOKESTATIC com/shd/codestudio/lang/jdt/compat/InputStreamCompat.readAllBytes (Ljava/io/InputStream;)[B`, and so on
  * for the rest, targeting a shim shipped in `:lang-jdt`. The receiver becomes the leading argument, so the
  * stack effect is identical and no other bytecode changes.
  *
@@ -115,7 +115,7 @@ class EclipseStreamArtPass : ArtPatchPass {
     private companion object {
         const val INPUT_STREAM = "java/io/InputStream"
         const val OUTPUT_STREAM = "java/io/OutputStream"
-        const val SHIM = "dev/ide/lang/jdt/compat/InputStreamCompat"
+        const val SHIM = "com/shd/codestudio/lang/jdt/compat/InputStreamCompat"
 
         /** Call owners rewritten by this pass: every one of these is an `InputStream` that inherits the method. */
         val RECEIVERS = setOf(

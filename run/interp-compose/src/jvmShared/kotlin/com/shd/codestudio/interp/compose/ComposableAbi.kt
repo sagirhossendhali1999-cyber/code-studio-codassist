@@ -1,16 +1,16 @@
-package dev.ide.interp.compose
+package com.shd.codestudio.interp.compose
 
-import dev.ide.interp.InterpProfile
-import dev.ide.interp.InterpretedLambda
-import dev.ide.interp.KotlinJvmNames
-import dev.ide.interp.OmittedArg
+import com.shd.codestudio.interp.InterpProfile
+import com.shd.codestudio.interp.InterpretedLambda
+import com.shd.codestudio.interp.KotlinJvmNames
+import com.shd.codestudio.interp.OmittedArg
 import java.lang.reflect.Method
 import java.lang.reflect.Modifier
 import java.util.concurrent.ConcurrentHashMap
 
 /**
  * Reflective adapter for the Compose compiler's call ABI (validated on device by
- * `dev.ide.android.spike.ComposeAbiSpikeTest`). A `@Composable fun f(a, b)` is compiled to
+ * `com.shd.codestudio.android.spike.ComposeAbiSpikeTest`). A `@Composable fun f(a, b)` is compiled to
  * `f(a, b, Composer, int $changed [, int $default])`; this discovers that method and invokes it, supplying
  * ALL original arguments (so `$default` can be 0 — no omissions) and `0` for every trailing int
  * (`$changed = 0` conservatively forces recompute). It also drives the caller-side group the plugin would
@@ -326,7 +326,7 @@ object ComposableAbi {
         // a mangled `RecordColor-…(long, …)` / `padding-…(…, float)` wants the primitive, not the boxed value
         // class. `colorResource`/`dimensionResource` hand back pre-built boxed `Color`/`Dp`, so unbox to fit the
         // param; RECURSIVE because `Color` wraps `ULong` wraps `long`. Found on ART (this is a SEPARATE copy from
-        // the reflective dispatcher's [dev.ide.interp] boxValueClassIfNeeded — the composable path is bound here).
+        // the reflective dispatcher's [com.shd.codestudio.interp] boxValueClassIfNeeded — the composable path is bound here).
         unboxToUnderlying(value, paramType)?.let { return it }
         if (paramType.isPrimitive) return value
         val box = paramType.methods.firstOrNull {

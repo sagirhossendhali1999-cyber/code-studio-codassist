@@ -1,4 +1,4 @@
-package dev.ide.build.kotlinc
+package com.shd.codestudio.build.kotlinc
 
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.MethodVisitor
@@ -7,7 +7,7 @@ import org.objectweb.asm.Opcodes
 /**
  * Takes IntelliJ's PSI tree builder off ART's interface dispatch for its fastutil collections, by routing each
  * `invokeinterface` on `IntSet` / `Int2ObjectMap` in [TARGETS] to a static [FastutilDirectCalls] shim
- * (`dev.ide.psi.compat`, in `:intellij-psi-host`), receiver first.
+ * (`com.shd.codestudio.psi.compat`, in `:intellij-psi-host`), receiver first.
  *
  * Why: the largest native crash cluster in the field is a SIGSEGV in `artInstanceOfFromCode` under
  * `PsiBuilderImpl.bind` -> `ProductionMarker.isCollapsed`, on Android 12 / 12L only. `isCollapsed` is one
@@ -55,7 +55,7 @@ class FastutilInterfaceDispatchArtPass : ArtPatchPass {
             "com.intellij.lang.impl.MarkerOptionalData",
             "com.intellij.lang.impl.PsiBuilderImpl\$MyTreeStructure",
         )
-        const val SHIM = "dev/ide/psi/compat/FastutilDirectCalls"
+        const val SHIM = "com/shd/codestudio/psi/compat/FastutilDirectCalls"
         private const val FASTUTIL = "it/unimi/dsi/fastutil/"
         private const val INT_SET = "it/unimi/dsi/fastutil/ints/IntSet"
         private const val INT2OBJECT = "it/unimi/dsi/fastutil/ints/Int2ObjectMap"

@@ -1,4 +1,4 @@
-package dev.ide.build.nativemodel
+package com.shd.codestudio.build.nativemodel
 
 import org.gradle.api.DefaultTask
 import org.gradle.api.file.RegularFileProperty

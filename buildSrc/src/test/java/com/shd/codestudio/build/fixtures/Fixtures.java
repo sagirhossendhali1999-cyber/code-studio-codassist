@@ -1,4 +1,4 @@
-package dev.ide.build.fixtures;
+package com.shd.codestudio.build.fixtures;
 
 /**
  * Hand-shaped fixtures for {@code ArtAbsentApiScannerTest}. Each exercises one reference *position* so the

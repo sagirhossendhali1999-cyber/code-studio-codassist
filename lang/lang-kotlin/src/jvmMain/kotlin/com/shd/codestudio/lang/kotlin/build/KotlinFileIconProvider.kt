@@ -1,7 +1,7 @@
-package dev.ide.lang.kotlin.build
+package com.shd.codestudio.lang.kotlin.build
 
-import dev.ide.model.FileIconProvider
-import dev.ide.model.IconTarget
+import com.shd.codestudio.model.FileIconProvider
+import com.shd.codestudio.model.IconTarget
 
 /**
  * Marks a Kotlin Multiplatform module in the project tree (`module.kmp`, the folder with a Kotlin-purple module

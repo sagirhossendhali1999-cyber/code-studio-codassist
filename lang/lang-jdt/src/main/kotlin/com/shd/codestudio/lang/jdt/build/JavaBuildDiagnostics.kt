@@ -1,13 +1,13 @@
-package dev.ide.lang.jdt.build
+package com.shd.codestudio.lang.jdt.build
 
-import dev.ide.build.BuildDiagnostic
-import dev.ide.build.BuildSeverity
-import dev.ide.build.DiagnosticKind
-import dev.ide.build.DiagnosticLocation
-import dev.ide.build.TaskContext
-import dev.ide.build.engine.reportAll
-import dev.ide.build.engine.transcript
-import dev.ide.lang.jdt.compile.JdtBatchCompiler
+import com.shd.codestudio.build.BuildDiagnostic
+import com.shd.codestudio.build.BuildSeverity
+import com.shd.codestudio.build.DiagnosticKind
+import com.shd.codestudio.build.DiagnosticLocation
+import com.shd.codestudio.build.TaskContext
+import com.shd.codestudio.build.engine.reportAll
+import com.shd.codestudio.build.engine.transcript
+import com.shd.codestudio.lang.jdt.compile.JdtBatchCompiler
 
 /**
  * Surface an ecj compile's result in the build console: its problems as structured, navigable diagnostics

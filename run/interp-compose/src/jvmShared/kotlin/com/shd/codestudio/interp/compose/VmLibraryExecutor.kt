@@ -1,28 +1,28 @@
-package dev.ide.interp.compose
+package com.shd.codestudio.interp.compose
 
 import androidx.compose.ui.layout.MeasureScope
-import dev.ide.interp.InterpretedLambda
-import dev.ide.interp.InterpreterException
-import dev.ide.interp.LibraryExecutor
-import dev.ide.interp.LibraryValue
-import dev.ide.interp.OmittedArg
-import dev.ide.jvm.AsmPeerFactory
-import dev.ide.jvm.ClassBytesSource
-import dev.ide.jvm.InterpretPolicy
-import dev.ide.jvm.PeerFactory
-import dev.ide.jvm.ReflectiveBridge
-import dev.ide.jvm.ReifiedInlineExecutor
-import dev.ide.jvm.Vm
-import dev.ide.jvm.VmMethodView
-import dev.ide.jvm.hasInterpretedClass
-import dev.ide.jvm.interpretedClassName
-import dev.ide.jvm.interpretedConstructors
-import dev.ide.jvm.interpretedMethods
-import dev.ide.jvm.interpretedMethodsOf
-import dev.ide.jvm.interpretedStaticFields
-import dev.ide.jvm.interpretedStaticValue
-import dev.ide.jvm.isInterpretedInstanceOf
-import dev.ide.jvm.isVmPeer
+import com.shd.codestudio.interp.InterpretedLambda
+import com.shd.codestudio.interp.InterpreterException
+import com.shd.codestudio.interp.LibraryExecutor
+import com.shd.codestudio.interp.LibraryValue
+import com.shd.codestudio.interp.OmittedArg
+import com.shd.codestudio.jvm.AsmPeerFactory
+import com.shd.codestudio.jvm.ClassBytesSource
+import com.shd.codestudio.jvm.InterpretPolicy
+import com.shd.codestudio.jvm.PeerFactory
+import com.shd.codestudio.jvm.ReflectiveBridge
+import com.shd.codestudio.jvm.ReifiedInlineExecutor
+import com.shd.codestudio.jvm.Vm
+import com.shd.codestudio.jvm.VmMethodView
+import com.shd.codestudio.jvm.hasInterpretedClass
+import com.shd.codestudio.jvm.interpretedClassName
+import com.shd.codestudio.jvm.interpretedConstructors
+import com.shd.codestudio.jvm.interpretedMethods
+import com.shd.codestudio.jvm.interpretedMethodsOf
+import com.shd.codestudio.jvm.interpretedStaticFields
+import com.shd.codestudio.jvm.interpretedStaticValue
+import com.shd.codestudio.jvm.isInterpretedInstanceOf
+import com.shd.codestudio.jvm.isVmPeer
 import java.lang.reflect.Proxy
 import java.nio.file.Files
 import java.nio.file.Path
@@ -124,7 +124,7 @@ class VmLibraryExecutor(
         policy = InterpretPolicy { internalName -> shouldInterpret(internalName.replace('/', '.')) },
         // Route a failure inside an interpreted lambda invoked by REAL code (a Compose measure/effect/callback
         // lambda the VM handed to the runtime) to the same [lambdaErrorSink] the VM-executed path uses, so it
-        // degrades + is reported instead of the raw [dev.ide.jvm.VmException] escaping to the host's main thread
+        // degrades + is reported instead of the raw [com.shd.codestudio.jvm.VmException] escaping to the host's main thread
         // and crashing the IDE. Read the var lazily so the dispatcher can wire the sink after construction; when
         // it is null (no preview channel) the bridge still degrades (this executor is preview-only).
         bridge = ReflectiveBridge(

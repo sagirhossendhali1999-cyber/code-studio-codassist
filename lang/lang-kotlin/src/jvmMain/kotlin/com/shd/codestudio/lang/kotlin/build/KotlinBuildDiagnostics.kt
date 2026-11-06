@@ -1,17 +1,17 @@
-package dev.ide.lang.kotlin.build
+package com.shd.codestudio.lang.kotlin.build
 
-import dev.ide.build.BuildDiagnostic
-import dev.ide.build.BuildSeverity
-import dev.ide.build.DiagnosticKind
-import dev.ide.build.DiagnosticLocation
-import dev.ide.build.TaskContext
-import dev.ide.build.engine.reportAll
-import dev.ide.build.engine.toolOutput
-import dev.ide.build.engine.transcript
-import dev.ide.lang.kotlin.compile.IncrementalKotlinCompiler
-import dev.ide.lang.kotlin.compile.KotlinCompileResult
-import dev.ide.lang.kotlin.compile.KotlinDiagnostic
-import dev.ide.lang.kotlin.compile.KotlinDiagnosticSeverity
+import com.shd.codestudio.build.BuildDiagnostic
+import com.shd.codestudio.build.BuildSeverity
+import com.shd.codestudio.build.DiagnosticKind
+import com.shd.codestudio.build.DiagnosticLocation
+import com.shd.codestudio.build.TaskContext
+import com.shd.codestudio.build.engine.reportAll
+import com.shd.codestudio.build.engine.toolOutput
+import com.shd.codestudio.build.engine.transcript
+import com.shd.codestudio.lang.kotlin.compile.IncrementalKotlinCompiler
+import com.shd.codestudio.lang.kotlin.compile.KotlinCompileResult
+import com.shd.codestudio.lang.kotlin.compile.KotlinDiagnostic
+import com.shd.codestudio.lang.kotlin.compile.KotlinDiagnosticSeverity
 
 /**
  * Surface a kotlinc compile's result in the build console: its problems as structured, navigable

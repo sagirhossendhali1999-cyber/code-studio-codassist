@@ -1,4 +1,4 @@
-package dev.ide.build.kotlinc
+package com.shd.codestudio.build.kotlinc
 
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.ClassVisitor
@@ -24,7 +24,7 @@ class CaffeineStripedBufferArtPassTest {
     private val targetInternal = "com/github/benmanes/caffeine/cache/StripedBuffer"
     private val unsafeAccess = "com/github/benmanes/caffeine/cache/UnsafeAccess"
     private val unsafe = "sun/misc/Unsafe"
-    private val shim = "dev/ide/lang/jdt/compat/CaffeineThreadProbe"
+    private val shim = "com/shd/codestudio/lang/jdt/compat/CaffeineThreadProbe"
 
     @Test
     fun handlesExactlyStripedBuffer() {

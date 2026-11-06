@@ -1,4 +1,4 @@
-package dev.ide.build.kotlinc
+package com.shd.codestudio.build.kotlinc
 
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.MethodVisitor
@@ -7,7 +7,7 @@ import org.objectweb.asm.Type
 
 /**
  * Relocates the `java.lang.invoke.VarHandle` usage of the bundled IntelliJ-platform concurrency classes to the
- * ART-safe shim [dev.ide.lang.jdt.compat.VarHandleCompat].
+ * ART-safe shim [com.shd.codestudio.lang.jdt.compat.VarHandleCompat].
  *
  * `VarHandle`'s access-mode methods (`compareAndSet`/`getVolatile`/`setVolatile`) are `@PolymorphicSignature`;
  * this device's ART verifier rejects the polymorphic call sites (`VerifyError: expected Object[], got Object`),
@@ -31,7 +31,7 @@ import org.objectweb.asm.Type
  * Only 3 access modes are used and the field VarHandles are primitive/erased-Object, so the shim needs a small
  * fixed method set. The shim maps each op to the classic `sun.misc.Unsafe` operation (same lock-free semantics
  * as the `VarHandle` form / JDK-8's `ConcurrentHashMap`). Like the other passes this rides the
- * `dev.ide.kotlinc-art` AGP instrumentation (scope = ALL); desktop keeps the real `VarHandle`.
+ * `com.shd.codestudio.kotlinc-art` AGP instrumentation (scope = ALL); desktop keeps the real `VarHandle`.
  */
 class VarHandleArtPass : ArtPatchPass {
 
@@ -100,7 +100,7 @@ class VarHandleArtPass : ArtPatchPass {
         const val VAR_HANDLE = "java/lang/invoke/VarHandle"
         const val METHOD_HANDLES = "java/lang/invoke/MethodHandles"
         const val LOOKUP = "java/lang/invoke/MethodHandles\$Lookup"
-        const val SHIM = "dev/ide/lang/jdt/compat/VarHandleCompat"
+        const val SHIM = "com/shd/codestudio/lang/jdt/compat/VarHandleCompat"
 
         val OBJECT: Type = Type.getObjectType("java/lang/Object")
         val OBJECT_ARRAY: Type = Type.getType("[Ljava/lang/Object;")

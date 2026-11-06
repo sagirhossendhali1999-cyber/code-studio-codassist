@@ -1,4 +1,4 @@
-package dev.ide.build.kotlinc
+package com.shd.codestudio.build.kotlinc
 
 import org.objectweb.asm.ClassVisitor
 import org.objectweb.asm.MethodVisitor
@@ -6,7 +6,7 @@ import org.objectweb.asm.Opcodes
 
 /**
  * Relocates the two `java.beans.Introspector` statics the bundled IntelliJ platform calls —
- * `decapitalize(String)` and `flushCaches()` — to the ART-safe shim [dev.ide.lang.jdt.compat.IntrospectorCompat].
+ * `decapitalize(String)` and `flushCaches()` — to the ART-safe shim [com.shd.codestudio.lang.jdt.compat.IntrospectorCompat].
  *
  * `java.beans.Introspector` is absent from ART (Android ships only the `PropertyChange*` slice of `java.beans`,
  * not the introspection API). ART eager-links class references, so the moment a platform class executes an
@@ -70,7 +70,7 @@ class IntrospectorArtPass : ArtPatchPass {
 
     private companion object {
         const val INTROSPECTOR = "java/beans/Introspector"
-        const val SHIM = "dev/ide/lang/jdt/compat/IntrospectorCompat"
+        const val SHIM = "com/shd/codestudio/lang/jdt/compat/IntrospectorCompat"
 
         /** The confirmed platform classes that call `Introspector.decapitalize`/`flushCaches`. */
         val TARGETS = listOf(

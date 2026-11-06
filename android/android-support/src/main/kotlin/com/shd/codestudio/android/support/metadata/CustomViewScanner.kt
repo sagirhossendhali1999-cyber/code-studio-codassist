@@ -1,4 +1,4 @@
-package dev.ide.android.support.metadata
+package com.shd.codestudio.android.support.metadata
 
 import org.objectweb.asm.ClassReader
 import org.objectweb.asm.Opcodes

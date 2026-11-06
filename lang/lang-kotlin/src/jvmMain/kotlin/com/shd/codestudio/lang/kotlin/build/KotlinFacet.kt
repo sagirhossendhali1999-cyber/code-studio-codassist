@@ -1,8 +1,8 @@
-package dev.ide.lang.kotlin.build
+package com.shd.codestudio.lang.kotlin.build
 
-import dev.ide.model.Facet
-import dev.ide.model.FacetCodec
-import dev.ide.model.FacetKey
+import com.shd.codestudio.model.Facet
+import com.shd.codestudio.model.FacetCodec
+import com.shd.codestudio.model.FacetKey
 
 /**
  * Per-module Kotlin compilation settings, as the `[kotlin]` table of `module.toml`.
