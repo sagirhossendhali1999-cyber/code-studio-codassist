@@ -17,7 +17,6 @@ plugins {
 dependencies {
     // RCanvas/RPaint/RGraphics: the owned drawing surface every renderer in the IDE already targets, with a
     // Compose backend on both platforms. Graphics2D is implemented over it.
-    api(project(":layout-preview-api"))
 
     // ClassRemapper, for rewriting java.awt/javax.swing references in a program's bytecode.
     implementation(libs.ow2.asm)

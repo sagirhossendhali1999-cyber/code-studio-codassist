@@ -35,11 +35,9 @@ kotlin {
         }
 
         // A JVM-only intermediate source set shared by the desktop + android targets, so it can depend on the
-        // plain-JVM `layout-preview-api` (which commonMain, being platform-agnostic, cannot). The XML layout
         // preview pane and its Compose-backed RCanvas live here; commonMain reaches them via expect/actual.
         val jvmShared = create("jvmShared") {
             dependsOn(getByName("commonMain"))
-            dependencies { implementation(project(":layout-preview-api")) }
         }
         getByName("desktopMain").dependsOn(jvmShared)
         getByName("androidMain").dependsOn(jvmShared)
