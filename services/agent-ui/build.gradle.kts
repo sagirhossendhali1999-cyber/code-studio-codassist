@@ -48,7 +48,6 @@ kotlin {
         val desktopTest by getting {
             dependencies {
                 implementation(kotlin("test"))
-                implementation(project(":ide-ui-testing"))
                 implementation(compose.desktop.currentOs) // skiko, for the off-screen render
             }
         }

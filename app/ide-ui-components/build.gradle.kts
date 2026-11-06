@@ -39,7 +39,6 @@ kotlin {
         val desktopTest by getting {
             dependencies {
                 implementation(kotlin("test"))
-                implementation(project(":ide-ui-testing"))
                 implementation(libs.kotlinx.coroutines.test)
                 implementation(compose.desktop.currentOs) // skiko, for the off-screen snapshot assertions
                 // Test-only, and only so the consent screen can be held to the SPI's own capability

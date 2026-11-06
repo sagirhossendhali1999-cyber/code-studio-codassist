@@ -58,7 +58,6 @@ kotlin {
         val desktopTest by getting {
             dependencies {
                 implementation(kotlin("test"))
-                implementation(project(":ide-ui-testing"))
                 implementation(libs.kotlinx.coroutines.test)
                 implementation(compose.desktop.currentOs) // skiko native runtime for off-screen ImageComposeScene snapshots
             }

@@ -61,7 +61,6 @@ kotlin {
         val desktopTest by getting {
             dependencies {
                 implementation(kotlin("test"))
-                implementation(project(":ide-ui-testing"))
                 implementation(libs.kotlinx.coroutines.test)
                 implementation(compose.desktop.currentOs) // skiko, for the text-measurement and rope benchmarks
             }

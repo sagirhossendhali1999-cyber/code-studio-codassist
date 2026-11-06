@@ -25,7 +25,7 @@ java = ["src/jvmShared/kotlin"]
 [dependencies]
 api = [{ module = "ide-ui-api" }, { module = "ide-ui-resources" }, { module = "ide-ui-core" }, { module = "ide-ui-components" }, { module = "ide-ui-editor" }, { module = "ide-ui-screens" }]
 implementation = ["kotlin-stdlib"]
-testImplementation = [{ module = "ide-ui-testing" }, "org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0", "org.jetbrains.compose.desktop:desktop-jvm-macos-arm64:1.11.1"]
+testImplementation = ["org.jetbrains.kotlinx:kotlinx-coroutines-test:1.11.0", "org.jetbrains.compose.desktop:desktop-jvm-macos-arm64:1.11.1"]
 
 [kotlin]
 commonSourceRoots = ["src/commonMain/kotlin", "src/jvmShared/kotlin"]
