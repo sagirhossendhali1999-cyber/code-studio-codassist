@@ -6,7 +6,6 @@ import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 // Editor strategy: use a parser ONLY (KtFile, from :kotlin-syntax — the Kotlin compiler's own multiplatform
 // grammar), and build our own symbol table, inference, and completion on the neutral DOM. Codegen (K2 ->
 // .class) is a separate track: KotlinJvmCompiler/IncrementalKotlinCompiler, driven by the module's own
-// compileKotlin build task (KotlinCompileTask) rather than a build-engine port.
 //
 // MULTIPLATFORM, and the source-set split IS the architecture. `commonMain` is the editor: parse, symbols,
 // resolve, inference, completion, diagnostics, highlighting, folding — 25k lines that need a string, not a
@@ -52,8 +51,6 @@ kotlin {
             implementation(project(":index-api"))
             implementation(project(":analysis-api")) // owns the Kotlin diagnostic + import-fix providers
             // Owns the `compileKotlin` build task (KotlinCompileTask): the build graph drives K2 directly through it,
-            // so build-engine carries no KotlinCompile port. Brings build-api transitively.
-            implementation(project(":build-engine"))
             // The build's in-process K2JVMCompiler. We never build a BindingContext or run the analyzer for
             // editing; all editor semantics are ours. The compiler comes from :kotlin-compiler-deps - the
             // UNSHADED `-for-ide` split over the real IntelliJ platform, replacing kotlin-compiler-embeddable,
