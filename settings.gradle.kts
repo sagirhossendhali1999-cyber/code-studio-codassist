@@ -141,6 +141,7 @@ val layers = mapOf(
     ),
     "run" to listOf("interp-api", "interp-core", "interp-impl", "interp-compose", "jvm-interp", "jvm-vm", "jvm-vm-fixtures", "awt-toolkit"),
     "android" to listOf(
+        "applog-runtime", "art-compat"
     ),
     "services" to listOf(
         "deps-api", "deps-impl", "vcs-api", "vcs-impl", "vcs-ui",
